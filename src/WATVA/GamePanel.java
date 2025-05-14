@@ -8,15 +8,15 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 public class GamePanel extends JPanel implements ActionListener {
-    public static final int PANEL_WIDTH = 1530;
-    public static final int PANEL_HEIGHT = 900;
+    public static final int PANEL_WIDTH = (int)(1530 * Game.getScaleFactor());
+    public static final int PANEL_HEIGHT = (int)(900 * Game.getScaleFactor());
+    public static final int BLOCK_SIZE = (int)(64 * Game.getScaleFactor());
     private JButton nextWaveButton;
     private AbilityPanel abilityPanel;
     private boolean abilityPanelVisible;
     private boolean upgradePanelVisible;
     public static int[][] map;
     public static int mapWidth, mapHeight;
-    public static final int BLOCK_SIZE = 64;
     private Player player;
     private CopyOnWriteArrayList<Enemy> enemies;
     private CopyOnWriteArrayList<Arrow> arrows;
@@ -34,7 +34,6 @@ public class GamePanel extends JPanel implements ActionListener {
     public static final int SCALE_FACTOR = 4;
     private static final int CAMERA_WIDTH = PANEL_WIDTH / SCALE_FACTOR;
     private static final int CAMERA_HEIGHT = PANEL_HEIGHT / SCALE_FACTOR;
-
     public static int cameraX, cameraY;
     private static int killCount;
     protected static Soundtrack backgroundMusic;
@@ -111,12 +110,17 @@ public class GamePanel extends JPanel implements ActionListener {
         try {
             for (int i = 0; i < blockImages.length; i++) {
                 Image original = ImageIO.read(new File("res/watva/background/Block" + i + ".png"));
-                blockImages[i] = original.getScaledInstance(BLOCK_SIZE, BLOCK_SIZE, Image.SCALE_SMOOTH);
+                blockImages[i] = original.getScaledInstance(
+                        BLOCK_SIZE,
+                        BLOCK_SIZE,
+                        Image.SCALE_SMOOTH
+                );
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
     private void initializeAbilityPanel() {
         abilityPanel = new AbilityPanel(this, player);
         add(abilityPanel);

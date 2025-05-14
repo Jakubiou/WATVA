@@ -11,10 +11,10 @@ public class Enemy {
     private static final int SHOOT_RANGE = 300;
     private static final long SHOOT_INTERVAL = 5000;
     private long lastShootTime = 0;
-    public static final int NORMAL_SIZE = 37;
-    public static final int GIANT_SIZE = 128;
-    public static final int SMALL_SIZE = 32;
-    public static final int SHOOTING_SIZE = 60;
+    public static final int NORMAL_SIZE = (int)(37 * Game.getScaleFactor());
+    public static final int GIANT_SIZE = (int)(128 * Game.getScaleFactor());
+    public static final int SMALL_SIZE = (int)(32 * Game.getScaleFactor());
+    public static final int SHOOTING_SIZE = (int)(60 * Game.getScaleFactor());
     protected int x;
     protected int y;
     protected double hp;
@@ -30,7 +30,8 @@ public class Enemy {
     private long frameDuration = 100;
     private boolean movingRight = true;
 
-    private Image[] giantTextures;
+    private Image[] giantTexturesRight;
+    private Image[] giantTexturesLeft;
     private Image texture3;
     private Image texture4;
 
@@ -55,10 +56,10 @@ public class Enemy {
         projectiles = new ArrayList<>();
 
         switch (type) {
-            case NORMAL -> speed = 2;
-            case GIANT -> speed = 1.5;
-            case SMALL -> speed = 2.5;
-            case SHOOTING -> speed = 1.8;
+            case NORMAL -> speed = 2 * Game.getScaleFactor();
+            case GIANT -> speed = 1.5 * Game.getScaleFactor();
+            case SMALL -> speed = 2.5 * Game.getScaleFactor();
+            case SHOOTING -> speed = 1.8 * Game.getScaleFactor();
         }
 
         try {
@@ -87,14 +88,22 @@ public class Enemy {
                 e.printStackTrace();
             }
         } else if (type == Type.GIANT) {
-            giantTextures = new  Image[6];
+            giantTexturesRight = new  Image[6];
+            giantTexturesLeft = new  Image[6];
             try {
-                giantTextures[0] = ImageIO.read(new File("res/watva/enemy/golem/golem1.png"));
-                giantTextures[1] = ImageIO.read(new File("res/watva/enemy/golem/golem2.png"));
-                giantTextures[2] = ImageIO.read(new File("res/watva/enemy/golem/golem3.png"));
-                giantTextures[3] = ImageIO.read(new File("res/watva/enemy/golem/golem4.png"));
-                giantTextures[4] = ImageIO.read(new File("res/watva/enemy/golem/golem5.png"));
-                giantTextures[5] = ImageIO.read(new File("res/watva/enemy/golem/golem6.png"));
+                giantTexturesLeft[0] = ImageIO.read(new File("res/watva/enemy/golem/golem1.png"));
+                giantTexturesLeft[1] = ImageIO.read(new File("res/watva/enemy/golem/golem2.png"));
+                giantTexturesLeft[2] = ImageIO.read(new File("res/watva/enemy/golem/golem3.png"));
+                giantTexturesLeft[3] = ImageIO.read(new File("res/watva/enemy/golem/golem4.png"));
+                giantTexturesLeft[4] = ImageIO.read(new File("res/watva/enemy/golem/golem5.png"));
+                giantTexturesLeft[5] = ImageIO.read(new File("res/watva/enemy/golem/golem6.png"));
+
+                giantTexturesRight[0] = ImageIO.read(new File("res/watva/enemy/golem/golem7.png"));
+                giantTexturesRight[1] = ImageIO.read(new File("res/watva/enemy/golem/golem8.png"));
+                giantTexturesRight[2] = ImageIO.read(new File("res/watva/enemy/golem/golem9.png"));
+                giantTexturesRight[3] = ImageIO.read(new File("res/watva/enemy/golem/golem10.png"));
+                giantTexturesRight[4] = ImageIO.read(new File("res/watva/enemy/golem/golem11.png"));
+                giantTexturesRight[5] = ImageIO.read(new File("res/watva/enemy/golem/golem12.png"));
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -111,7 +120,8 @@ public class Enemy {
             Image[] textures = movingRight ? knightTexturesRight : knightTexturesLeft;
             g.drawImage(textures[currentFrame], x, y, NORMAL_SIZE, NORMAL_SIZE, null);
         } else if (type == Type.GIANT) {
-            g.drawImage(giantTextures[currentFrame], x, y, GIANT_SIZE, GIANT_SIZE, null);
+            Image[] textures = movingRight ? giantTexturesRight : giantTexturesLeft;
+            g.drawImage(textures[currentFrame], x, y, GIANT_SIZE, GIANT_SIZE, null);
         } else if (type == Type.SMALL) {
             g.drawImage(texture3, x, y, SMALL_SIZE, SMALL_SIZE, null);
         }else if (type == Type.SHOOTING) {
@@ -181,7 +191,7 @@ public class Enemy {
             if (type == Type.GIANT) {
                 long currentTime = System.currentTimeMillis();
                 if (currentTime - lastFrameChange >= frameDuration) {
-                    currentFrame = (currentFrame + 1) % giantTextures.length;
+                    currentFrame = (currentFrame + 1) % giantTexturesRight.length;
                     lastFrameChange = currentTime;
                 }
             }

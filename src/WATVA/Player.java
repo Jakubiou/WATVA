@@ -12,14 +12,15 @@ import java.util.Iterator;
 import static com.sun.java.accessibility.util.AWTEventMonitor.addMouseMotionListener;
 
 public class Player implements Serializable {
-    protected static int WIDTH = 48;
+    protected static int WIDTH = (int)(48 * Game.getScaleFactor());
+    public static final int HEIGHT = (int)(48 * Game.getScaleFactor());
     private ArrayList<Explosion> explosions = new ArrayList<>();
     private long explosionCooldown = 5000;
     private long lastExplosionTime = 0;
     private int explosionRange = 100;
-    public static final int HEIGHT = 48;
     private int x, y, hp;
-    private int speed = 5;
+    private int speed = (int)(5 * Game.getScaleFactor());
+    private int dashSpeed = (int)(20 * Game.getScaleFactor());
     private int heal = 0;
     private int coins = 0;
     private int damage = 5;
@@ -36,7 +37,6 @@ public class Player implements Serializable {
     public static final int PANEL_HEIGHT = 3600;
     private boolean dashing = false;
     private int dashDistance = 100;
-    private int dashSpeed = 20;
     private int dashDirectionX = 0, dashDirectionY = 0;
     private int dashProgress = 0;
     private long dashCooldown = 5000;
@@ -138,8 +138,8 @@ public class Player implements Serializable {
         }
         drawExplosionCooldown(g);
 
-        int hpBarWidth = 200;
-        int hpBarHeight = 20;
+        int hpBarWidth = (int)(200 * Game.getScaleFactor());
+        int hpBarHeight = (int)(20 * Game.getScaleFactor());
         int hpBarX = GamePanel.PANEL_WIDTH - hpBarWidth - 10 + GamePanel.cameraX;
         int hpBarY = 29 + GamePanel.cameraY;
 
