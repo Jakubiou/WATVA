@@ -39,7 +39,7 @@ public class DarkMageBoss extends Enemy {
 
     public DarkMageBoss(int x, int y, int hp) {
         super(x, y, hp, Type.DARK_MAGE_BOSS);
-        this.speed = 1;
+        this.baseSpeed = 1;
 
         bossTexturesLeft = new Image[5];
         bossTexturesRight = new Image[5];
@@ -242,7 +242,7 @@ public class DarkMageBoss extends Enemy {
         return new Rectangle(x, y, BOSS_SIZE, BOSS_SIZE);
     }
 
-    protected int getWidth() {
+    public int getWidth() {
         return BOSS_SIZE;
     }
 

@@ -48,7 +48,7 @@ public class BunnyBoss extends Enemy {
 
     public BunnyBoss(int x, int y, int hp) {
         super(x, y, hp, Type.BUNNY_BOSS);
-        this.speed = 0;
+        this.baseSpeed = 0;
 
         try {
             for (int i = 0; i < 6; i++) {

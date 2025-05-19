@@ -26,7 +26,7 @@ public class Slime extends Enemy {
 
     public Slime(int x, int y, int hp) {
         super(x, y, hp, Type.SLIME);
-        this.speed = 0;
+        this.baseSpeed = 0;
 
         try {
             for (int i = 0; i < 6; i++) {
