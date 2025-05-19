@@ -5,36 +5,41 @@ import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 public class Enemy {
-    private ArrayList<EnemyProjectile> projectiles;
     private static final int SHOOT_RANGE = 300;
-    private static final long SHOOT_INTERVAL = 5000;
-    private long lastShootTime = 0;
-    public static final int NORMAL_SIZE = (int)(37 * Game.getScaleFactor());
-    public static final int GIANT_SIZE = (int)(128 * Game.getScaleFactor());
-    public static final int SMALL_SIZE = (int)(32 * Game.getScaleFactor());
-    public static final int SHOOTING_SIZE = (int)(60 * Game.getScaleFactor());
+    private static final long SHOOT_INTERVAL_MS = 5000;
+    private static final long ATTACK_COOLDOWN_MS = 1000;
+    private static final long FRAME_DURATION_MS = 100;
+    private static final int EDGE_LIMIT = 61;
+    private static final int SCREEN_WIDTH = 6120;
+    private static final int SCREEN_HEIGHT = 3600;
+
+    public enum Type {
+        NORMAL, GIANT, SMALL, SHOOTING, SLIME, DARK_MAGE_BOSS, BUNNY_BOSS
+    }
+
+    public static final int NORMAL_SIZE = scale(37);
+    public static final int GIANT_SIZE = scale(128);
+    public static final int SMALL_SIZE = scale(32);
+    public static final int SHOOTING_SIZE = scale(60);
+
+    private final List<EnemyProjectile> projectiles;
+    private final Type type;
     protected int x;
     protected int y;
     protected double hp;
-    protected double speed;
-    private boolean isAlive;
-    private Type type;
-    private long lastAttackTime = 0;
+    protected double baseSpeed;
+    private double currentSpeed;
+    private boolean isAlive = true;
 
-    private Image[] knightTexturesRight;
-    private Image[] knightTexturesLeft;
+    private Image[] rightTextures;
+    private Image[] leftTextures;
+    private Image staticTexture;
     private int currentFrame = 0;
-    private long lastFrameChange = 0;
-    private long frameDuration = 100;
+    private long lastFrameChangeTime = 0;
     private boolean movingRight = true;
-
-    private Image[] giantTexturesRight;
-    private Image[] giantTexturesLeft;
-    private Image texture3;
-    private Image texture4;
-
 
     private boolean isOnFire = false;
     private long fireEndTime = 0;
@@ -42,171 +47,122 @@ public class Enemy {
     private boolean isSlowed = false;
     private long slowEndTime = 0;
 
-
-    public enum Type {
-        NORMAL, GIANT, SMALL, SHOOTING, SLIME, DARK_MAGE_BOSS,BUNNY_BOSS
-    }
+    private long lastShootTime = 0;
+    private long lastAttackTime = 0;
 
     public Enemy(int x, int y, double hp, Type type) {
         this.x = x;
         this.y = y;
         this.hp = hp;
         this.type = type;
-        this.isAlive = true;
-        projectiles = new ArrayList<>();
+        this.projectiles = new ArrayList<>();
 
+        initializeSpeed();
+        loadTextures();
+    }
+
+    private static int scale(int value) {
+        return (int)(value * Game.getScaleFactor());
+    }
+
+    private void initializeSpeed() {
         switch (type) {
-            case NORMAL -> speed = 2 * Game.getScaleFactor();
-            case GIANT -> speed = 1.5 * Game.getScaleFactor();
-            case SMALL -> speed = 2.5 * Game.getScaleFactor();
-            case SHOOTING -> speed = 1.8 * Game.getScaleFactor();
+            case NORMAL -> baseSpeed = 2 * Game.getScaleFactor();
+            case GIANT -> baseSpeed = 1.5 * Game.getScaleFactor();
+            case SMALL -> baseSpeed = 2.5 * Game.getScaleFactor();
+            case SHOOTING -> baseSpeed = 1.8 * Game.getScaleFactor();
         }
+        currentSpeed = baseSpeed;
+    }
 
+    private void loadTextures() {
         try {
             switch (type) {
-                case SMALL -> texture3 = ImageIO.read(new File("res/watva/enemy/small/small.png"));
-                case SHOOTING -> texture4 = ImageIO.read(new File("res/watva/enemy/mage/mage1.png"));
+                case NORMAL -> loadAnimationTextures("knight", 4, 1, 5);
+                case GIANT -> loadAnimationTextures("golem", 6, 7, 1);
+                case SMALL -> staticTexture = loadTexture("res/watva/enemy/small/small.png");
+                case SHOOTING -> staticTexture = loadTexture("res/watva/enemy/mage/mage1.png");
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
 
-        if (type == Type.NORMAL) {
-            knightTexturesRight = new Image[4];
-            knightTexturesLeft = new Image[4];
-            try {
-                knightTexturesRight[0] = ImageIO.read(new File("res/watva/enemy/knight/knight1.png"));
-                knightTexturesRight[1] = ImageIO.read(new File("res/watva/enemy/knight/knight2.png"));
-                knightTexturesRight[2] = ImageIO.read(new File("res/watva/enemy/knight/knight3.png"));
-                knightTexturesRight[3] = ImageIO.read(new File("res/watva/enemy/knight/knight4.png"));
+    private void loadAnimationTextures(String enemyName, int frameCount, int rightStartIndex, int leftStartIndex)
+            throws IOException {
+        rightTextures = new Image[frameCount];
+        leftTextures = new Image[frameCount];
 
-                knightTexturesLeft[0] = ImageIO.read(new File("res/watva/enemy/knight/knight5.png"));
-                knightTexturesLeft[1] = ImageIO.read(new File("res/watva/enemy/knight/knight6.png"));
-                knightTexturesLeft[2] = ImageIO.read(new File("res/watva/enemy/knight/knight7.png"));
-                knightTexturesLeft[3] = ImageIO.read(new File("res/watva/enemy/knight/knight8.png"));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else if (type == Type.GIANT) {
-            giantTexturesRight = new  Image[6];
-            giantTexturesLeft = new  Image[6];
-            try {
-                giantTexturesLeft[0] = ImageIO.read(new File("res/watva/enemy/golem/golem1.png"));
-                giantTexturesLeft[1] = ImageIO.read(new File("res/watva/enemy/golem/golem2.png"));
-                giantTexturesLeft[2] = ImageIO.read(new File("res/watva/enemy/golem/golem3.png"));
-                giantTexturesLeft[3] = ImageIO.read(new File("res/watva/enemy/golem/golem4.png"));
-                giantTexturesLeft[4] = ImageIO.read(new File("res/watva/enemy/golem/golem5.png"));
-                giantTexturesLeft[5] = ImageIO.read(new File("res/watva/enemy/golem/golem6.png"));
+        String basePath = "res/watva/enemy/" + enemyName + "/" + enemyName;
 
-                giantTexturesRight[0] = ImageIO.read(new File("res/watva/enemy/golem/golem7.png"));
-                giantTexturesRight[1] = ImageIO.read(new File("res/watva/enemy/golem/golem8.png"));
-                giantTexturesRight[2] = ImageIO.read(new File("res/watva/enemy/golem/golem9.png"));
-                giantTexturesRight[3] = ImageIO.read(new File("res/watva/enemy/golem/golem10.png"));
-                giantTexturesRight[4] = ImageIO.read(new File("res/watva/enemy/golem/golem11.png"));
-                giantTexturesRight[5] = ImageIO.read(new File("res/watva/enemy/golem/golem12.png"));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        for (int i = 0; i < frameCount; i++) {
+            rightTextures[i] = loadTexture(basePath + (rightStartIndex + i) + ".png");
+            leftTextures[i] = loadTexture(basePath + (leftStartIndex + i) + ".png");
         }
     }
 
-
-    public boolean isAlive() {
-        return isAlive;
-    }
-
-    public void draw(Graphics g) {
-        if (type == Type.NORMAL) {
-            Image[] textures = movingRight ? knightTexturesRight : knightTexturesLeft;
-            g.drawImage(textures[currentFrame], x, y, NORMAL_SIZE, NORMAL_SIZE, null);
-        } else if (type == Type.GIANT) {
-            Image[] textures = movingRight ? giantTexturesRight : giantTexturesLeft;
-            g.drawImage(textures[currentFrame], x, y, GIANT_SIZE, GIANT_SIZE, null);
-        } else if (type == Type.SMALL) {
-            g.drawImage(texture3, x, y, SMALL_SIZE, SMALL_SIZE, null);
-        }else if (type == Type.SHOOTING) {
-            g.drawImage(texture4, x, y, SHOOTING_SIZE - 20, SHOOTING_SIZE, null);
-        }
-        if (isSlowed) {
-            g.setColor(new Color(0, 0, 255, 100)); // Blue tint
-            g.fillRect(x, y, getWidth(), getHeight());
-        }
-        if (isOnFire) {
-            g.setColor(new Color(255, 0, 0, 100));
-            g.fillRect(x, y, getWidth(), getHeight());
-        }
+    private Image loadTexture(String path) throws IOException {
+        return ImageIO.read(new File(path));
     }
 
     public boolean isOffScreen() {
-        int screenWidth = 6120;
-        int screenHeight = 3600;
-        return (x + getWidth() < 0 || x > screenWidth || y + getHeight() < 0 || y > screenHeight);
-    }
-
-
-    protected int getWidth() {
-        switch (type) {
-            case GIANT: return GIANT_SIZE;
-            case SMALL: return SMALL_SIZE;
-            case SHOOTING: return SHOOTING_SIZE;
-            default: return NORMAL_SIZE;
-        }
-    }
-
-    private int getHeight() {
-        return getWidth();
+        return x + getWidth() < 0 || x > SCREEN_WIDTH ||
+                y + getHeight() < 0 || y > SCREEN_HEIGHT;
     }
 
     public void moveTowards(int targetX, int targetY) {
-        double deltaX = targetX - x;
-        double deltaY = targetY - y;
-        double distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-        if (type == Type.SHOOTING && isInRange(targetX, targetY)) {
+        if (shouldStopAndShoot(targetX, targetY)) {
             stopAndShoot(targetX, targetY);
             return;
         }
 
+        double dx = targetX - x;
+        double dy = targetY - y;
+        double distance = Math.hypot(dx, dy);
+
         if (distance > 0) {
-            double moveX = (deltaX / distance) * speed;
-            double moveY = (deltaY / distance) * speed;
-
-            x += Math.round(moveX);
-            y += Math.round(moveY);
-
-            int edgeLimit = 61;
-            x = Math.max(edgeLimit, Math.min(x, Player.PANEL_WIDTH - edgeLimit - getWidth()));
-            y = Math.max(edgeLimit, Math.min(y, Player.PANEL_HEIGHT - edgeLimit - getHeight()));
-
-            movingRight = moveX > 0;
-
-            if (type == Type.NORMAL) {
-                long currentTime = System.currentTimeMillis();
-                if (currentTime - lastFrameChange >= frameDuration) {
-                    currentFrame = (currentFrame + 1) % knightTexturesRight.length;
-                    lastFrameChange = currentTime;
-                }
-            }
-
-            if (type == Type.GIANT) {
-                long currentTime = System.currentTimeMillis();
-                if (currentTime - lastFrameChange >= frameDuration) {
-                    currentFrame = (currentFrame + 1) % giantTexturesRight.length;
-                    lastFrameChange = currentTime;
-                }
-            }
+            move(dx / distance, dy / distance);
+            updateDirection(dx > 0);
+            updateAnimation();
         }
     }
 
+    private boolean shouldStopAndShoot(int targetX, int targetY) {
+        return type == Type.SHOOTING && isInRange(targetX, targetY);
+    }
 
     private boolean isInRange(int targetX, int targetY) {
-        double distance = Math.sqrt(Math.pow(targetX - x, 2) + Math.pow(targetY - y, 2));
-        return distance <= SHOOT_RANGE;
+        return Math.hypot(targetX - x, targetY - y) <= SHOOT_RANGE;
+    }
+
+    private void move(double moveX, double moveY) {
+        x += Math.round(moveX * currentSpeed);
+        y += Math.round(moveY * currentSpeed);
+
+        x = Math.max(EDGE_LIMIT, Math.min(x, Player.PANEL_WIDTH - EDGE_LIMIT - getWidth()));
+        y = Math.max(EDGE_LIMIT, Math.min(y, Player.PANEL_HEIGHT - EDGE_LIMIT - getHeight()));
+    }
+
+    private void updateDirection(boolean movingRight) {
+        this.movingRight = movingRight;
+    }
+
+    private void updateAnimation() {
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastFrameChangeTime >= FRAME_DURATION_MS) {
+            currentFrame = (currentFrame + 1) % getFrameCount();
+            lastFrameChangeTime = currentTime;
+        }
+    }
+
+    private int getFrameCount() {
+        return type == Type.NORMAL ? 4 :
+                type == Type.GIANT ? 6 : 1;
     }
 
     private void stopAndShoot(int playerX, int playerY) {
         long currentTime = System.currentTimeMillis();
-        if (currentTime - lastShootTime >= SHOOT_INTERVAL) {
+        if (currentTime - lastShootTime >= SHOOT_INTERVAL_MS) {
             shootAtPlayer(playerX, playerY);
             lastShootTime = currentTime;
         }
@@ -214,7 +170,9 @@ public class Enemy {
 
     public void shootAtPlayer(int playerX, int playerY) {
         if (isInRange(playerX, playerY)) {
-            projectiles.add(new EnemyProjectile(x + SHOOTING_SIZE / 2, y + SHOOTING_SIZE / 2, playerX, playerY));
+            int centerX = x + SHOOTING_SIZE / 2;
+            int centerY = y + SHOOTING_SIZE / 2;
+            projectiles.add(new EnemyProjectile(centerX, centerY, playerX, playerY));
         }
     }
 
@@ -229,51 +187,18 @@ public class Enemy {
         }
     }
 
-    public ArrayList<EnemyProjectile> getProjectiles() {
-        return projectiles;
+    public List<EnemyProjectile> getProjectiles() {
+        return new ArrayList<>(projectiles);
     }
+
     public void drawProjectiles(Graphics g) {
         for (EnemyProjectile projectile : projectiles) {
             projectile.draw(g);
         }
     }
-
-
-    public Rectangle getCollider() {
-        if(type == Type.NORMAL) {
-            return new Rectangle(x + 24, y + 3, NORMAL_SIZE - 32, NORMAL_SIZE - 9);
-        } else if (type == Type.GIANT) {
-            return new Rectangle(x, y, GIANT_SIZE, GIANT_SIZE);
-        }else if (type == Type.SHOOTING) {
-            return new Rectangle(x, y, SHOOTING_SIZE, SHOOTING_SIZE);
-        }else{
-            return new Rectangle(x, y, SMALL_SIZE, SMALL_SIZE);
-        }
-    }
-
-    public void hit(int damage) {
-        hp -= damage;
-    }
-
-    public double getHp() {
-        return hp;
-    }
-
-    public int getDamage() {
-        if(type == Type.SHOOTING){
-            return 20;
-        }else if(type == Type.SLIME){
-            return 5;
-        }else if(type == Type.DARK_MAGE_BOSS){
-            return 50;
-        }else {
-            return 10;
-        }
-    }
-
     public boolean canAttack() {
         long currentTime = System.currentTimeMillis();
-        if (currentTime - lastAttackTime >= 1000) {
+        if (currentTime - lastAttackTime >= ATTACK_COOLDOWN_MS) {
             lastAttackTime = currentTime;
             return true;
         }
@@ -291,27 +216,109 @@ public class Enemy {
         }
     }
 
+    public void applySlow(int durationMs) {
+        isSlowed = true;
+        slowEndTime = System.currentTimeMillis() + durationMs;
+        currentSpeed = baseSpeed * 0.5;
+    }
+
+    public void setFire(int damage, int durationMs) {
+        isOnFire = true;
+        fireEndTime = System.currentTimeMillis() + durationMs;
+        fireDamage = damage;
+    }
+
     public void update() {
-        if (isSlowed && System.currentTimeMillis() >= slowEndTime) {
-            isSlowed = false;
-            speed *= 2;
-        }
+        updateStatusEffects();
         if (isOnFire && System.currentTimeMillis() < fireEndTime) {
             hp -= fireDamage;
-        } else if (isOnFire) {
+        }
+    }
+
+    private void updateStatusEffects() {
+        if (isSlowed && System.currentTimeMillis() >= slowEndTime) {
+            isSlowed = false;
+            currentSpeed = baseSpeed;
+        }
+        if (isOnFire && System.currentTimeMillis() >= fireEndTime) {
             isOnFire = false;
         }
     }
-    public void applySlow(int duration) {
-        isSlowed = true;
-        slowEndTime = System.currentTimeMillis() + duration;
-        speed *= 0.5;
+
+    public void draw(Graphics g) {
+        drawEnemyTexture(g);
+        drawStatusEffects(g);
     }
 
-    public void setFire(int damage, int duration) {
-        isOnFire = true;
-        fireEndTime = System.currentTimeMillis() + duration;
-        fireDamage = damage;
+    private void drawEnemyTexture(Graphics g) {
+        switch (type) {
+            case NORMAL, GIANT -> drawAnimatedEnemy(g);
+            case SMALL, SHOOTING -> drawStaticEnemy(g);
+        }
+    }
+
+    private void drawAnimatedEnemy(Graphics g) {
+        Image[] textures = movingRight ? rightTextures : leftTextures;
+        int size = type == Type.NORMAL ? NORMAL_SIZE : GIANT_SIZE;
+        g.drawImage(textures[currentFrame], x, y, size, size, null);
+    }
+
+    private void drawStaticEnemy(Graphics g) {
+        int width = type == Type.SMALL ? SMALL_SIZE : SHOOTING_SIZE - 20;
+        int height = type == Type.SMALL ? SMALL_SIZE : SHOOTING_SIZE;
+        g.drawImage(staticTexture, x, y, width, height, null);
+    }
+
+    private void drawStatusEffects(Graphics g) {
+        if (isSlowed) {
+            drawEffectOverlay(g, new Color(0, 0, 255, 100));
+        }
+        if (isOnFire) {
+            drawEffectOverlay(g, new Color(255, 0, 0, 100));
+        }
+    }
+
+    private void drawEffectOverlay(Graphics g, Color color) {
+        g.setColor(color);
+        g.fillRect(x, y, getWidth(), getHeight());
+    }
+
+    public Rectangle getCollider() {
+        if (type == Type.NORMAL) {
+            return new Rectangle(x + 24, y + 3, NORMAL_SIZE - 32, NORMAL_SIZE - 9);
+        }
+        return new Rectangle(x, y, getWidth(), getHeight());
+    }
+
+    public void hit(int damage) {
+        hp -= damage;
+        isAlive = hp > 0;
+    }
+
+    public double getHp() {
+        return hp;
+    }
+
+    public int getWidth() {
+        return switch (type) {
+            case GIANT -> GIANT_SIZE;
+            case SMALL -> SMALL_SIZE;
+            case SHOOTING -> SHOOTING_SIZE;
+            default -> NORMAL_SIZE;
+        };
+    }
+
+    public int getHeight() {
+        return getWidth();
+    }
+
+    public int getDamage() {
+        return switch (type) {
+            case SHOOTING -> 20;
+            case SLIME -> 5;
+            case DARK_MAGE_BOSS -> 50;
+            default -> 10;
+        };
     }
 
     public int getX() {
@@ -321,8 +328,12 @@ public class Enemy {
     public int getY() {
         return y;
     }
+
+    public boolean isAlive() {
+        return isAlive;
+    }
+
     public Type getType() {
         return type;
     }
-
 }
