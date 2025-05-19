@@ -8,8 +8,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 public class GamePanel extends JPanel implements ActionListener {
-    public static final int PANEL_WIDTH = (int)(1530 * Game.getScaleFactor());
-    public static final int PANEL_HEIGHT = (int)(900 * Game.getScaleFactor());
+    public static final int PANEL_WIDTH = (int)Game.getRealScreenWidth();
+    public static final int PANEL_HEIGHT = (int)Game.getRealScreenHeight();
     public static final int BLOCK_SIZE = (int)(64 * Game.getScaleFactor());
     private JButton nextWaveButton;
     private AbilityPanel abilityPanel;
@@ -431,8 +431,6 @@ public class GamePanel extends JPanel implements ActionListener {
         cameraX = Math.max(0, Math.min(targetCameraX, mapWidth * BLOCK_SIZE - PANEL_WIDTH));
         cameraY = Math.max(0, Math.min(targetCameraY, mapHeight * BLOCK_SIZE - PANEL_HEIGHT));
     }
-
-
     private void drawBackground(Graphics g) {
         for (int y = 0; y < mapHeight; y++) {
             for (int x = 0; x < mapWidth; x++) {
