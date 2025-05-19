@@ -7,15 +7,20 @@ public class Game extends JFrame {
     private GamePanel gamePanel;
     private Player player;
     private static double scaleFactor = 1.0;
+    private static double realScreenWidth;
+    private static double realScreenHeight;
 
     public Game() {
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         int screenWidth = (int) screenSize.getWidth();
         int screenHeight = (int) screenSize.getHeight();
+        realScreenWidth = (int) screenSize.getWidth();
+        realScreenHeight = (int) screenSize.getHeight();
 
-        scaleFactor = Math.min((double)screenWidth / 1530, (double)screenHeight / 900);
+        scaleFactor = Math.min((double)screenWidth / GamePanel.PANEL_WIDTH,
+                (double)screenHeight / GamePanel.PANEL_HEIGHT);
 
-        player = new Player((int)(Player.PANEL_WIDTH * scaleFactor), (int)(Player.PANEL_HEIGHT * scaleFactor), 100);
+        player = new Player(0, 0, 100);
         gamePanel = new GamePanel(this, player);
 
         setUndecorated(true);
@@ -27,5 +32,13 @@ public class Game extends JFrame {
 
     public static double getScaleFactor() {
         return scaleFactor;
+    }
+
+    public static double getRealScreenWidth() {
+        return realScreenWidth;
+    }
+
+    public static double getRealScreenHeight() {
+        return realScreenHeight;
     }
 }
