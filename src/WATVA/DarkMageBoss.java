@@ -162,7 +162,7 @@ public class DarkMageBoss extends Enemy {
             int offsetX = (int) (Math.cos(angle) * radius);
             int offsetY = (int) (Math.sin(angle) * radius);
 
-            enemies.add(new Enemy(x + offsetX, y + offsetY, 50, Type.SHOOTING));
+            enemies.add(new Enemy(x + offsetX, y + offsetY, 50, Type.ZOMBIE));
         }
     }
 
