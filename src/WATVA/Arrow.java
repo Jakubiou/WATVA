@@ -6,7 +6,7 @@ import java.io.File;
 import java.io.IOException;
 
 public class Arrow {
-    public static final int SIZE = 25;
+    public static final int SIZE = 64;
     private int x, y;
     private int targetX, targetY;
     private int speed = 10;
@@ -27,11 +27,13 @@ public class Arrow {
         this.targetX = (int) (x + MAX_DISTANCE * Math.cos(angle));
         this.targetY = (int) (y + MAX_DISTANCE * Math.sin(angle));
 
-        bulletTextures = new Image[3];
+        bulletTextures = new Image[5];
         try {
-            bulletTextures[0] = ImageIO.read(new File("res/watva/bullets/Player_bullet1.png"));
-            bulletTextures[1] = ImageIO.read(new File("res/watva/bullets/Player_bullet2.png"));
-            bulletTextures[2] = ImageIO.read(new File("res/watva/bullets/Player_bullet3.png"));
+            bulletTextures[0] = ImageIO.read(new File("res/watva/weapons/knife/knife1.png"));
+            bulletTextures[1] = ImageIO.read(new File("res/watva/weapons/knife/knife2.png"));
+            bulletTextures[2] = ImageIO.read(new File("res/watva/weapons/knife/knife3.png"));
+            bulletTextures[3] = ImageIO.read(new File("res/watva/weapons/knife/knife4.png"));
+            bulletTextures[4] = ImageIO.read(new File("res/watva/weapons/knife/knife5.png"));
         } catch (IOException e) {
             e.printStackTrace();
         }
