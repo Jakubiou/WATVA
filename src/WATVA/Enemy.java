@@ -17,13 +17,14 @@ public class Enemy {
     private static final int SCREEN_HEIGHT = 3600;
 
     public enum Type {
-        NORMAL, GIANT, SMALL, SHOOTING, SLIME, DARK_MAGE_BOSS, BUNNY_BOSS
+        NORMAL, GIANT, SMALL, SHOOTING, SLIME, DARK_MAGE_BOSS, BUNNY_BOSS,ZOMBIE
     }
 
     public static final int NORMAL_SIZE = scale(37);
     public static final int GIANT_SIZE = scale(128);
     public static final int SMALL_SIZE = scale(32);
     public static final int SHOOTING_SIZE = scale(60);
+    public static final int ZOMBIE_SIZE = scale(50);
 
     private final List<EnemyProjectile> projectiles;
     private final Type type;
@@ -67,10 +68,10 @@ public class Enemy {
 
     private void initializeSpeed() {
         switch (type) {
-            case NORMAL -> baseSpeed = 2 * Game.getScaleFactor();
             case GIANT -> baseSpeed = 1.5 * Game.getScaleFactor();
             case SMALL -> baseSpeed = 2.5 * Game.getScaleFactor();
             case SHOOTING -> baseSpeed = 1.8 * Game.getScaleFactor();
+            default -> baseSpeed = 2 * Game.getScaleFactor();
         }
         currentSpeed = baseSpeed;
     }
@@ -79,6 +80,7 @@ public class Enemy {
         try {
             switch (type) {
                 case NORMAL -> loadAnimationTextures("knight", 4, 1, 5);
+                case ZOMBIE -> loadAnimationTextures("zombie", 4, 1, 5);
                 case GIANT -> loadAnimationTextures("golem", 6, 7, 1);
                 case SMALL -> staticTexture = loadTexture("res/watva/enemy/small/small.png");
                 case SHOOTING -> staticTexture = loadTexture("res/watva/enemy/mage/mage1.png");
@@ -157,6 +159,7 @@ public class Enemy {
 
     private int getFrameCount() {
         return type == Type.NORMAL ? 4 :
+                type == Type.ZOMBIE ? 4 :
                 type == Type.GIANT ? 6 : 1;
     }
 
@@ -252,14 +255,19 @@ public class Enemy {
 
     private void drawEnemyTexture(Graphics g) {
         switch (type) {
-            case NORMAL, GIANT -> drawAnimatedEnemy(g);
+            case NORMAL, GIANT, ZOMBIE -> drawAnimatedEnemy(g);
             case SMALL, SHOOTING -> drawStaticEnemy(g);
         }
     }
 
     private void drawAnimatedEnemy(Graphics g) {
         Image[] textures = movingRight ? rightTextures : leftTextures;
-        int size = type == Type.NORMAL ? NORMAL_SIZE : GIANT_SIZE;
+        int size;
+        switch (type){
+            case ZOMBIE-> size = ZOMBIE_SIZE;
+            case GIANT -> size = GIANT_SIZE;
+            default -> size = NORMAL_SIZE;
+        }
         g.drawImage(textures[currentFrame], x, y, size, size, null);
     }
 
