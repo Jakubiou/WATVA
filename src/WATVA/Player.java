@@ -12,8 +12,8 @@ import java.util.Iterator;
 import static com.sun.java.accessibility.util.AWTEventMonitor.addMouseMotionListener;
 
 public class Player implements Serializable {
-    protected static int WIDTH = (int)(48 * Game.getScaleFactor());
-    public static final int HEIGHT = (int)(48 * Game.getScaleFactor());
+    protected static int WIDTH = (int)(50 * Game.getScaleFactor());
+    public static final int HEIGHT = (int)(50 * Game.getScaleFactor());
     private ArrayList<Explosion> explosions = new ArrayList<>();
     private long explosionCooldown = 5000;
     private long lastExplosionTime = 0;
@@ -26,15 +26,15 @@ public class Player implements Serializable {
     private int damage = 5;
     private int attackSpeed = 5;
     private int defense = 0;
-    private boolean up, down, left, right;
+    private boolean up, down, left, right,idle;
     private int currentFrame = 0;
     private long lastFrameChange = 0;
     private long frameDuration = 200;
     private transient Image[] rightTextures, leftTextures, idleTextures, upTextures, downTextures;
     private transient Image hpBarFrame1, hpBarFrame2, hpBarFrame3;
 
-    public static final int PANEL_WIDTH = 6120;
-    public static final int PANEL_HEIGHT = 3600;
+    public static final int PANEL_WIDTH = GamePanel.PANEL_WIDTH * 4;
+    public static final int PANEL_HEIGHT = GamePanel.PANEL_HEIGHT * 4;
     private boolean dashing = false;
     private int dashDistance = 100;
     private int dashDirectionX = 0, dashDirectionY = 0;
@@ -66,6 +66,10 @@ public class Player implements Serializable {
     private static final int MAX_SHIELD_HP = 100;
     private static final long SHIELD_REGENERATION_INTERVAL = 1000;
     private long lastShieldRegenerationTime = 0;
+
+    private long lastMovementTime = System.currentTimeMillis();
+    private long idleAnimationStartTime = 0;
+    private static final long IDLE_TRIGGER_DELAY = 500;
 
 
     public Player(int x, int y, int hp) {
@@ -120,14 +124,16 @@ public class Player implements Serializable {
     public void draw(Graphics g) {
         Image[] textures = idleTextures;
 
-        if (right) {
-            textures = rightTextures;
-        } else if (left) {
-            textures = leftTextures;
-        } else if (up) {
-            textures = upTextures;
-        } else if (down) {
-            textures = downTextures;
+        if(!idle) {
+            if (right) {
+                textures = rightTextures;
+            } else if (left) {
+                textures = leftTextures;
+            } else if (up) {
+                textures = upTextures;
+            } else if (down) {
+                textures = downTextures;
+            }
         }
 
         g.drawImage(textures[currentFrame], x, y, WIDTH, HEIGHT, null);
@@ -260,8 +266,9 @@ public class Player implements Serializable {
 
     public void move() {
         boolean moving = false;
-        int edgeLimit = 61;
+        int edgeLimit = 54;
         long currentTime = System.currentTimeMillis();
+
         if (shieldLevel > 0 && currentTime - lastShieldRegenerationTime >= SHIELD_REGENERATION_INTERVAL) {
             shieldHP = Math.min(shieldHP + 1, MAX_SHIELD_HP);
             lastShieldRegenerationTime = currentTime;
@@ -272,53 +279,79 @@ public class Player implements Serializable {
         }
 
         if (dashing) {
-            x += dashDirectionX * dashSpeed;
-            y += dashDirectionY * dashSpeed;
+            int newX = x + dashDirectionX * dashSpeed;
+            int newY = y + dashDirectionY * dashSpeed;
+
+            if (newX >= edgeLimit && newX + WIDTH <= GamePanel.mapWidth * GamePanel.BLOCK_SIZE - edgeLimit &&
+                    newY >= edgeLimit && newY + HEIGHT <= GamePanel.mapHeight * GamePanel.BLOCK_SIZE - edgeLimit) {
+                x = newX;
+                y = newY;
+            }
+
             dashProgress += dashSpeed;
 
-            if (dashProgress >= dashDistance || x < edgeLimit || y < edgeLimit ||
-                    x + WIDTH > PANEL_WIDTH - edgeLimit || y + HEIGHT > PANEL_HEIGHT - edgeLimit) {
+            if (dashProgress >= dashDistance) {
                 dashing = false;
             }
+            lastMovementTime = currentTime;
+            idle = false;
             return;
         }
 
-        if (up && y - speed >= edgeLimit) {
-            y -= speed;
-            moving = true;
+        if (up) {
+            int newY = y - speed;
+            if (newY >= edgeLimit) {
+                y = newY;
+                moving = true;
+            }
         }
 
-        if (down && y + speed + HEIGHT <= PANEL_HEIGHT - edgeLimit + 25) {
-            y += speed;
-            moving = true;
+        if (down) {
+            int newY = y + speed;
+            if (newY + HEIGHT <= GamePanel.mapHeight * GamePanel.BLOCK_SIZE - edgeLimit) {
+                y = newY;
+                moving = true;
+            }
         }
 
-        if (left && x - speed >= edgeLimit) {
-            x -= speed;
-            moving = true;
+        if (left) {
+            int newX = x - speed;
+            if (newX >= edgeLimit) {
+                x = newX;
+                moving = true;
+            }
         }
 
-        if (right && x + speed + WIDTH <= PANEL_WIDTH - edgeLimit) {
-            x += speed;
-            moving = true;
+        if (right) {
+            int newX = x + speed;
+            if (newX + WIDTH <= GamePanel.mapWidth * GamePanel.BLOCK_SIZE - edgeLimit) {
+                x = newX;
+                moving = true;
+            }
         }
-
-        if (x < edgeLimit) x = edgeLimit;
-        if (y < edgeLimit) y = edgeLimit;
-        if (x + WIDTH > PANEL_WIDTH - edgeLimit) x = PANEL_WIDTH - edgeLimit - WIDTH;
-        if (y + HEIGHT > PANEL_HEIGHT - edgeLimit) y = PANEL_HEIGHT - edgeLimit - HEIGHT;
 
         if (moving) {
+            lastMovementTime = currentTime;
+            idle = false;
             if (currentTime - lastFrameChange >= frameDuration) {
                 currentFrame = (currentFrame + 1) % 4;
                 lastFrameChange = currentTime;
             }
         } else {
-            currentFrame = 0;
+            if (!idle && currentTime - lastMovementTime > IDLE_TRIGGER_DELAY) {
+                idle = true;
+                idleAnimationStartTime = currentTime;
+                currentFrame = 0;
+            }
+
+            if (idle && currentTime - lastFrameChange >= frameDuration) {
+                currentFrame = (currentFrame + 1) % idleTextures.length;
+                lastFrameChange = currentTime;
+            }
         }
+
         updateExplosions();
     }
-
 
     public void keyPressed(KeyEvent e) {
         int key = e.getKeyCode();
