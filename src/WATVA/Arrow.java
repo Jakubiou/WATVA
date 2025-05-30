@@ -16,12 +16,16 @@ public class Arrow {
     private int currentFrame = 0;
     private long lastFrameChange = 0;
     private long frameDuration = 100;
-    private int pierceCount = 1;
-    private boolean giantArrow;
+    private int pierceCount;
+    private int fireDamageLevel;
+    private boolean slowEffect;
 
-    public Arrow(int x, int y, int targetX, int targetY) {
+    public Arrow(int x, int y, int targetX, int targetY, int piercingLevel, int fireLevel, boolean hasSlowEffect) {
         this.x = x;
         this.y = y;
+        this.pierceCount = 1 + piercingLevel;
+        this.fireDamageLevel = fireLevel;
+        this.slowEffect = hasSlowEffect;
 
         double angle = Math.atan2(targetY - y, targetX - x);
         this.targetX = (int) (x + MAX_DISTANCE * Math.cos(angle));
@@ -72,6 +76,14 @@ public class Arrow {
 
     public int getY() {
         return y;
+    }
+
+    public int getFireDamageLevel() {
+        return fireDamageLevel;
+    }
+
+    public boolean hasSlowEffect() {
+        return slowEffect;
     }
 
 }
