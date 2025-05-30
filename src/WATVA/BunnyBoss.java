@@ -44,6 +44,7 @@ public class BunnyBoss extends Enemy {
     private boolean isJumpAttack = false;
     private int jumpAttackCount = 0;
     private static final int JUMP_ATTACK_MAX_COUNT = 5;
+    private transient Image hpBarFrame1;
 
 
     public BunnyBoss(int x, int y, int hp) {
@@ -58,6 +59,7 @@ public class BunnyBoss extends Enemy {
             for (int i = 0; i < 6; i++) {
                 bunnyTexturesLeft[i] = ImageIO.read(new File("res/watva/boss/bunny/bunny" + (i + 1) + ".png"));
             }
+            hpBarFrame1 = ImageIO.read(new File("res/watva/boss/bunny/BunnyHPBar1.png"));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -168,6 +170,40 @@ public class BunnyBoss extends Enemy {
 
             if (isFalling) {
 
+            }
+        }
+        if (this.hp > 0) {
+            int hpBarWidth = (int)(300 * Game.getScaleFactor());
+            int hpBarHeight = (int)(30 * Game.getScaleFactor());
+            int hpBarX = (GamePanel.PANEL_WIDTH - hpBarWidth) / 2;
+            int hpBarY = GamePanel.PANEL_HEIGHT - hpBarHeight - (int)(10 * Game.getScaleFactor());
+
+            g.setColor(new Color(50, 50, 50));
+            g.fillRect(hpBarX + GamePanel.cameraX, hpBarY + GamePanel.cameraY, hpBarWidth, hpBarHeight);
+
+            g.setColor(Color.RED);
+            int redWidth = (int)(Math.min(this.hp, 500) * hpBarWidth / 500);
+            g.fillRect(hpBarX + GamePanel.cameraX, hpBarY + GamePanel.cameraY, redWidth, hpBarHeight);
+
+            g.setColor(Color.BLACK);
+            int numSections = 10;
+            int sectionWidth = hpBarWidth / numSections;
+            for (int i = 1; i < numSections; i++) {
+                int sectionX = hpBarX + sectionWidth * i + GamePanel.cameraX;
+                g.drawLine(sectionX, hpBarY + GamePanel.cameraY,
+                        sectionX, hpBarY + hpBarHeight + GamePanel.cameraY);
+            }
+
+            g.setColor(Color.BLACK);
+            g.drawRect(hpBarX + GamePanel.cameraX, hpBarY + GamePanel.cameraY, hpBarWidth, hpBarHeight);
+
+            if (hpBarFrame1 != null) {
+                int frameWidth = (int)((hpBarWidth + 96) * Game.getScaleFactor());
+                int frameHeight = (int)((hpBarHeight * 4.4) * Game.getScaleFactor());
+                int frameX = hpBarX + GamePanel.cameraX - (int)(54 * Game.getScaleFactor());
+                int frameY = hpBarY + GamePanel.cameraY - (int)(58 * Game.getScaleFactor());
+
+                g.drawImage(hpBarFrame1, frameX, frameY, frameWidth, frameHeight, null);
             }
         }
     }
