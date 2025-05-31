@@ -11,7 +11,6 @@ public class GamePanel extends JPanel implements ActionListener {
     public static final int PANEL_WIDTH = (int)Game.getRealScreenWidth();
     public static final int PANEL_HEIGHT = (int)Game.getRealScreenHeight();
     public static final int BLOCK_SIZE = (int)(64 * Game.getScaleFactor());
-    private JButton nextWaveButton;
     private AbilityPanel abilityPanel;
     private boolean abilityPanelVisible;
     private boolean upgradePanelVisible;
@@ -208,25 +207,7 @@ public class GamePanel extends JPanel implements ActionListener {
         gameOverPanel.setVisible(false);
         add(gameOverPanel);
 
-
         spawningEnemies = new SpawningEnemies(this, enemies);
-
-        nextWaveButton = new JButton();
-        nextWaveButton.setBounds(10, 60, 200, 50);
-
-        ImageIcon normalIcon = new ImageIcon(new ImageIcon("res/buttons/NextWave_button1.png").getImage().getScaledInstance(200, 50, Image.SCALE_SMOOTH));
-        ImageIcon rolloverIcon = new ImageIcon(new ImageIcon("res/buttons/NextWave_button2.png").getImage().getScaledInstance(200, 50, Image.SCALE_SMOOTH));
-        nextWaveButton.setIcon(normalIcon);
-        nextWaveButton.setRolloverIcon(rolloverIcon);
-
-        nextWaveButton.setBorderPainted(false);
-        nextWaveButton.setContentAreaFilled(false);
-        nextWaveButton.setFocusPainted(false);
-        nextWaveButton.setOpaque(false);
-
-        nextWaveButton.setVisible(false);
-        nextWaveButton.addActionListener(e -> startNextWave());
-        add(nextWaveButton);
 
         addKeyListener(new KeyAdapter() {
             @Override
@@ -324,9 +305,7 @@ public class GamePanel extends JPanel implements ActionListener {
         startGame();
     }
 
-
-    private void startNextWave() {
-        nextWaveButton.setVisible(false);
+    public void startNextWaveAfterAbility() {
         abilityPanel.hidePanel();
         nextWave();
     }
@@ -374,7 +353,6 @@ public class GamePanel extends JPanel implements ActionListener {
                 }
             }
 
-
             if (bossExists) {
                 waveComplete = bossDeathAnimationComplete;
             } else {
@@ -383,7 +361,6 @@ public class GamePanel extends JPanel implements ActionListener {
 
             if (waveComplete && !gameOver) {
                 stopGame();
-                nextWaveButton.setVisible(true);
                 abilityPanel.showPanel();
             }
 
@@ -398,6 +375,7 @@ public class GamePanel extends JPanel implements ActionListener {
             repaint();
         }
     }
+
     public static void killCountPlus(){
         killCount++;
     }
