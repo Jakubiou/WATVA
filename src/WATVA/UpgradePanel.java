@@ -1,47 +1,92 @@
 package WATVA;
 import java.awt.*;
 import javax.swing.*;
+import java.io.FileInputStream;
+import java.util.HashMap;
+import java.util.Map;
 
 public class UpgradePanel extends JPanel {
     private final Player player;
     private final GamePanel gamePanel;
     private boolean visible;
+    private JLabel coinsLabel;
+    private Map<String, Integer> baseCosts;
+    private Map<String, Integer> maxLevels;
+    private Font pixelPurlFont;
 
-    public UpgradePanel(GamePanel gamePanel,Player player) {
+    public UpgradePanel(GamePanel gamePanel, Player player) {
         this.gamePanel = gamePanel;
         this.player = player;
+        initializeBaseCosts();
         initializeUpgradePanel();
+        try {
+            FileInputStream fontStream = new FileInputStream("res/fonts/PixelPurl.ttf");
+            pixelPurlFont = Font.createFont(Font.TRUETYPE_FONT, fontStream).deriveFont(24f);
+        } catch (Exception e) {
+            pixelPurlFont = new Font("Arial", Font.BOLD, 24);
+            e.printStackTrace();
+        }
+    }
+
+    private void initializeBaseCosts() {
+        baseCosts = new HashMap<>();
+        baseCosts.put("Damage", 10);
+        baseCosts.put("HP", 15);
+        baseCosts.put("Defense", 20);
+
+        maxLevels = new HashMap<>();
+        maxLevels.put("Damage", 999);
+        maxLevels.put("HP", 40);
+        maxLevels.put("Defense", 50);
     }
 
     private void initializeUpgradePanel() {
-        setLayout(new GridLayout(3, 1));
+        setLayout(new BorderLayout());
 
-        int panelWidth = 400;
-        int panelHeight = 300;
+        int panelWidth = 500;
+        int panelHeight = 400;
         setBounds((GamePanel.PANEL_WIDTH - panelWidth) / 2, (GamePanel.PANEL_HEIGHT - panelHeight) / 2, panelWidth, panelHeight);
 
-        setBackground(Color.DARK_GRAY);
-        setBorder(BorderFactory.createLineBorder(Color.BLACK, 5));
+        setBackground(new Color(40, 40, 50));
+        setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.ORANGE, 3),
+                BorderFactory.createEmptyBorder(20, 20, 20, 20)
+        ));
 
-        JLabel coinsLabel = new JLabel("Coins: " + player.getCoins(), JLabel.CENTER);
-        coinsLabel.setForeground(Color.WHITE);
-        coinsLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        add(coinsLabel);
+        coinsLabel = new JLabel("Coins: " + player.getCoins(), JLabel.CENTER);
+        coinsLabel.setForeground(Color.YELLOW);
+        coinsLabel.setFont(pixelPurlFont);
+        coinsLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
+        add(coinsLabel, BorderLayout.NORTH);
 
-        JButton damageButton = createUpgradeButton("Damage");
-        JButton hpButton = createUpgradeButton("HP");
-        JButton defenseButton = createUpgradeButton("Defense");
-        JButton playAgainButton = createUpgradeButton("Play again");
+        JPanel upgradesPanel = new JPanel(new GridLayout(3, 1, 0, 15));
+        upgradesPanel.setBackground(new Color(40, 40, 50));
 
-        damageButton.addActionListener(e -> upgradeStat("damage", 10));
-        hpButton.addActionListener(e -> upgradeStat("HP", 10));
-        defenseButton.addActionListener(e -> upgradeStat("defense", 10));
-        playAgainButton.addActionListener(e -> upgradeStat("play again", 0));
+        upgradesPanel.add(createUpgradeButton("Damage"));
+        upgradesPanel.add(createUpgradeButton("HP"));
+        upgradesPanel.add(createUpgradeButton("Defense"));
 
-        add(damageButton);
-        add(hpButton);
-        add(defenseButton);
-        add(playAgainButton);
+        add(upgradesPanel, BorderLayout.CENTER);
+
+        JPanel bottomPanel = new JPanel(new FlowLayout());
+        bottomPanel.setBackground(new Color(40, 40, 50));
+
+        JButton playAgainButton = new JButton("Play Again");
+        playAgainButton.setFont(pixelPurlFont);
+        playAgainButton.setBackground(new Color(60, 120, 60));
+        playAgainButton.setForeground(Color.WHITE);
+        playAgainButton.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.GREEN, 2),
+                BorderFactory.createEmptyBorder(10, 20, 10, 20)
+        ));
+        playAgainButton.setFocusPainted(false);
+        playAgainButton.addActionListener(e -> {
+            gamePanel.restartGame();
+            hidePanel();
+        });
+
+        bottomPanel.add(playAgainButton);
+        add(bottomPanel, BorderLayout.SOUTH);
 
         setVisible(false);
     }
@@ -50,26 +95,56 @@ public class UpgradePanel extends JPanel {
         JButton button = new JButton() {
             @Override
             public void paintComponent(Graphics g) {
-                super.paintComponent(g);
+                g.setColor(getBackground());
+                g.fillRect(0, 0, getWidth(), getHeight());
+
+                g.setColor(getForeground());
+                g.drawRect(0, 0, getWidth() - 1, getHeight() - 1);
+                g.drawRect(1, 1, getWidth() - 3, getHeight() - 3);
+
                 g.setColor(Color.WHITE);
-                g.setFont(new Font("Arial", Font.BOLD, 20));
-                String text = String.format("%s +\nCurrent: %d", statName, getCurrentStatValue(statName));
-                drawCenteredString(g, text, getWidth(), getHeight());
+                g.setFont(pixelPurlFont);
+
+                int currentValue = getCurrentStatValue(statName);
+                int cost = calculateCost(statName);
+                boolean isMaxed = isStatMaxed(statName);
+
+                String mainText = statName + " Upgrade";
+                String currentText = "Current: " + currentValue;
+                String costText = isMaxed ? "MAX LEVEL" : "Cost: " + cost + " coins";
+
+                FontMetrics fm = g.getFontMetrics();
+                int textHeight = fm.getHeight();
+                int y = (getHeight() - (textHeight * 3)) / 2 + fm.getAscent();
+
+                int x = (getWidth() - fm.stringWidth(mainText)) / 2;
+                g.drawString(mainText, x, y);
+                y += textHeight;
+
+                g.setColor(Color.CYAN);
+                x = (getWidth() - fm.stringWidth(currentText)) / 2;
+                g.drawString(currentText, x, y);
+                y += textHeight;
+
+                if (isMaxed) {
+                    g.setColor(Color.RED);
+                } else {
+                    g.setColor(player.getCoins() >= cost ? Color.GREEN : Color.RED);
+                }
+                x = (getWidth() - fm.stringWidth(costText)) / 2;
+                g.drawString(costText, x, y);
             }
         };
-        styleAbilityButton(button);
-        return button;
-    }
 
-    private void drawCenteredString(Graphics g, String text, int width, int height) {
-        FontMetrics metrics = g.getFontMetrics();
-        String[] lines = text.split("\\n");
-        int y = (height - metrics.getHeight() * lines.length) / 2 + metrics.getAscent();
-        for (String line : lines) {
-            int x = (width - metrics.stringWidth(line)) / 2;
-            g.drawString(line, x, y);
-            y += metrics.getHeight();
-        }
+        button.setPreferredSize(new Dimension(400, 80));
+        button.setBackground(new Color(70, 70, 80));
+        button.setForeground(Color.WHITE);
+        button.setBorder(null);
+        button.setFocusPainted(false);
+
+        button.addActionListener(e -> upgradeStat(statName));
+
+        return button;
     }
 
     private int getCurrentStatValue(String statName) {
@@ -85,44 +160,65 @@ public class UpgradePanel extends JPanel {
         }
     }
 
-    private void styleAbilityButton(JButton button) {
-        button.setFont(new Font("Arial", Font.BOLD, 20));
-        button.setBackground(Color.GRAY);
-        button.setForeground(Color.WHITE);
-        button.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
-        button.setFocusPainted(false);
+    private int calculateCost(String statName) {
+        int baseCost = baseCosts.get(statName);
+        int currentLevel = getCurrentUpgradeLevel(statName);
+
+        return (int) (baseCost * Math.pow(1.2, currentLevel));
     }
 
-    private void upgradeStat(String stat, int cost) {
+    private int getCurrentUpgradeLevel(String statName) {
+        switch (statName) {
+            case "Damage":
+                return player.getDamage() - 1;
+            case "HP":
+                int baseHp = 100;
+                return Math.max(0, (player.getHp() - baseHp) / 10);
+            case "Defense":
+                return player.getDefense();
+            default:
+                return 0;
+        }
+    }
+
+    private boolean isStatMaxed(String statName) {
+        int currentLevel = getCurrentUpgradeLevel(statName);
+        return currentLevel >= maxLevels.get(statName);
+    }
+
+    private void upgradeStat(String stat) {
+        if (isStatMaxed(stat)) {
+            return;
+        }
+
+        int cost = calculateCost(stat);
+
         if (player.getCoins() >= cost) {
             player.setCoins(player.getCoins() - cost);
-            switch (stat.toLowerCase()) {
-                case "damage":
+
+            switch (stat) {
+                case "Damage":
                     player.increaseDamage();
                     break;
-                case "hp":
+                case "HP":
                     player.increaseHp();
                     break;
-                case "defense":
+                case "Defense":
                     player.increaseDefense();
                     break;
-                case "play again":
-                    gamePanel.restartGame();
-                    break;
-                default:
-                    System.err.println("Unknown stat: " + stat);
             }
+
             player.saveState("player_save.dat");
             updateAbilityPanel();
-        } else {
-            System.out.println("Not enough coins!");
         }
     }
 
     public void updateAbilityPanel() {
-        ((JLabel) getComponent(0)).setText("Coins: " + player.getCoins());
+        coinsLabel.setFont(pixelPurlFont);
+        coinsLabel.setText("Coins: " + player.getCoins());
         repaint();
     }
+
     public void showPanel() {
         setVisible(true);
         updateAbilityPanel();
