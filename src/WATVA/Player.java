@@ -23,7 +23,7 @@ public class Player implements Serializable {
     private int dashSpeed = (int)(20 * Game.getScaleFactor());
     private int heal = 0;
     private int coins = 0;
-    private int damage = 5;
+    private int damage = 1;
     private int attackSpeed = 5;
     private int defense = 0;
     private boolean up, down, left, right,idle;
@@ -41,19 +41,14 @@ public class Player implements Serializable {
     private int dashProgress = 0;
     private long dashCooldown = 5000;
     private long lastDashTime = 0;
-    private boolean meleeMode = false;
     private int mouseX, mouseY;
-    private long meleeAttackStartTime = 0;
 
     private int maxHp;
-    private static final long MELEE_ATTACK_DURATION = 50;
     private static final long serialVersionUID = 1L;
     protected static Soundtrack punchSound;
     private boolean isExplosionActive = false;
     private boolean isDoubleShotActive = false;
     private boolean isForwardBackwardShotActive = false;
-    private transient MeleeAttack meleeAttack;
-    private boolean isMeleeMode = false;
 
     private int piercingArrowsLevel = 0;
     private boolean slowEnemiesUnlocked = false;
@@ -66,6 +61,7 @@ public class Player implements Serializable {
     private static final int MAX_SHIELD_HP = 100;
     private static final long SHIELD_REGENERATION_INTERVAL = 1000;
     private long lastShieldRegenerationTime = 0;
+    private int slowEnemiesLevel = 0;
 
     private long lastMovementTime = System.currentTimeMillis();
     private long idleAnimationStartTime = 0;
@@ -100,13 +96,12 @@ public class Player implements Serializable {
         downTextures = loadTextures("Player13", "Player14", "Player15", "Player16");
         idleTextures = loadTextures("Player17", "Player18", "Player19", "Player20");
         try {
-            hpBarFrame1 = ImageIO.read(new File("res/watva/background/HPBar1.png"));
-            hpBarFrame2 = ImageIO.read(new File("res/watva/background/HPBar2.png"));
-            hpBarFrame3 = ImageIO.read(new File("res/watva/background/HPBar3.png"));
+            hpBarFrame1 = ImageIO.read(new File("res/watva/player/HPBar1.png"));
+            hpBarFrame2 = ImageIO.read(new File("res/watva/player/HPBar2.png"));
+            hpBarFrame3 = ImageIO.read(new File("res/watva/player/HPBar3.png"));
         } catch (IOException e) {
             e.printStackTrace();
         }
-        meleeAttack = new MeleeAttack(0, 0, 0);
     }
 
     private Image[] loadTextures(String... filenames) {
@@ -144,10 +139,10 @@ public class Player implements Serializable {
         }
         drawExplosionCooldown(g);
 
-        int hpBarWidth = (int)(200 * Game.getScaleFactor());
-        int hpBarHeight = (int)(20 * Game.getScaleFactor());
+        int hpBarWidth = (int)(270 * Game.getScaleFactor());
+        int hpBarHeight = (int)(30 * Game.getScaleFactor());
         int hpBarX = GamePanel.PANEL_WIDTH - hpBarWidth - 10 + GamePanel.cameraX;
-        int hpBarY = 29 + GamePanel.cameraY;
+        int hpBarY = 35 + GamePanel.cameraY;
 
         if (hp > 0) {
             g.setColor(Color.BLACK);
@@ -166,7 +161,7 @@ public class Player implements Serializable {
             g.setColor(Color.RED);
             g.fillRect(hpBarX, hpBarY, redWidth, hpBarHeight);
             if (hpBarFrame1 != null) {
-                g.drawImage(hpBarFrame1, hpBarX - 35, hpBarY - 30, hpBarWidth + 35, hpBarHeight + 45, null);
+                g.drawImage(hpBarFrame1, hpBarX - 37, hpBarY - 30, hpBarWidth + 40, hpBarHeight + 45, null);
             }
         }
 
@@ -175,7 +170,7 @@ public class Player implements Serializable {
             g.setColor(Color.MAGENTA);
             g.fillRect(hpBarX, hpBarY, purpleWidth, hpBarHeight);
             if (hpBarFrame2 != null) {
-                g.drawImage(hpBarFrame2, hpBarX - 35, hpBarY - 30, hpBarWidth + 35, hpBarHeight + 45, null);
+                g.drawImage(hpBarFrame2, hpBarX - 37, hpBarY - 30, hpBarWidth + 40, hpBarHeight + 45, null);
             }
         }
 
@@ -184,7 +179,7 @@ public class Player implements Serializable {
             g.setColor(Color.YELLOW);
             g.fillRect(hpBarX, hpBarY, goldWidth, hpBarHeight);
             if (hpBarFrame3 != null) {
-                g.drawImage(hpBarFrame3, hpBarX - 35, hpBarY - 30, hpBarWidth + 35, hpBarHeight + 45, null);
+                g.drawImage(hpBarFrame3, hpBarX - 37, hpBarY - 30, hpBarWidth + 40, hpBarHeight + 45, null);
             }
         }
 
@@ -192,45 +187,9 @@ public class Player implements Serializable {
             g.setColor(Color.BLACK);
             for (int i = 1; i <= 9; i++) {
                 int dividerX = hpBarX + (i * hpBarWidth / 10);
-                g.drawLine(dividerX, hpBarY - 3, dividerX, hpBarY + hpBarHeight);
+                g.drawLine(dividerX, hpBarY , dividerX, hpBarY + hpBarHeight);
             }
         }
-        if (isMeleeMode && System.currentTimeMillis() - meleeAttackStartTime < MELEE_ATTACK_DURATION) {
-            meleeAttack.draw((Graphics2D) g);
-        }
-    }
-
-    public void toggleMeleeMode() {
-        isMeleeMode = !isMeleeMode;
-    }
-
-    public boolean isMeleeMode() {
-        return isMeleeMode;
-    }
-    public boolean isMeleeAttackActive() {
-        return isMeleeMode;
-    }
-
-    public MeleeAttack getMeleeAttack() {
-        return meleeAttack;
-    }
-
-    public void performMeleeAttack(int mouseX, int mouseY) {
-        if (!isMeleeMode) return;
-
-        int centerX = x + WIDTH / 2;
-        int centerY = y + HEIGHT / 2;
-        int angle = (int) Math.toDegrees(Math.atan2(mouseY - centerY, mouseX - centerX));
-
-        meleeAttack.setPosition(centerX, centerY, angle);
-        meleeAttackStartTime = System.currentTimeMillis();
-        if (punchSound != null) {
-            punchSound.playOnce();
-        }
-    }
-
-    public long getMeleeAttackStartTime() {
-        return meleeAttackStartTime;
     }
 
     private void drawDashCooldown(Graphics g) {
@@ -582,15 +541,18 @@ public class Player implements Serializable {
     }
     public void hitEnemy(Enemy enemy) {
         if (slowEnemiesUnlocked) {
-            enemy.applySlow(3000);
+            enemy.applySlow(1000 + (slowEnemiesLevel * 1000));
         }
         if (fireDamageLevel > 0) {
-            enemy.setFire(fireDamageLevel, 3000);
+            enemy.setFire(5 + (fireDamageLevel * 5), 3000);
         }
     }
-
-
-
+    public void upgradeSlow() {
+        if (slowEnemiesLevel < 3) {
+            slowEnemiesLevel++;
+        }
+        slowEnemiesUnlocked = true;
+    }
     public void upgradePiercing() {
         if (piercingArrowsLevel < 3) piercingArrowsLevel++;
     }
@@ -619,9 +581,6 @@ public class Player implements Serializable {
         }
     }
 
-    public int getPiercingLevel() { return piercingArrowsLevel; }
-    public boolean hasSlowEnemies() { return slowEnemiesUnlocked; }
-    public int getFireLevel() { return fireDamageLevel; }
     public int getShieldLevel() { return shieldLevel; }
 
     public void hit(int damage) {
@@ -632,7 +591,7 @@ public class Player implements Serializable {
                 hp -= remainingDamage;
             }
         } else {
-            hp -= damage;
+            hp  -= damage;
         }
         if (hp < 0) hp = 0;
     }
@@ -643,5 +602,19 @@ public class Player implements Serializable {
             shieldHP = MAX_SHIELD_HP;
         }
     }
+    public int getPiercingLevel() {
+        return piercingArrowsLevel;
+    }
 
+    public int getFireLevel() {
+        return fireDamageLevel;
+    }
+
+    public int getSlowLevel() {
+        return slowEnemiesLevel;
+    }
+
+    public boolean hasSlowEnemies() {
+        return slowEnemiesUnlocked;
+    }
 }
