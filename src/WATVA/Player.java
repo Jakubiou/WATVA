@@ -14,38 +14,40 @@ import static com.sun.java.accessibility.util.AWTEventMonitor.addMouseMotionList
 public class Player implements Serializable {
     protected static int WIDTH = (int)(50 * Game.getScaleFactor());
     public static final int HEIGHT = (int)(50 * Game.getScaleFactor());
+    public static final int PANEL_WIDTH = GamePanel.PANEL_WIDTH * 4;
+    public static final int PANEL_HEIGHT = GamePanel.PANEL_HEIGHT * 4;
+    public static final int MAX_SHIELD_HP = 100;
+    public static final long SHIELD_REGENERATION_INTERVAL = 1000;
+    public static final long IDLE_TRIGGER_DELAY = 500;
+
     private ArrayList<Explosion> explosions = new ArrayList<>();
-    private long explosionCooldown = 5000;
-    private long lastExplosionTime = 0;
-    private int explosionRange = 100;
     private int x, y, hp;
+    private int maxHp;
     private int speed = (int)(5 * Game.getScaleFactor());
     private int dashSpeed = (int)(20 * Game.getScaleFactor());
-    private int heal = 0;
+    private int dashDistance = 100;
+    private long dashCooldown = 5000;
+    private long lastDashTime = 0;
     private int coins = 0;
     private int damage = 1;
     private int attackSpeed = 5;
     private int defense = 0;
-    private boolean up, down, left, right,idle;
+    private static final int MAX_DEFENSE = 50;
+
     private int currentFrame = 0;
     private long lastFrameChange = 0;
     private long frameDuration = 200;
-    private transient Image[] rightTextures, leftTextures, idleTextures, upTextures, downTextures;
-    private transient Image hpBarFrame1, hpBarFrame2, hpBarFrame3;
+    private long lastMovementTime = System.currentTimeMillis();
+    private long idleAnimationStartTime = 0;
 
-    public static final int PANEL_WIDTH = GamePanel.PANEL_WIDTH * 4;
-    public static final int PANEL_HEIGHT = GamePanel.PANEL_HEIGHT * 4;
-    private boolean dashing = false;
-    private int dashDistance = 100;
-    private int dashDirectionX = 0, dashDirectionY = 0;
-    private int dashProgress = 0;
-    private long dashCooldown = 5000;
-    private long lastDashTime = 0;
+    private long explosionCooldown = 5000;
+    private long lastExplosionTime = 0;
+    private int explosionRange = 100;
+
     private int mouseX, mouseY;
-
-    private int maxHp;
     private static final long serialVersionUID = 1L;
     protected static Soundtrack punchSound;
+
     private boolean isExplosionActive = false;
     private boolean isDoubleShotActive = false;
     private boolean isForwardBackwardShotActive = false;
@@ -58,14 +60,11 @@ public class Player implements Serializable {
     private int regenerationLevel = 0;
     private int shieldLevel = 0;
     private int shieldHP = 0;
-    private static final int MAX_SHIELD_HP = 100;
-    private static final long SHIELD_REGENERATION_INTERVAL = 1000;
     private long lastShieldRegenerationTime = 0;
     private int slowEnemiesLevel = 0;
 
-    private long lastMovementTime = System.currentTimeMillis();
-    private long idleAnimationStartTime = 0;
-    private static final long IDLE_TRIGGER_DELAY = 500;
+    private transient PlayerGraphics graphics;
+    private transient PlayerMovement movement;
 
 
     public Player(int x, int y, int hp) {
@@ -90,251 +89,22 @@ public class Player implements Serializable {
         });
     }
     private void initializeTransientFields() {
-        rightTextures = loadTextures("Player1", "Player2", "Player3", "Player4");
-        leftTextures = loadTextures("Player5", "Player6", "Player7", "Player8");
-        upTextures = loadTextures("Player9", "Player10", "Player11", "Player12");
-        downTextures = loadTextures("Player13", "Player14", "Player15", "Player16");
-        idleTextures = loadTextures("Player17", "Player18", "Player19", "Player20");
-        try {
-            hpBarFrame1 = ImageIO.read(new File("res/watva/player/HPBar1.png"));
-            hpBarFrame2 = ImageIO.read(new File("res/watva/player/HPBar2.png"));
-            hpBarFrame3 = ImageIO.read(new File("res/watva/player/HPBar3.png"));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private Image[] loadTextures(String... filenames) {
-        Image[] textures = new Image[filenames.length];
-        try {
-            for (int i = 0; i < filenames.length; i++) {
-                textures[i] = ImageIO.read(new File("res/watva/player/" + filenames[i] + ".png"));
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return textures;
-    }
-
-    public void draw(Graphics g) {
-        Image[] textures = idleTextures;
-
-        if(!idle) {
-            if (right) {
-                textures = rightTextures;
-            } else if (left) {
-                textures = leftTextures;
-            } else if (up) {
-                textures = upTextures;
-            } else if (down) {
-                textures = downTextures;
-            }
-        }
-
-        g.drawImage(textures[currentFrame], x, y, WIDTH, HEIGHT, null);
-
-        drawDashCooldown(g);
-        for (Explosion explosion : explosions) {
-            explosion.draw(g);
-        }
-        drawExplosionCooldown(g);
-
-        int hpBarWidth = (int)(270 * Game.getScaleFactor());
-        int hpBarHeight = (int)(30 * Game.getScaleFactor());
-        int hpBarX = GamePanel.PANEL_WIDTH - hpBarWidth - 10 + GamePanel.cameraX;
-        int hpBarY = 35 + GamePanel.cameraY;
-
-        if (hp > 0) {
-            g.setColor(Color.BLACK);
-            g.drawRect(hpBarX, hpBarY, hpBarWidth, hpBarHeight);
-        }
-        if (shieldLevel > 0) {
-            int shieldWidth = shieldHP * hpBarWidth / MAX_SHIELD_HP;
-            g.setColor(Color.BLUE);
-            g.fillRect(hpBarX, hpBarY + hpBarHeight + 5, shieldWidth, hpBarHeight);
-            g.setColor(Color.BLACK);
-            g.drawRect(hpBarX, hpBarY + hpBarHeight + 5, hpBarWidth, hpBarHeight);
-        }
-
-        if (hp > 0) {
-            int redWidth = Math.min(hp, 100) * hpBarWidth / 100;
-            g.setColor(Color.RED);
-            g.fillRect(hpBarX, hpBarY, redWidth, hpBarHeight);
-            if (hpBarFrame1 != null) {
-                g.drawImage(hpBarFrame1, hpBarX - 37, hpBarY - 30, hpBarWidth + 40, hpBarHeight + 45, null);
-            }
-        }
-
-        if (hp > 100) {
-            int purpleWidth = Math.min(hp - 100, 200) * hpBarWidth / 200;
-            g.setColor(Color.MAGENTA);
-            g.fillRect(hpBarX, hpBarY, purpleWidth, hpBarHeight);
-            if (hpBarFrame2 != null) {
-                g.drawImage(hpBarFrame2, hpBarX - 37, hpBarY - 30, hpBarWidth + 40, hpBarHeight + 45, null);
-            }
-        }
-
-        if (hp > 300) {
-            int goldWidth = Math.min(hp - 300, 200) * hpBarWidth / 200;
-            g.setColor(Color.YELLOW);
-            g.fillRect(hpBarX, hpBarY, goldWidth, hpBarHeight);
-            if (hpBarFrame3 != null) {
-                g.drawImage(hpBarFrame3, hpBarX - 37, hpBarY - 30, hpBarWidth + 40, hpBarHeight + 45, null);
-            }
-        }
-
-        if (hp > 0) {
-            g.setColor(Color.BLACK);
-            for (int i = 1; i <= 9; i++) {
-                int dividerX = hpBarX + (i * hpBarWidth / 10);
-                g.drawLine(dividerX, hpBarY , dividerX, hpBarY + hpBarHeight);
-            }
-        }
-    }
-
-    private void drawDashCooldown(Graphics g) {
-        long timeSinceLastDash = System.currentTimeMillis() - lastDashTime;
-        if (timeSinceLastDash < dashCooldown) {
-            double percentage = 1 - (double) timeSinceLastDash / dashCooldown;
-
-            int radius = 30;
-            int centerX = 50 + GamePanel.cameraX;
-            int centerY = GamePanel.PANEL_HEIGHT - 50 + GamePanel.cameraY;
-
-            g.setColor(Color.RED);
-            g.fillArc(centerX - radius, centerY - radius, radius * 2, radius * 2, 90, (int) (360 * percentage));
-        }
-    }
-
-    private void drawExplosionCooldown(Graphics g) {
-        long timeSinceLastExplosion = System.currentTimeMillis() - lastExplosionTime;
-        if (timeSinceLastExplosion < explosionCooldown) {
-            double percentage = 1 - (double) timeSinceLastExplosion / explosionCooldown;
-
-            int radius = 30;
-            int centerX = 100 + GamePanel.cameraX;
-            int centerY = GamePanel.PANEL_HEIGHT - 50 + GamePanel.cameraY;
-
-            g.setColor(Color.ORANGE);
-            g.fillArc(centerX - radius, centerY - radius, radius * 2, radius * 2, 90, (int) (360 * percentage));
-        }
-    }
-    public ArrayList<Explosion> getExplosions() {
-        return explosions;
+        this.graphics = new PlayerGraphics(this);
+        this.movement = new PlayerMovement(this);
     }
 
     public void move() {
-        boolean moving = false;
-        int edgeLimit = 54;
-        long currentTime = System.currentTimeMillis();
-
-        if (shieldLevel > 0 && currentTime - lastShieldRegenerationTime >= SHIELD_REGENERATION_INTERVAL) {
-            shieldHP = Math.min(shieldHP + 1, MAX_SHIELD_HP);
-            lastShieldRegenerationTime = currentTime;
-        }
-
-        if (regenerationLevel > 0 && hp < 100) {
-            hp = Math.min(hp + regenerationLevel, 100);
-        }
-
-        if (dashing) {
-            int newX = x + dashDirectionX * dashSpeed;
-            int newY = y + dashDirectionY * dashSpeed;
-
-            if (newX >= edgeLimit && newX + WIDTH <= GamePanel.mapWidth * GamePanel.BLOCK_SIZE - edgeLimit &&
-                    newY >= edgeLimit && newY + HEIGHT <= GamePanel.mapHeight * GamePanel.BLOCK_SIZE - edgeLimit) {
-                x = newX;
-                y = newY;
-            }
-
-            dashProgress += dashSpeed;
-
-            if (dashProgress >= dashDistance) {
-                dashing = false;
-            }
-            lastMovementTime = currentTime;
-            idle = false;
-            return;
-        }
-
-        if (up) {
-            int newY = y - speed;
-            if (newY >= edgeLimit) {
-                y = newY;
-                moving = true;
-            }
-        }
-
-        if (down) {
-            int newY = y + speed;
-            if (newY + HEIGHT <= GamePanel.mapHeight * GamePanel.BLOCK_SIZE - edgeLimit) {
-                y = newY;
-                moving = true;
-            }
-        }
-
-        if (left) {
-            int newX = x - speed;
-            if (newX >= edgeLimit) {
-                x = newX;
-                moving = true;
-            }
-        }
-
-        if (right) {
-            int newX = x + speed;
-            if (newX + WIDTH <= GamePanel.mapWidth * GamePanel.BLOCK_SIZE - edgeLimit) {
-                x = newX;
-                moving = true;
-            }
-        }
-
-        if (moving) {
-            lastMovementTime = currentTime;
-            idle = false;
-            if (currentTime - lastFrameChange >= frameDuration) {
-                currentFrame = (currentFrame + 1) % 4;
-                lastFrameChange = currentTime;
-            }
-        } else {
-            if (!idle && currentTime - lastMovementTime > IDLE_TRIGGER_DELAY) {
-                idle = true;
-                idleAnimationStartTime = currentTime;
-                currentFrame = 0;
-            }
-
-            if (idle && currentTime - lastFrameChange >= frameDuration) {
-                currentFrame = (currentFrame + 1) % idleTextures.length;
-                lastFrameChange = currentTime;
-            }
-        }
-
-        updateExplosions();
+        movement.move();
     }
 
     public void keyPressed(KeyEvent e) {
-        int key = e.getKeyCode();
-
-        if (key == KeyEvent.VK_W || key == KeyEvent.VK_UP) { up = true; }
-        if (key == KeyEvent.VK_S || key == KeyEvent.VK_DOWN) { down = true; }
-        if (key == KeyEvent.VK_A || key == KeyEvent.VK_LEFT) { left = true; }
-        if (key == KeyEvent.VK_D || key == KeyEvent.VK_RIGHT) { right = true; }
-        if (key == KeyEvent.VK_SHIFT && canDash()) {
-            startDash();
-        }
-        if (key == KeyEvent.VK_Q && canUseExplosion()) {
-            triggerExplosion();
-        }
+        movement.keyPressed(e);
     }
 
     public void keyReleased(KeyEvent e) {
-        int key = e.getKeyCode();
-
-        if (key == KeyEvent.VK_W || key == KeyEvent.VK_UP) { up = false; }
-        if (key == KeyEvent.VK_S || key == KeyEvent.VK_DOWN) { down = false; }
-        if (key == KeyEvent.VK_A || key == KeyEvent.VK_LEFT) { left = false; }
-        if (key == KeyEvent.VK_D || key == KeyEvent.VK_RIGHT) { right = false; }
+        movement.keyReleased(e);
     }
+
     protected boolean canUseExplosion() {
         return System.currentTimeMillis() - lastExplosionTime >= explosionCooldown;
     }
@@ -354,37 +124,7 @@ public class Player implements Serializable {
             }
         }
     }
-    private boolean canDash() {
-        return System.currentTimeMillis() - lastDashTime >= dashCooldown;
-    }
 
-    private void startDash() {
-        dashing = true;
-        dashProgress = 0;
-        lastDashTime = System.currentTimeMillis();
-
-        dashDirectionX = 0;
-        dashDirectionY = 0;
-
-        if (up) dashDirectionY = -1;
-        if (down) dashDirectionY = 1;
-        if (left) dashDirectionX = -1;
-        if (right) dashDirectionX = 1;
-
-        if (up && left) {
-            dashDirectionX = -1;
-            dashDirectionY = -1;
-        } else if (up && right) {
-            dashDirectionX = 1;
-            dashDirectionY = -1;
-        } else if (down && left) {
-            dashDirectionX = -1;
-            dashDirectionY = 1;
-        } else if (down && right) {
-            dashDirectionX = 1;
-            dashDirectionY = 1;
-        }
-    }
     public void saveState(String filePath) {
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(filePath))) {
             oos.writeObject(this);
@@ -456,103 +196,68 @@ public class Player implements Serializable {
         }
     }
 
-    public int getHp() {
-        return hp;
-    }
-    public int getCoins() {
-        return coins;
-    }
-    public void earnCoins(int amount) {
-        coins += amount;
-    }
-    public void spendCoins(int amount) {
-        coins -= amount;
-    }
-    public void increaseAttackSpeed() {
-        attackSpeed -= 50;
-    }
-    public void increaseSpeed() {
-        speed += 1;
-    }
-    public void increaseHeal() {
-        hp += 1;
-        if (hp > 500) hp = 500;
-    }
-    public void increaseDefense() {
-        defense += 1;
-    }
-    public void increaseDamage() {
-        damage += 1;
-    }
-
-    public void increaseHp() {
-        hp += 10;
-        if (hp > 500) hp = 500;
-    }
-
-    public int getX() {
-        return x;
-    }
-    public int getY() {
-        return y;
-    }
+    public int getHp() { return hp; }
+    public int getCoins() { return coins; }
+    public void earnCoins(int amount) { coins += amount; }
+    public void increaseDefense() { defense += 1; if (defense > MAX_DEFENSE) defense = MAX_DEFENSE; }
+    public void increaseDamage() { damage += 1; }
+    public void increaseHp() { hp += 10; if (hp > 500) hp = 500; }
+    public int getX() { return x; }
+    public int getY() { return y; }
     public int getAttackSpeed() { return attackSpeed; }
     public int getSpeed() { return speed; }
     public int getDefense() { return defense; }
+    public int getDamage() { return damage; }
+    public void setCoins(int coins) { this.coins = coins; }
+    public void setDoubleShotActive(boolean active) { isDoubleShotActive = active; }
+    public void setForwardBackwardShotActive(boolean active) { isForwardBackwardShotActive = active; }
+    public boolean isDoubleShotActive() { return isDoubleShotActive; }
+    public boolean isExplosionActive() { return isExplosionActive; }
+    public boolean isForwardBackwardShotActive() { return isForwardBackwardShotActive; }
+    public void setX(int x) { this.x = x; }
+    public void setY(int y) { this.y = y; }
+    public int getCurrentFrame() { return currentFrame; }
+    public int getShieldHP() { return shieldHP; }
+    public int getShieldLevel() { return shieldLevel; }
+    public int getPiercingLevel() { return piercingArrowsLevel; }
+    public int getFireLevel() { return fireDamageLevel; }
+    public int getSlowLevel() { return slowEnemiesLevel; }
+    public boolean hasSlowEnemies() { return slowEnemiesUnlocked; }
+    public int getExplosionRangeLevel() { return explosionRangeLevel; }
+    public int getRegenerationLevel() { return regenerationLevel; }
+    public ArrayList<Explosion> getExplosions() { return explosions; }
+    public long getLastDashTime() { return lastDashTime; }
+    public long getDashCooldown() { return dashCooldown; }
+    public long getLastExplosionTime() { return lastExplosionTime; }
+    public long getExplosionCooldown() { return explosionCooldown; }
+    public long getLastShieldRegenerationTime() { return lastShieldRegenerationTime; }
+    public void setLastShieldRegenerationTime(long time) { lastShieldRegenerationTime = time; }
+    public void setIdleAnimationStartTime(long time) { idleAnimationStartTime = time; }
+    public void setLastMovementTime(long time) { lastMovementTime = time; }
+    public void setLastFrameChange(long time) { lastFrameChange = time; }
+    public void setCurrentFrame(int frame) { currentFrame = frame; }
+    public long getFrameDuration() { return frameDuration; }
+    public long getLastFrameChange() { return lastFrameChange; }
+    public int getDashSpeed() { return dashSpeed; }
+    public int getDashDistance() { return dashDistance; }
+    public PlayerGraphics getGraphics() { return graphics; }
+    public void setHp(int hp) { this.hp = hp; }
+    public void setShieldHP(int shieldHP) { this.shieldHP = shieldHP; }
+    public void setLastDashTime(long lastDashTime) { this.lastDashTime = lastDashTime; }
+    public long getLastMovementTime() { return lastMovementTime; }
+    public boolean isUp() { return movement.isUp(); }
+    public boolean isDown() { return movement.isDown(); }
+    public boolean isLeft() { return movement.isLeft(); }
+    public boolean isRight() { return movement.isRight(); }
+    public boolean isIdle() { return movement.isIdle(); }
 
-    public int getDamage() {
-        return damage;
-    }
-
-    public void setCoins(int coins) {
-        this.coins = coins;
-    }
-
-    public int getHeal() {
-        return heal;
-    }
-    public void setDoubleShotActive(boolean active) {
-        isDoubleShotActive = active;
-    }
-
-    public void setForwardBackwardShotActive(boolean active) {
-        isForwardBackwardShotActive = active;
-    }
-    public boolean isDoubleShotActive() {
-        return isDoubleShotActive;
-    }
-    public boolean isExplosionActive() {
-        return isExplosionActive;
-    }
-
-    public boolean isForwardBackwardShotActive() {
-        return isForwardBackwardShotActive;
-    }
-
-    public void setHp(int hp) {
-        this.hp = hp;
-    }
-    public void setX(int x) {
-        this.x = x;
-    }
-
-    public void setY(int y) {
-        this.y = y;
-    }
-    public void hitEnemy(Enemy enemy) {
-        if (slowEnemiesUnlocked) {
-            enemy.applySlow(1000 + (slowEnemiesLevel * 1000));
-        }
-        if (fireDamageLevel > 0) {
-            enemy.setFire(5 + (fireDamageLevel * 5), 3000);
-        }
-    }
     public void upgradeSlow() {
         if (slowEnemiesLevel < 3) {
             slowEnemiesLevel++;
         }
         slowEnemiesUnlocked = true;
     }
+
     public void upgradePiercing() {
         if (piercingArrowsLevel < 3) piercingArrowsLevel++;
     }
@@ -581,17 +286,20 @@ public class Player implements Serializable {
         }
     }
 
-    public int getShieldLevel() { return shieldLevel; }
-
     public void hit(int damage) {
+        int reducedDamage = damage;
+        if (defense > 0) {
+            reducedDamage = (int) Math.ceil(damage * (100 - defense) / 100.0);
+        }
+
         if (shieldLevel > 0) {
-            int remainingDamage = damage - shieldHP;
-            shieldHP = Math.max(0, shieldHP - damage);
+            int remainingDamage = reducedDamage - shieldHP;
+            shieldHP = Math.max(0, shieldHP - reducedDamage);
             if (remainingDamage > 0) {
                 hp -= remainingDamage;
             }
         } else {
-            hp  -= damage;
+            hp -= reducedDamage;
         }
         if (hp < 0) hp = 0;
     }
@@ -601,20 +309,5 @@ public class Player implements Serializable {
             shieldLevel++;
             shieldHP = MAX_SHIELD_HP;
         }
-    }
-    public int getPiercingLevel() {
-        return piercingArrowsLevel;
-    }
-
-    public int getFireLevel() {
-        return fireDamageLevel;
-    }
-
-    public int getSlowLevel() {
-        return slowEnemiesLevel;
-    }
-
-    public boolean hasSlowEnemies() {
-        return slowEnemiesUnlocked;
     }
 }
