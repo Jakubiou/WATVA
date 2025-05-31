@@ -5,7 +5,7 @@ import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 
-public class Arrow {
+public class PlayerProjectile {
     public static final int SIZE = 64;
     private int x, y;
     private int targetX, targetY;
@@ -20,7 +20,7 @@ public class Arrow {
     private int fireDamageLevel;
     private boolean slowEffect;
 
-    public Arrow(int x, int y, int targetX, int targetY, int piercingLevel, int fireLevel, boolean hasSlowEffect) {
+    public PlayerProjectile(int x, int y, int targetX, int targetY, int piercingLevel, int fireLevel, boolean hasSlowEffect) {
         this.x = x;
         this.y = y;
         this.pierceCount = 1 + piercingLevel;
