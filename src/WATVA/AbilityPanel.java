@@ -77,7 +77,7 @@ public class AbilityPanel extends JPanel {
 
         btn.addActionListener(e -> {
             applyAbility(ability);
-            hidePanel();
+            gamePanel.startNextWaveAfterAbility();
         });
         return btn;
     }
