@@ -24,7 +24,7 @@ public class GamePanel extends JPanel implements ActionListener {
     private boolean gameOver = false;
     private boolean isPaused = false;
     private Image[] blockImages;
-    private int waveNumber = 0;
+    private static int waveNumber = 0;
     private Game game;
     private JButton menuButton;
     private MenuPanel menuPanel;
@@ -38,11 +38,12 @@ public class GamePanel extends JPanel implements ActionListener {
     private static int killCount;
     protected static Soundtrack backgroundMusic;
     private UpgradePanel upgradePanel;
+    private Font pixelPurlFont;
 
     public GamePanel(Game game, Player player) {
         this.game = game;
         this.player = player;
-        backgroundMusic = new Soundtrack("res/watva/Music/658572__josefpres__8-bit-game-loop-013-simple-mix-1-short-120-bpm.wav");
+        backgroundMusic = new Soundtrack("res/watva/Music/MainMenuSong.wav");
         backgroundMusic.playLoop();
 
         setPreferredSize(new Dimension(PANEL_WIDTH, PANEL_HEIGHT));
@@ -53,11 +54,20 @@ public class GamePanel extends JPanel implements ActionListener {
         loadMap("map1.txt");
         initGame();
         initializeAbilityPanel();
+        try {
+            InputStream is = new FileInputStream("res/fonts/PixelPurl.ttf");
+            pixelPurlFont = Font.createFont(Font.TRUETYPE_FONT, is).deriveFont((float) (20f * Game.getScaleFactor()));
+            GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(pixelPurlFont);
+        } catch (FontFormatException | IOException e) {
+            e.printStackTrace();
+            System.err.println("Using fallback font instead");
+            pixelPurlFont = new Font("Courier New", Font.BOLD, (int)(20 * Game.getScaleFactor()));
+        }
     }
 
     private void initializeMenu() {
         menuButton = new JButton();
-        menuButton.setBounds(750, 10, 100, 40);
+        menuButton.setBounds(PANEL_WIDTH / 2 - 50, 10, 100, 40);
 
         ImageIcon normalMenuIcon = new ImageIcon(new ImageIcon("res/buttons/Menu_button1.png").getImage().getScaledInstance(100, 40, Image.SCALE_SMOOTH));
         ImageIcon rolloverMenuIcon = new ImageIcon(new ImageIcon("res/buttons/Menu_button2.png").getImage().getScaledInstance(100, 40, Image.SCALE_SMOOTH));
@@ -189,7 +199,7 @@ public class GamePanel extends JPanel implements ActionListener {
             player.setY(mapHeight * BLOCK_SIZE / 2);
         }
         System.out.println("Player initialized: x=" + player.getX() + ", y=" + player.getY() +
-                ", hp=" + player.getHp() + ", coins=" + player.getCoins());
+                ", hp=" + player.getHp() + ", coins=" + player.getCoins() + ", defence=" + player.getDefense());
 
         enemies = new CopyOnWriteArrayList<>();
         arrows = new CopyOnWriteArrayList<>();
@@ -230,24 +240,6 @@ public class GamePanel extends JPanel implements ActionListener {
             }
         });
 
-        addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                int key = e.getKeyCode();
-                if (key == KeyEvent.VK_1) {
-                    player.toggleMeleeMode();
-                } else if (key == KeyEvent.VK_2) {
-                    player.toggleMeleeMode();
-                } else {
-                    player.keyPressed(e);
-                }
-            }
-
-            @Override
-            public void keyReleased(KeyEvent e) {
-                player.keyReleased(e);
-            }
-        });
 
         addMouseListener(new MouseAdapter() {
             @Override
@@ -256,26 +248,28 @@ public class GamePanel extends JPanel implements ActionListener {
                     int mouseX = e.getX() + cameraX;
                     int mouseY = e.getY() + cameraY;
 
-                    if (player.isMeleeMode()) {
-                        player.performMeleeAttack(mouseX, mouseY);
-                    } else if (player.isExplosionActive() && player.canUseExplosion()) {
+                    if (player.isExplosionActive() && player.canUseExplosion()) {
                         player.triggerExplosion();
                     } else {
                         int centerX = player.getX() + Player.WIDTH / 2;
                         int centerY = player.getY() + Player.HEIGHT / 2;
 
+                        int piercingLevel = player.getPiercingLevel();
+                        int fireLevel = player.getFireLevel();
+                        boolean hasSlow = player.hasSlowEnemies();
+
                         if (player.isDoubleShotActive() && player.isForwardBackwardShotActive()) {
-                            arrows.add(new Arrow(centerX, centerY, mouseX + 20, mouseY));
-                            arrows.add(new Arrow(centerX, centerY, mouseX - 20, mouseY));
-                            arrows.add(new Arrow(centerX, centerY, centerX - (mouseX - centerX), centerY - (mouseY - centerY)));
+                            arrows.add(new Arrow(centerX, centerY, mouseX + 20, mouseY, piercingLevel, fireLevel, hasSlow));
+                            arrows.add(new Arrow(centerX, centerY, mouseX - 20, mouseY, piercingLevel, fireLevel, hasSlow));
+                            arrows.add(new Arrow(centerX, centerY, centerX - (mouseX - centerX), centerY - (mouseY - centerY), piercingLevel, fireLevel, hasSlow));
                         } else if (player.isDoubleShotActive()) {
-                            arrows.add(new Arrow(centerX, centerY, mouseX + 20, mouseY));
-                            arrows.add(new Arrow(centerX, centerY, mouseX - 20, mouseY));
+                            arrows.add(new Arrow(centerX, centerY, mouseX + 20, mouseY, piercingLevel, fireLevel, hasSlow));
+                            arrows.add(new Arrow(centerX, centerY, mouseX - 20, mouseY, piercingLevel, fireLevel, hasSlow));
                         } else if (player.isForwardBackwardShotActive()) {
-                            arrows.add(new Arrow(centerX, centerY, mouseX, mouseY));
-                            arrows.add(new Arrow(centerX, centerY, centerX - (mouseX - centerX), centerY - (mouseY - centerY)));
+                            arrows.add(new Arrow(centerX, centerY, mouseX, mouseY, piercingLevel, fireLevel, hasSlow));
+                            arrows.add(new Arrow(centerX, centerY, centerX - (mouseX - centerX), centerY - (mouseY - centerY), piercingLevel, fireLevel, hasSlow));
                         } else {
-                            arrows.add(new Arrow(centerX, centerY, mouseX, mouseY));
+                            arrows.add(new Arrow(centerX, centerY, mouseX, mouseY, piercingLevel, fireLevel, hasSlow));
                         }
                     }
                 }
@@ -299,11 +293,21 @@ public class GamePanel extends JPanel implements ActionListener {
         waveNumber++;
         arrows.clear();
         killCount = 0;
-        spawningEnemies.spawnBunnyBoss();
 
+        boolean isBossWave = (waveNumber % 10 == 0);
+
+        if (waveNumber % 5 == 0) {
+            spawningEnemies.spawnBunnyBoss();
+        }
+
+        if (waveNumber % 10 == 0) {
+            spawningEnemies.spawnDarkMageBoss();
+        }
+
+        if (!isBossWave) {
             switch (waveNumber) {
-                case 10:
-                    spawningEnemies.spawnEnemies(0, 0, 10, 0, 0);
+                case 1:
+                    spawningEnemies.spawnEnemies(1, 0, 0, 0, 0);
                     break;
                 case 2:
                     spawningEnemies.spawnEnemies(5, 2, 1, 2, 1);
@@ -311,15 +315,11 @@ public class GamePanel extends JPanel implements ActionListener {
                 case 3:
                     spawningEnemies.spawnEnemies(7, 3, 1, 5, 2);
                     break;
-                case 1:
-                    //spawningEnemies.spawnDarkMageBoss();
-                    spawningEnemies.spawnEnemies(0, 0, 0, 0, 1);
-                    break;
                 default:
-                    spawningEnemies.spawnEnemies(waveNumber * 4, waveNumber * 2, waveNumber * 3, waveNumber * 3, 5);
+                    spawningEnemies.spawnEnemies(15, 5, 10, 10, 10);
                     break;
             }
-
+        }
 
         startGame();
     }
@@ -341,27 +341,47 @@ public class GamePanel extends JPanel implements ActionListener {
 
             collisions.checkCollisions();
             gameOver = collisions.isGameOver();
-            boolean bossDead = false;
+            boolean bossExists = false;
+            boolean bossDeathAnimationComplete = false;
+            boolean waveComplete = false;
 
             for (Enemy enemy : enemies) {
                 if (enemy instanceof DarkMageBoss) {
+                    bossExists = true;
                     DarkMageBoss darkMageBoss = (DarkMageBoss) enemy;
+
                     if (darkMageBoss.isDead()) {
-                        bossDead = true;
-                    }else {
+                        bossDeathAnimationComplete = true;
+                        enemies.remove(enemy);
+                        break;
+                    }
+                    else if (darkMageBoss.isDying()) {;
+                    }
+                    else {
                         darkMageBoss.updateBossBehavior(player, enemies);
                     }
                 } else if (enemy instanceof BunnyBoss) {
+                    bossExists = true;
                     BunnyBoss bunnyBoss = (BunnyBoss) enemy;
-
+                    if (bunnyBoss.getHp() <= 0) {
+                        enemies.remove(enemy);
+                        break;
+                    } else {
                         bunnyBoss.updateBossBehavior(player, enemies);
-
+                    }
                 } else if (enemy.getType() == Enemy.Type.SHOOTING) {
                     enemy.updateProjectiles();
                 }
             }
 
-            if ((killCount > waveNumber * 1 || bossDead) && !gameOver) {
+
+            if (bossExists) {
+                waveComplete = bossDeathAnimationComplete;
+            } else {
+                waveComplete = killCount >= waveNumber * 10;
+            }
+
+            if (waveComplete && !gameOver) {
                 stopGame();
                 nextWaveButton.setVisible(true);
                 abilityPanel.showPanel();
@@ -404,6 +424,7 @@ public class GamePanel extends JPanel implements ActionListener {
         drawArrows(g2d);
         drawUI(g2d);
         drawPlayer(g2d);
+        drawWaveProgressBar(g2d);
 
         g2d.translate(cameraX, cameraY);
 
@@ -460,11 +481,59 @@ public class GamePanel extends JPanel implements ActionListener {
         }
     }
     private void drawUI(Graphics g) {
-        g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.BOLD, 20));
-        g.drawString("Wave: " + waveNumber, 10 + cameraX, 20 + cameraY);
-        g.drawString("Coins: " + player.getCoins(), 10 + cameraX, 40 + cameraY);
+        Graphics2D g2d = (Graphics2D) g;
+        int fontSize = (int)(48 * Game.getScaleFactor());
+        pixelPurlFont = pixelPurlFont.deriveFont((float)fontSize);
+        g2d.setFont(pixelPurlFont);
+        drawOutlinedText(g2d, "Wave: " + waveNumber, 20 + cameraX, 40 + cameraY);
+        drawOutlinedText(g2d, "Coins: " + player.getCoins(), 10 + cameraX, 80 + cameraY);
     }
+
+    private void drawOutlinedText(Graphics2D g2d, String text, int x, int y) {
+        g2d.setColor(Color.BLACK);
+        g2d.drawString(text, x - 3, y);
+        g2d.drawString(text, x + 3, y);
+        g2d.drawString(text, x, y - 3);
+        g2d.drawString(text, x, y + 3);
+
+        g2d.setColor(Color.WHITE);
+        g2d.drawString(text, x, y);
+    }
+    private void drawWaveProgressBar(Graphics2D g2d) {
+        if (gameOver || isPaused || enemies.isEmpty()) return;
+
+        int barWidth = (int)(390 * Game.getScaleFactor());
+        int barHeight = (int)(30 * Game.getScaleFactor());
+
+        int x = (PANEL_WIDTH / 2) - (barWidth / 2) + cameraX;
+        int y = 60 + cameraY;
+
+        int maxKills = waveNumber * 10;
+        float progress = Math.min((float) killCount / maxKills, 1.0f);
+        int filledWidth = (int) (barWidth * progress);
+
+        g2d.setColor(new Color(50, 50, 50, 180));
+        g2d.fillRoundRect(x, y, barWidth, barHeight, 15, 15);
+
+        if (filledWidth > 0) {
+            GradientPaint gradient = new GradientPaint(
+                    x, y, Color.BLUE,
+                    x + filledWidth, y, Color.CYAN
+            );
+            g2d.setPaint(gradient);
+            g2d.fillRoundRect(x, y, filledWidth, barHeight, 15, 15);
+        }
+
+        g2d.setColor(Color.BLACK);
+        g2d.drawRoundRect(x, y, barWidth, barHeight, 15, 15);
+
+        g2d.setFont(pixelPurlFont.deriveFont((float) (16f * Game.getScaleFactor())));
+        g2d.setColor(Color.WHITE);
+        String text = "Wave Progress: " + killCount + " / " + maxKills;
+        int textWidth = g2d.getFontMetrics().stringWidth(text);
+        g2d.drawString(text, x + (barWidth - textWidth) / 2, y + (barHeight / 2) + 6);
+    }
+
 
     public int getCameraX() {
         return cameraX;
@@ -476,5 +545,8 @@ public class GamePanel extends JPanel implements ActionListener {
 
     public Player getPlayer() {
         return player;
+    }
+    public static int getWaveNumber() {
+        return waveNumber;
     }
 }
