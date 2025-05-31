@@ -31,11 +31,20 @@ public class DarkMageBoss extends Enemy {
     private long areaAttackPrepareTime = 0;
     private Image[] bossAreaAttackTextures;
     private Image[] deathTextures;
-    protected boolean isDying = false;
+    public boolean isDying = false;
     protected boolean isDead = false;
     private long deathStartTime = 0;
     private int deathFrame = 0;
     private static final long DEATH_FRAME_DURATION = 100;
+    private transient Image hpBarFrame1;
+
+    private boolean isShootingProjectiles = false;
+    private long projectileAttackStartTime = 0;
+    private static final long PROJECTILE_ATTACK_DURATION = 10000;
+    private static final long PROJECTILE_INTERVAL = 200;
+    private long lastProjectileTime = 0;
+    private CopyOnWriteArrayList<DarkMageProjectile> projectiles = new CopyOnWriteArrayList<>();
+    private int projectilePhase = 0;
 
     public DarkMageBoss(int x, int y, int hp) {
         super(x, y, hp, Type.DARK_MAGE_BOSS);
@@ -54,6 +63,7 @@ public class DarkMageBoss extends Enemy {
             for (int i = 0; i < 10; i++) {
                 deathTextures[i] = ImageIO.read(new File("res/watva/boss/darkMage/darkMage" + (i + 11) + ".png"));
             }
+            hpBarFrame1 = ImageIO.read(new File("res/watva/boss/darkMage/DarkMageHPBar1.png"));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -75,10 +85,18 @@ public class DarkMageBoss extends Enemy {
         } else if (isPreparingAreaAttack) {
             int animFrame = (int) ((System.currentTimeMillis() - areaAttackPrepareTime) / frameDuration) % bossAreaAttackTextures.length;
             g.drawImage(bossAreaAttackTextures[animFrame], x, y, BOSS_SIZE, BOSS_SIZE, null);
+        } else if (isShootingProjectiles) {
+            int animFrame = (int) ((System.currentTimeMillis() - projectileAttackStartTime) / frameDuration) % bossAreaAttackTextures.length;
+            g.drawImage(bossAreaAttackTextures[animFrame], x, y, BOSS_SIZE, BOSS_SIZE, null);
         } else {
             Image[] textures = movingRight ? bossTexturesRight : bossTexturesLeft;
             g.drawImage(textures[currentFrame], x, y, BOSS_SIZE, BOSS_SIZE, null);
         }
+
+        for (DarkMageProjectile projectile : projectiles) {
+            projectile.draw(g);
+        }
+
         if (isAreaAttacking) {
             g.setColor(new Color(86, 0, 110, 100));
             int attackRadius = 400;
@@ -91,29 +109,38 @@ public class DarkMageBoss extends Enemy {
         }
 
         if (this.hp > 0) {
-            int hpBarWidth = 300;
-            int hpBarHeight = 30;
+            int hpBarWidth = (int)(320 * Game.getScaleFactor());
+            int hpBarHeight = (int)(30 * Game.getScaleFactor());
             int hpBarX = (GamePanel.PANEL_WIDTH - hpBarWidth) / 2;
-            int hpBarY = GamePanel.PANEL_HEIGHT - hpBarHeight - 10;
+            int hpBarY = GamePanel.PANEL_HEIGHT - hpBarHeight - (int)(10 * Game.getScaleFactor());
 
             g.setColor(new Color(50, 50, 50));
             g.fillRect(hpBarX + GamePanel.cameraX, hpBarY + GamePanel.cameraY, hpBarWidth, hpBarHeight);
 
             g.setColor(Color.RED);
-            int redWidth = (int) (Math.min(this.hp, 500) * hpBarWidth / 500);
+            int redWidth = (int)(Math.min(this.hp, 500) * hpBarWidth / 500);
             g.fillRect(hpBarX + GamePanel.cameraX, hpBarY + GamePanel.cameraY, redWidth, hpBarHeight);
 
             g.setColor(Color.BLACK);
             int numSections = 10;
             int sectionWidth = hpBarWidth / numSections;
-
             for (int i = 1; i < numSections; i++) {
                 int sectionX = hpBarX + sectionWidth * i + GamePanel.cameraX;
-                g.drawLine(sectionX, hpBarY + GamePanel.cameraY, sectionX, hpBarY + hpBarHeight + GamePanel.cameraY);
+                g.drawLine(sectionX, hpBarY + GamePanel.cameraY,
+                        sectionX, hpBarY + hpBarHeight + GamePanel.cameraY);
             }
 
             g.setColor(Color.BLACK);
             g.drawRect(hpBarX + GamePanel.cameraX, hpBarY + GamePanel.cameraY, hpBarWidth, hpBarHeight);
+
+            if (hpBarFrame1 != null) {
+                int frameWidth = (int)((hpBarWidth + 96) * Game.getScaleFactor());
+                int frameHeight = (int)((hpBarHeight * 4.4) * Game.getScaleFactor());
+                int frameX = hpBarX + GamePanel.cameraX - (int)(54 * Game.getScaleFactor());
+                int frameY = hpBarY + GamePanel.cameraY - (int)(58 * Game.getScaleFactor());
+
+                g.drawImage(hpBarFrame1, frameX, frameY, frameWidth, frameHeight, null);
+            }
         }
     }
 
@@ -138,7 +165,6 @@ public class DarkMageBoss extends Enemy {
         }
     }
 
-
     @Override
     public void moveTowards(int playerX, int playerY) {
         double deltaX = playerX - x;
@@ -155,17 +181,16 @@ public class DarkMageBoss extends Enemy {
 
     public void summonMinions(CopyOnWriteArrayList<Enemy> enemies) {
         int radius = 150;
-        int minionCount = 6;
+        int minionCount = 9;
 
         for (int i = 0; i < minionCount; i++) {
             double angle = 2 * Math.PI / minionCount * i;
             int offsetX = (int) (Math.cos(angle) * radius);
             int offsetY = (int) (Math.sin(angle) * radius);
 
-            enemies.add(new Enemy(x + offsetX, y + offsetY, 50, Type.ZOMBIE));
+            enemies.add(new Enemy(x + offsetX, y + offsetY, 1, Type.ZOMBIE));
         }
     }
-
 
     public void areaAttack(Player player) {
         long currentTime = System.currentTimeMillis();
@@ -192,10 +217,106 @@ public class DarkMageBoss extends Enemy {
             areaAttackPrepareTime = currentTime;
         }
     }
-    public void updateBossBehavior(Player player, CopyOnWriteArrayList<Enemy> enemies) {
-        if (isDead) {
-            return;
+
+    private void startProjectileAttack() {
+        isShootingProjectiles = true;
+        projectileAttackStartTime = System.currentTimeMillis();
+        lastProjectileTime = projectileAttackStartTime;
+        projectilePhase = 0;
+    }
+
+    private void updateProjectileAttack(Player player) {
+        long currentTime = System.currentTimeMillis();
+
+        if (currentTime - projectileAttackStartTime >= PROJECTILE_ATTACK_DURATION) {
+            projectiles.forEach(p -> {
+            });
+            isShootingProjectiles = false;
         }
+
+        if (isShootingProjectiles && currentTime - lastProjectileTime >= PROJECTILE_INTERVAL) {
+            shootProjectiles(player);
+            lastProjectileTime = currentTime;
+            projectilePhase = (projectilePhase + 1) % 4;
+        }
+
+        for (DarkMageProjectile projectile : projectiles) {
+            projectile.update();
+        }
+
+        projectiles.removeIf(p -> !p.isActive());
+    }
+
+    private void shootProjectiles(Player player) {
+        int centerX = x + BOSS_SIZE / 2;
+        int centerY = y + BOSS_SIZE / 2;
+
+        switch (projectilePhase) {
+            case 0:
+                for (int i = 0; i < 12; i++) {
+                    double angle = Math.toRadians(i * 30);
+                    projectiles.add(new DarkMageProjectile(
+                            centerX, centerY,
+                            Math.cos(angle), Math.sin(angle)
+                    ));
+                }
+                break;
+
+            case 1:
+                double dx = player.getX() - centerX;
+                double dy = player.getY() - centerY;
+                double dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 0) {
+                    projectiles.add(new DarkMageProjectile(
+                            centerX, centerY,
+                            dx/dist, dy/dist
+                    ));
+                }
+                break;
+
+            case 2:
+                for (int i = 0; i < 6; i++) {
+                    double angle = Math.toRadians((i * 60) + (System.currentTimeMillis() % 360));
+                    projectiles.add(new DarkMageProjectile(
+                            centerX, centerY,
+                            Math.cos(angle), Math.sin(angle)
+                    ));
+                }
+                break;
+
+            case 3:
+                for (int i = 0; i < 4; i++) {
+                    double angle = Math.toRadians(i * 90);
+                    projectiles.add(new DarkMageProjectile(
+                            centerX, centerY,
+                            Math.cos(angle), Math.sin(angle)
+                    ));
+                    projectiles.add(new DarkMageProjectile(
+                            centerX, centerY,
+                            Math.cos(angle + 0.2), Math.sin(angle + 0.2)
+                    ));
+                    projectiles.add(new DarkMageProjectile(
+                            centerX, centerY,
+                            Math.cos(angle - 0.2), Math.sin(angle - 0.2)
+                    ));
+                }
+                break;
+        }
+    }
+
+    public void checkProjectileCollisions(Player player) {
+        Rectangle playerCollider = player.getCollider();
+
+        for (DarkMageProjectile projectile : projectiles) {
+            if (projectile.isActive() && projectile.getCollider().intersects(playerCollider)) {
+                player.hit(10);
+                projectile.setActive(false);
+            }
+        }
+    }
+
+    public void updateBossBehavior(Player player, CopyOnWriteArrayList<Enemy> enemies) {
+        if (isDead) return;
 
         if (hp <= 0 && !isDying) {
             isDying = true;
@@ -203,21 +324,20 @@ public class DarkMageBoss extends Enemy {
             return;
         }
 
-        if (isDying) {
-            if (deathFrame >= deathTextures.length) {
-                isDead = true;
-            }
-            return;
-        }
-
         long currentTime = System.currentTimeMillis();
 
-        if (!isDashing && !isAreaAttacking && !isPreparingForDash) {
+        if (!isDashing && !isAreaAttacking && !isPreparingForDash && !isShootingProjectiles) {
             moveTowards(player.getX(), player.getY());
         }
 
         if (currentTime - lastSpecialAttackTime >= SPECIAL_ATTACK_INTERVAL) {
-            int attackType = (int) (Math.random() * 3);
+            if (isShootingProjectiles) {
+                projectiles.forEach(p -> {
+                });
+                isShootingProjectiles = false;
+            }
+
+            int attackType = (int)(Math.random() * 4);
             switch (attackType) {
                 case 0 -> {
                     isPreparingForDash = true;
@@ -227,6 +347,7 @@ public class DarkMageBoss extends Enemy {
                 }
                 case 1 -> areaAttack(player);
                 case 2 -> summonMinions(enemies);
+                case 3 -> startProjectileAttack();
             }
             lastSpecialAttackTime = currentTime;
         }
@@ -234,12 +355,17 @@ public class DarkMageBoss extends Enemy {
         if (isPreparingForDash || isDashing) {
             dashAttack(dashTargetX, dashTargetY);
         }
-    }
 
+        if (isShootingProjectiles) {
+            updateProjectileAttack(player);
+        } else if (!projectiles.isEmpty()) {
+            updateProjectileAttack(player);
+        }
+    }
 
     @Override
     public Rectangle getCollider() {
-        return new Rectangle(x, y, BOSS_SIZE, BOSS_SIZE);
+        return new Rectangle(x +(BOSS_SIZE / 2) / 2, y +(BOSS_SIZE / 2) / 2, BOSS_SIZE / 2, BOSS_SIZE / 2);
     }
 
     public int getWidth() {
