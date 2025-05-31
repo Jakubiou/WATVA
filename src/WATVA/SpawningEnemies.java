@@ -23,11 +23,11 @@ public class SpawningEnemies {
     public void spawnEnemies(int normalPerSecond, int giantPerSecond, int smallPerSecond, int shootingPerSecond, int slimePerSecond) {
         stopSpawning = false;
 
-        spawnEnemyType(normalPerSecond, Enemy.Type.NORMAL, 10);
-        spawnEnemyType(giantPerSecond, Enemy.Type.GIANT, 25);
-        spawnEnemyType(smallPerSecond, Enemy.Type.SMALL, 5);
-        spawnEnemyType(shootingPerSecond, Enemy.Type.SHOOTING, 20);
-        spawnEnemyType(slimePerSecond, Enemy.Type.SLIME, 8);
+        spawnEnemyType(normalPerSecond, Enemy.Type.NORMAL, 5 * gamePanel.getWaveNumber());
+        spawnEnemyType(giantPerSecond, Enemy.Type.GIANT, 15 * gamePanel.getWaveNumber());
+        spawnEnemyType(smallPerSecond, Enemy.Type.SMALL, 3 * gamePanel.getWaveNumber());
+        spawnEnemyType(shootingPerSecond, Enemy.Type.SHOOTING, 4 * gamePanel.getWaveNumber());
+        spawnEnemyType(slimePerSecond, Enemy.Type.SLIME, 4 * gamePanel.getWaveNumber());
     }
 
     private void spawnEnemyType(int rate, Enemy.Type type, int hp) {
@@ -68,7 +68,7 @@ public class SpawningEnemies {
     public void spawnDarkMageBoss() {
         Point spawnPoint = getSpawnPointBehindCamera();
         if (spawnPoint != null) {
-            DarkMageBoss darkMageBoss = new DarkMageBoss(spawnPoint.x, spawnPoint.y, 500);
+            DarkMageBoss darkMageBoss = new DarkMageBoss(spawnPoint.x, spawnPoint.y, 50);
             enemies.add(darkMageBoss);
         }
     }
@@ -88,10 +88,10 @@ public class SpawningEnemies {
         int cameraX = gamePanel.getCameraX();
         int cameraY = gamePanel.getCameraY();
 
-        int leftBound = cameraX - GamePanel.BLOCK_SIZE;
-        int rightBound = cameraX + GamePanel.PANEL_WIDTH + GamePanel.BLOCK_SIZE * 2;
-        int topBound = cameraY - GamePanel.BLOCK_SIZE * 2;
-        int bottomBound = cameraY + GamePanel.PANEL_HEIGHT + GamePanel.BLOCK_SIZE;
+        int leftBound = cameraX - GamePanel.BLOCK_SIZE * 6;
+        int rightBound = cameraX + GamePanel.PANEL_WIDTH + GamePanel.BLOCK_SIZE * 4;
+        int topBound = cameraY - GamePanel.BLOCK_SIZE * 6;
+        int bottomBound = cameraY + GamePanel.PANEL_HEIGHT + GamePanel.BLOCK_SIZE *4;
 
         for (int y = EDGE_OFFSET; y < GamePanel.mapHeight - EDGE_OFFSET; y++) {
             for (int x = EDGE_OFFSET; x < GamePanel.mapWidth - EDGE_OFFSET; x++) {
