@@ -2,7 +2,6 @@
 package WATVA;
 
 import java.awt.event.KeyEvent;
-import java.util.ArrayList;
 import java.util.Iterator;
 
 public class PlayerMovement {
@@ -172,9 +171,9 @@ public class PlayerMovement {
         }
     }
 
-    public boolean isUp() { return up; }
-    public boolean isDown() { return down; }
-    public boolean isLeft() { return left; }
-    public boolean isRight() { return right; }
+    public boolean isUp() { return up && !down; }
+    public boolean isDown() { return down && !up; }
+    public boolean isLeft() { return left && !right; }
+    public boolean isRight() { return right && !left; }
     public boolean isIdle() { return idle; }
 }
