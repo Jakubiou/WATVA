@@ -12,7 +12,7 @@ public class DarkMageProjectile {
     private Color color = new Color(150, 0, 200);
     private boolean isFading = false;
     private float fadeAlpha = 1.0f;
-    private static final float FADE_SPEED = 0.1f; // Faster fade when attack ends
+    private static final float FADE_SPEED = 0.1f;
 
     public DarkMageProjectile(int startX, int startY, double dirX, double dirY) {
         this.x = startX;
