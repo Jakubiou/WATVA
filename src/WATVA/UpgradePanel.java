@@ -1,4 +1,5 @@
 package WATVA;
+
 import java.awt.*;
 import javax.swing.*;
 import java.io.FileInputStream;
@@ -30,9 +31,9 @@ public class UpgradePanel extends JPanel {
 
     private void initializeBaseCosts() {
         baseCosts = new HashMap<>();
-        baseCosts.put("Damage", 10);
-        baseCosts.put("HP", 15);
-        baseCosts.put("Defense", 20);
+        baseCosts.put("Damage", 50);
+        baseCosts.put("HP", 55);
+        baseCosts.put("Defense", 100);
 
         maxLevels = new HashMap<>();
         maxLevels.put("Damage", 999);
