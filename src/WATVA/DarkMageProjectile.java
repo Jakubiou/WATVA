@@ -8,7 +8,6 @@ public class DarkMageProjectile {
     private boolean active = true;
     private static final int SIZE = 20;
     private static final int SPEED = 10;
-    private static final int MAX_DISTANCE = 800;
     private int distanceTraveled = 0;
     private Color color = new Color(150, 0, 200);
     private boolean isFading = false;
