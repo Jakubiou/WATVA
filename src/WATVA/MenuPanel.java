@@ -14,7 +14,7 @@ public class MenuPanel extends JPanel {
     private Soundtrack backgroundMusic;
     private Font pixelPurlFont;
 
-    public MenuPanel(Game game, GamePanel gamePanel) {
+    public MenuPanel(Game game, GamePanel gamePanel,GameLogic gameLogic) {
         try {
             FileInputStream fontStream = new FileInputStream("res/fonts/PixelPurl.ttf");
             pixelPurlFont = Font.createFont(Font.TRUETYPE_FONT, fontStream).deriveFont(24f);
@@ -47,14 +47,14 @@ public class MenuPanel extends JPanel {
         mainMenuButton.addActionListener(e -> {
             gamePanel.closeGame();
             new MainMenuPanel();
-            gamePanel.savePlayerCoins();
+            gameLogic.savePlayerCoins();
         });
         add(mainMenuButton);
 
         settingsButton = createMenuButton("SETTINGS", 300, 50);
         settingsButton.setBounds((menuPanelWidth - 300) / 2, 350, 300, 50);
         settingsButton.addActionListener(e -> {
-            Settings settings = new Settings(GamePanel.backgroundMusic);
+            Settings settings = new Settings(GameLogic.backgroundMusic);
             settings.setVisible(true);
         });
         add(settingsButton);

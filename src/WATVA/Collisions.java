@@ -64,9 +64,9 @@ public class Collisions {
                 if (darkMageBoss.isDead()) {
                     enemiesToRemove.add(enemy);
                     int x = 0;
-                    while(x <= GamePanel.getWaveNumber() * 10) {
+                    while(x <= GamePanel.getWaveNumber() * 20) {
                         x++;
-                        GamePanel.killCountPlus();
+                        GameLogic.killCountPlus();
                     }
                 }
             }
@@ -112,7 +112,7 @@ public class Collisions {
 
                     if (!(enemy instanceof DarkMageBoss) && !(enemy instanceof BunnyBoss)) {
                         enemiesToRemove.add(enemy);
-                        GamePanel.killCountPlus();
+                        GameLogic.killCountPlus();
                         player.earnCoins(10);
                     }
                 }
@@ -154,7 +154,7 @@ public class Collisions {
 
                     if (enemy.getHp() <= 0 && !(enemy instanceof DarkMageBoss)) {
                         enemiesToRemove.add(enemy);
-                        GamePanel.killCountPlus();
+                        GameLogic.killCountPlus();
                         player.earnCoins(10);
                     }
 

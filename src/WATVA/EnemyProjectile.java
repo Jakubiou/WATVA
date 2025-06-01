@@ -47,7 +47,7 @@ public class EnemyProjectile {
 
     public void draw(Graphics g) {
         g.setColor(Color.RED);
-        g.fillOval((int)x - GamePanel.cameraX, (int)y - GamePanel.cameraY, 10, 10);
+        g.fillOval((int)x - GameLogic.cameraX, (int)y - GameLogic.cameraY, 10, 10);
     }
 
     public Rectangle getCollider() {

@@ -71,8 +71,8 @@ public class PlayerGraphics {
     private void drawHealthBar(Graphics g) {
         int hpBarWidth = (int)(270 * Game.getScaleFactor());
         int hpBarHeight = (int)(30 * Game.getScaleFactor());
-        int hpBarX = GamePanel.PANEL_WIDTH - hpBarWidth - 10 + GamePanel.cameraX;
-        int hpBarY = 35 + GamePanel.cameraY;
+        int hpBarX = GamePanel.PANEL_WIDTH - hpBarWidth - 10 + GameLogic.cameraX;
+        int hpBarY = 35 + GameLogic.cameraY;
 
         if (player.getHp() > 0) {
             g.setColor(Color.BLACK);
@@ -128,8 +128,8 @@ public class PlayerGraphics {
             double percentage = 1 - (double) timeSinceLastDash / player.getDashCooldown();
 
             int radius = 30;
-            int centerX = 50 + GamePanel.cameraX;
-            int centerY = GamePanel.PANEL_HEIGHT - 50 + GamePanel.cameraY;
+            int centerX = 50 + GameLogic.cameraX;
+            int centerY = GamePanel.PANEL_HEIGHT - 50 + GameLogic.cameraY;
 
             g.setColor(Color.RED);
             g.fillArc(centerX - radius, centerY - radius, radius * 2, radius * 2, 90, (int) (360 * percentage));
@@ -142,8 +142,8 @@ public class PlayerGraphics {
             double percentage = 1 - (double) timeSinceLastExplosion / player.getExplosionCooldown();
 
             int radius = 30;
-            int centerX = 100 + GamePanel.cameraX;
-            int centerY = GamePanel.PANEL_HEIGHT - 50 + GamePanel.cameraY;
+            int centerX = 100 + GameLogic.cameraX;
+            int centerY = GamePanel.PANEL_HEIGHT - 50 + GameLogic.cameraY;
 
             g.setColor(Color.ORANGE);
             g.fillArc(centerX - radius, centerY - radius, radius * 2, radius * 2, 90, (int) (360 * percentage));

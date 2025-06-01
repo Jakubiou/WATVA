@@ -32,8 +32,8 @@ public class PlayerMovement {
             int newX = player.getX() + dashDirectionX * player.getDashSpeed();
             int newY = player.getY() + dashDirectionY * player.getDashSpeed();
 
-            if (newX >= edgeLimit && newX + Player.WIDTH <= GamePanel.mapWidth * GamePanel.BLOCK_SIZE - edgeLimit &&
-                    newY >= edgeLimit && newY + Player.HEIGHT <= GamePanel.mapHeight * GamePanel.BLOCK_SIZE - edgeLimit) {
+            if (newX >= edgeLimit && newX + Player.WIDTH <= GameLogic.mapWidth * GamePanel.BLOCK_SIZE - edgeLimit &&
+                    newY >= edgeLimit && newY + Player.HEIGHT <= GameLogic.mapHeight * GamePanel.BLOCK_SIZE - edgeLimit) {
                 player.setX(newX);
                 player.setY(newY);
             }
@@ -58,7 +58,7 @@ public class PlayerMovement {
 
         if (down) {
             int newY = player.getY() + player.getSpeed();
-            if (newY + Player.HEIGHT <= GamePanel.mapHeight * GamePanel.BLOCK_SIZE - edgeLimit) {
+            if (newY + Player.HEIGHT <= GameLogic.mapHeight * GamePanel.BLOCK_SIZE - edgeLimit) {
                 player.setY(newY);
                 moving = true;
             }
@@ -74,7 +74,7 @@ public class PlayerMovement {
 
         if (right) {
             int newX = player.getX() + player.getSpeed();
-            if (newX + Player.WIDTH <= GamePanel.mapWidth * GamePanel.BLOCK_SIZE - edgeLimit) {
+            if (newX + Player.WIDTH <= GameLogic.mapWidth * GamePanel.BLOCK_SIZE - edgeLimit) {
                 player.setX(newX);
                 moving = true;
             }

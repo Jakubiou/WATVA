@@ -115,29 +115,29 @@ public class DarkMageBoss extends Enemy {
             int hpBarY = GamePanel.PANEL_HEIGHT - hpBarHeight - (int)(10 * Game.getScaleFactor());
 
             g.setColor(new Color(50, 50, 50));
-            g.fillRect(hpBarX + GamePanel.cameraX, hpBarY + GamePanel.cameraY, hpBarWidth, hpBarHeight);
+            g.fillRect(hpBarX + GameLogic.cameraX, hpBarY + GameLogic.cameraY, hpBarWidth, hpBarHeight);
 
             g.setColor(Color.RED);
             int redWidth = (int)(Math.min(this.hp, 500) * hpBarWidth / 500);
-            g.fillRect(hpBarX + GamePanel.cameraX, hpBarY + GamePanel.cameraY, redWidth, hpBarHeight);
+            g.fillRect(hpBarX + GameLogic.cameraX, hpBarY + GameLogic.cameraY, redWidth, hpBarHeight);
 
             g.setColor(Color.BLACK);
             int numSections = 10;
             int sectionWidth = hpBarWidth / numSections;
             for (int i = 1; i < numSections; i++) {
-                int sectionX = hpBarX + sectionWidth * i + GamePanel.cameraX;
-                g.drawLine(sectionX, hpBarY + GamePanel.cameraY,
-                        sectionX, hpBarY + hpBarHeight + GamePanel.cameraY);
+                int sectionX = hpBarX + sectionWidth * i + GameLogic.cameraX;
+                g.drawLine(sectionX, hpBarY + GameLogic.cameraY,
+                        sectionX, hpBarY + hpBarHeight + GameLogic.cameraY);
             }
 
             g.setColor(Color.BLACK);
-            g.drawRect(hpBarX + GamePanel.cameraX, hpBarY + GamePanel.cameraY, hpBarWidth, hpBarHeight);
+            g.drawRect(hpBarX + GameLogic.cameraX, hpBarY + GameLogic.cameraY, hpBarWidth, hpBarHeight);
 
             if (hpBarFrame1 != null) {
                 int frameWidth = (int)((hpBarWidth + 96) * Game.getScaleFactor());
                 int frameHeight = (int)((hpBarHeight * 4.4) * Game.getScaleFactor());
-                int frameX = hpBarX + GamePanel.cameraX - (int)(54 * Game.getScaleFactor());
-                int frameY = hpBarY + GamePanel.cameraY - (int)(58 * Game.getScaleFactor());
+                int frameX = hpBarX + GameLogic.cameraX - (int)(54 * Game.getScaleFactor());
+                int frameY = hpBarY + GameLogic.cameraY - (int)(58 * Game.getScaleFactor());
 
                 g.drawImage(hpBarFrame1, frameX, frameY, frameWidth, frameHeight, null);
             }
