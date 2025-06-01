@@ -13,8 +13,8 @@ public class Enemy {
     private static final long ATTACK_COOLDOWN_MS = 1000;
     private static final long FRAME_DURATION_MS = 100;
     private static final int EDGE_LIMIT = 61;
-    private static final int SCREEN_WIDTH = 6120;
-    private static final int SCREEN_HEIGHT = 3600;
+    public static final int SCREEN_WIDTH = GamePanel.PANEL_WIDTH * 4;
+    public static final int SCREEN_HEIGHT = GamePanel.PANEL_HEIGHT * 4;
 
     public enum Type {
         NORMAL, GIANT, SMALL, SHOOTING, SLIME, DARK_MAGE_BOSS, BUNNY_BOSS,ZOMBIE
@@ -44,7 +44,7 @@ public class Enemy {
 
     private boolean isOnFire = false;
     private long fireEndTime = 0;
-    private int fireDamage = 0;
+    private int fireDamage = 10;
     private boolean isSlowed = false;
     private long slowEndTime = 0;
 
@@ -68,10 +68,11 @@ public class Enemy {
 
     private void initializeSpeed() {
         switch (type) {
-            case GIANT -> baseSpeed = 1.5 * Game.getScaleFactor();
-            case SMALL -> baseSpeed = 2.5 * Game.getScaleFactor();
-            case SHOOTING -> baseSpeed = 1.8 * Game.getScaleFactor();
-            default -> baseSpeed = 2 * Game.getScaleFactor();
+            case GIANT -> baseSpeed = 1.4 * Game.getScaleFactor();
+            case ZOMBIE -> baseSpeed = 5 * Game.getScaleFactor();
+            case SMALL -> baseSpeed = 1.8 * Game.getScaleFactor();
+            case SHOOTING -> baseSpeed = 2 * Game.getScaleFactor();
+            default -> baseSpeed = 1.5 * Game.getScaleFactor();
         }
         currentSpeed = baseSpeed;
     }
@@ -219,32 +220,45 @@ public class Enemy {
         }
     }
 
-    public void applySlow(int durationMs) {
-        isSlowed = true;
-        slowEndTime = System.currentTimeMillis() + durationMs;
-        currentSpeed = baseSpeed * 0.5;
+    public void update() {
+        updateStatusEffects();
+
+        long currentTime = System.currentTimeMillis();
+        if (isOnFire && currentTime % 1000 < 15) {
+            hp -= fireDamage;
+            if (hp <= 0) {
+                isAlive = false;
+            }
+        }
     }
 
     public void setFire(int damage, int durationMs) {
         isOnFire = true;
         fireEndTime = System.currentTimeMillis() + durationMs;
         fireDamage = damage;
+        hp -= damage * 4;
+        if (hp <= 0) {
+            isAlive = false;
+        }
     }
 
-    public void update() {
-        updateStatusEffects();
-        if (isOnFire && System.currentTimeMillis() < fireEndTime) {
-            hp -= fireDamage;
-        }
+    public void applySlow(int durationMs) {
+        isSlowed = true;
+        slowEndTime = System.currentTimeMillis() + durationMs;
+        currentSpeed = baseSpeed * 0.5;
     }
 
     private void updateStatusEffects() {
-        if (isSlowed && System.currentTimeMillis() >= slowEndTime) {
+        long currentTime = System.currentTimeMillis();
+
+        if (isSlowed && currentTime >= slowEndTime) {
             isSlowed = false;
             currentSpeed = baseSpeed;
         }
-        if (isOnFire && System.currentTimeMillis() >= fireEndTime) {
+
+        if (isOnFire && currentTime >= fireEndTime) {
             isOnFire = false;
+            fireDamage = 0;
         }
     }
 
@@ -288,14 +302,14 @@ public class Enemy {
 
     private void drawEffectOverlay(Graphics g, Color color) {
         g.setColor(color);
-        g.fillRect(x, y, getWidth(), getHeight());
+        g.fillOval(x + getWidth() / 2, y + getHeight() / 2, getWidth(), getHeight());
     }
 
     public Rectangle getCollider() {
         if (type == Type.NORMAL) {
             return new Rectangle(x + 24, y + 3, NORMAL_SIZE - 32, NORMAL_SIZE - 9);
         }
-        return new Rectangle(x, y, getWidth(), getHeight());
+        return new Rectangle(x + getWidth() / 2, y + getHeight() / 2, getWidth(), getHeight());
     }
 
     public void hit(int damage) {
@@ -309,10 +323,10 @@ public class Enemy {
 
     public int getWidth() {
         return switch (type) {
-            case GIANT -> GIANT_SIZE;
-            case SMALL -> SMALL_SIZE;
-            case SHOOTING -> SHOOTING_SIZE;
-            default -> NORMAL_SIZE;
+            case GIANT -> GIANT_SIZE / 2;
+            case SMALL -> SMALL_SIZE / 2;
+            case SHOOTING -> SHOOTING_SIZE / 2;
+            default -> NORMAL_SIZE / 2;
         };
     }
 

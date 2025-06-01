@@ -1,18 +1,16 @@
 package WATVA;
 
-import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Iterator;
 
 import static com.sun.java.accessibility.util.AWTEventMonitor.addMouseMotionListener;
 
 public class Player implements Serializable {
-    protected static int WIDTH = (int)(50 * Game.getScaleFactor());
+    public static int WIDTH = (int)(50 * Game.getScaleFactor());
     public static final int HEIGHT = (int)(50 * Game.getScaleFactor());
     public static final int PANEL_WIDTH = GamePanel.PANEL_WIDTH * 4;
     public static final int PANEL_HEIGHT = GamePanel.PANEL_HEIGHT * 4;
@@ -105,24 +103,13 @@ public class Player implements Serializable {
         movement.keyReleased(e);
     }
 
-    protected boolean canUseExplosion() {
+    public boolean canUseExplosion() {
         return System.currentTimeMillis() - lastExplosionTime >= explosionCooldown;
     }
 
     public void triggerExplosion() {
         explosions.add(new Explosion(x + WIDTH / 2, y + HEIGHT / 2, explosionRange));
         lastExplosionTime = System.currentTimeMillis();
-    }
-
-    private void updateExplosions() {
-        Iterator<Explosion> iterator = explosions.iterator();
-        while (iterator.hasNext()) {
-            Explosion explosion = iterator.next();
-            explosion.update();
-            if (explosion.isComplete()) {
-                iterator.remove();
-            }
-        }
     }
 
     public void saveState(String filePath) {
@@ -134,8 +121,6 @@ public class Player implements Serializable {
             System.err.println("Error saving player state: " + e.getMessage());
         }
     }
-
-
 
     public static Player loadState(String filePath) {
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(filePath))) {
@@ -250,6 +235,7 @@ public class Player implements Serializable {
     public boolean isLeft() { return movement.isLeft(); }
     public boolean isRight() { return movement.isRight(); }
     public boolean isIdle() { return movement.isIdle(); }
+    public void setSlowEnemiesUnlocked(boolean unlocked) { slowEnemiesUnlocked = unlocked; }
 
     public void upgradeSlow() {
         if (slowEnemiesLevel < 3) {
@@ -259,15 +245,13 @@ public class Player implements Serializable {
     }
 
     public void upgradePiercing() {
-        if (piercingArrowsLevel < 3) piercingArrowsLevel++;
-    }
-
-    public void setSlowEnemiesUnlocked(boolean unlocked) {
-        slowEnemiesUnlocked = unlocked;
+        if (piercingArrowsLevel < 3) piercingArrowsLevel += 2;
     }
 
     public void upgradeFire() {
-        if (fireDamageLevel < 3) fireDamageLevel++;
+        if (fireDamageLevel < 3) {
+            fireDamageLevel++;
+        }
     }
 
     public void upgradeSpeed() {
