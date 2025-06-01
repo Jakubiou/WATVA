@@ -43,7 +43,6 @@ public class MainMenuPanel extends JFrame {
         gbc.insets = new Insets(20, 0, 20, 0);
 
         backgroundPanel.add(playButton, gbc);
-        backgroundPanel.add(settingsButton, gbc);
         backgroundPanel.add(quitGameButton, gbc);
 
         addActionListeners();
@@ -66,16 +65,6 @@ public class MainMenuPanel extends JFrame {
         playButton = new JButton(playIcon1);
         styleButton(playButton, originalButtonWidth, originalButtonHeight);
 
-        ImageIcon settingsIcon1 = new ImageIcon("res/buttons/Settings_button1.png");
-        Image settingsImage1 = settingsIcon1.getImage().getScaledInstance(originalButtonWidth, originalButtonHeight, Image.SCALE_SMOOTH);
-        settingsIcon1 = new ImageIcon(settingsImage1);
-
-        ImageIcon settingsIcon2 = new ImageIcon("res/buttons/Settings_button2.png");
-        Image settingsImage2 = settingsIcon2.getImage().getScaledInstance((int)(originalButtonWidth * 1.1), (int)(originalButtonHeight * 1.1), Image.SCALE_SMOOTH);
-        settingsIcon2 = new ImageIcon(settingsImage2);
-
-        settingsButton = new JButton(settingsIcon1);
-        styleButton(settingsButton, originalButtonWidth, originalButtonHeight);
 
         ImageIcon quitGameIcon1 = new ImageIcon("res/buttons/QuitGame_button1.png");
         Image quitGameImage1 = quitGameIcon1.getImage().getScaledInstance(originalButtonWidth, originalButtonHeight, Image.SCALE_SMOOTH);
@@ -89,7 +78,6 @@ public class MainMenuPanel extends JFrame {
         styleButton(quitGameButton, originalButtonWidth, originalButtonHeight);
 
         addHoverEffects(playButton, playIcon1, playIcon2);
-        addHoverEffects(settingsButton, settingsIcon1, settingsIcon2);
         addHoverEffects(quitGameButton, quitGameIcon1, quitGameIcon2);
     }
 
@@ -125,10 +113,6 @@ public class MainMenuPanel extends JFrame {
         playButton.addActionListener(e -> {
             new Game();
             dispose();
-        });
-
-        settingsButton.addActionListener(e -> {
-            System.out.println("Settings clicked");
         });
 
         quitGameButton.addActionListener(e -> {

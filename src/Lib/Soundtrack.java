@@ -1,4 +1,4 @@
-package WATVA;
+package Lib;
 
 import javax.sound.sampled.*;
 import java.io.File;

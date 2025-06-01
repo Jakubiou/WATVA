@@ -1,5 +1,7 @@
 package WATVA;
 
+import Lib.SettingsPanel;
+import Lib.Soundtrack;
 import MainMenu.MainMenuPanel;
 import javax.swing.*;
 import java.awt.*;
@@ -13,8 +15,12 @@ public class MenuPanel extends JPanel {
     private JButton settingsButton;
     private Soundtrack backgroundMusic;
     private Font pixelPurlFont;
+    private SettingsPanel settingsPanel;
+    private GamePanel gamePanel;
 
-    public MenuPanel(Game game, GamePanel gamePanel,GameLogic gameLogic) {
+    public MenuPanel(Game game, GamePanel gamePanel, GameLogic gameLogic) {
+        this.gamePanel = gamePanel;
+
         try {
             FileInputStream fontStream = new FileInputStream("res/fonts/PixelPurl.ttf");
             pixelPurlFont = Font.createFont(Font.TRUETYPE_FONT, fontStream).deriveFont(24f);
@@ -54,8 +60,12 @@ public class MenuPanel extends JPanel {
         settingsButton = createMenuButton("SETTINGS", 300, 50);
         settingsButton.setBounds((menuPanelWidth - 300) / 2, 350, 300, 50);
         settingsButton.addActionListener(e -> {
-            Settings settings = new Settings(GameLogic.backgroundMusic);
-            settings.setVisible(true);
+            setVisible(false);
+            if (settingsPanel == null) {
+                settingsPanel = new SettingsPanel(GameLogic.backgroundMusic, this);
+                gamePanel.add(settingsPanel);
+            }
+            settingsPanel.setVisible(true);
         });
         add(settingsButton);
 
@@ -93,6 +103,7 @@ public class MenuPanel extends JPanel {
 
         return button;
     }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
