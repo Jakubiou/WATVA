@@ -8,6 +8,7 @@ public class Explosion {
     private int maxRadius;
     private long startTime;
     private int duration = 500;
+    private boolean hasDamaged = false;
 
     public Explosion(int x, int y, int maxRadius) {
         this.x = x;
@@ -41,5 +42,13 @@ public class Explosion {
         int dx = x - targetX;
         int dy = y - targetY;
         return dx * dx + dy * dy <= currentRadius * currentRadius;
+    }
+
+    public boolean hasDamaged() {
+        return hasDamaged;
+    }
+
+    public void setDamaged(boolean damaged) {
+        this.hasDamaged = damaged;
     }
 }
