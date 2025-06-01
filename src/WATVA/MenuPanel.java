@@ -69,7 +69,6 @@ public class MenuPanel extends JPanel {
 
     private JButton createMenuButton(String text, int width, int height) {
         JButton button = new JButton(text);
-
         button.setFont(pixelPurlFont);
         button.setForeground(Color.WHITE);
         button.setBackground(new Color(40, 40, 40));

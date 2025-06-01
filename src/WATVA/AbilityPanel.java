@@ -33,15 +33,15 @@ public class AbilityPanel extends JPanel {
 
     private void initializeAbilities() {
         allAbilities = new ArrayList<>();
-        allAbilities.add(new Ability("Double Shot", "Shoot two arrows at once", 0, "double", 1));
-        allAbilities.add(new Ability("Backward Shot", "Shoot backward arrow", 0, "backward", 1));
-        allAbilities.add(new Ability("Piercing Arrows", "Arrows pierce enemies", 0, "piercing", 3));
-        allAbilities.add(new Ability("Slow Enemies", "Slow enemy movement", 0, "slow", 1));
-        allAbilities.add(new Ability("Fire Arrows", "Burn enemies over time", 0, "fire", 3));
-        allAbilities.add(new Ability("Speed Boost", "Increase movement speed", 0, "speed", 3));
-        allAbilities.add(new Ability("Explosion+", "Bigger explosions", 0, "explosion", 3));
-        allAbilities.add(new Ability("Health Regen", "Regenerate health", 0, "regen", 3));
-        allAbilities.add(new Ability("Shield", "Damage absorption", 0, "shield", 3));
+        allAbilities.add(new Ability("Double Shot", "Shoot two arrows at once",  "double"));
+        allAbilities.add(new Ability("Backward Shot", "Shoot backward arrow",  "backward"));
+        allAbilities.add(new Ability("Piercing Arrows", "Arrows pierce enemies",  "piercing"));
+        allAbilities.add(new Ability("Slow Enemies", "Slow enemy movement",  "slow"));
+        allAbilities.add(new Ability("Fire Arrows", "Burn enemies over time",  "fire"));
+        allAbilities.add(new Ability("Speed Boost", "Increase movement speed",  "speed"));
+        allAbilities.add(new Ability("Explosion+", "Bigger explosions",  "explosion"));
+        allAbilities.add(new Ability("Health Regen", "Regenerate health",  "regen"));
+        allAbilities.add(new Ability("Shield", "Damage absorption",  "shield"));
     }
 
     private void initializeAbilityPanel() {
