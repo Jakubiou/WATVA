@@ -32,14 +32,6 @@ public class BunnyBoss extends Enemy {
     private boolean isStomping = false;
     private long stompStartTime = 0;
     private static final long STOMP_DURATION = 500;
-    private boolean isCircleAttack = false;
-    private long circleAttackStartTime = 0;
-    private static final long CIRCLE_ATTACK_DURATION = 3000;
-    private int circleRadius = 0;
-    private int circleX, circleY;
-    private boolean isFalling = false;
-    private long fallStartTime = 0;
-    private static final long FALL_DURATION = 1000;
 
     private boolean isJumpAttack = false;
     private int jumpAttackCount = 0;
@@ -140,7 +132,6 @@ public class BunnyBoss extends Enemy {
 
     @Override
     public void draw(Graphics g) {
-        if(!isCircleAttack){
             Image currentTexture;
         Image[] currentTextures = jumpingRight ? bunnyTexturesRight : bunnyTexturesLeft;
 
@@ -153,7 +144,7 @@ public class BunnyBoss extends Enemy {
         if (currentTexture != null) {
             g.drawImage(currentTexture, x, y, BUNNY_SIZE, BUNNY_SIZE, null);
         }
-        }
+
 
         if (isStomping) {
             g.setColor(new Color(255, 0, 0, 100));
@@ -161,16 +152,6 @@ public class BunnyBoss extends Enemy {
             g.fillOval(x - shockwaveRadius / 2 + BUNNY_SIZE / 2,
                     y - shockwaveRadius / 2 + BUNNY_SIZE / 2,
                     shockwaveRadius, shockwaveRadius);
-        }
-
-        if (isCircleAttack) {
-            g.setColor(new Color(255, 0, 0, 100));
-            g.fillOval(circleX - circleRadius, circleY - circleRadius,
-                    circleRadius * 2, circleRadius * 2);
-
-            if (isFalling) {
-
-            }
         }
         if (this.hp > 0) {
             int hpBarWidth = (int)(300 * Game.getScaleFactor());
@@ -235,73 +216,21 @@ public class BunnyBoss extends Enemy {
         long currentTime = System.currentTimeMillis();
 
         if (currentTime - lastSpecialAttackTime >= SPECIAL_ATTACK_INTERVAL) {
-            int attackType = (int) (Math.random() * 3);
+            int attackType = (int) (Math.random() * 2);
             switch (attackType) {
-                case 0 -> startCircleAttack(player);
-                case 1 -> startGroundStomp();
-                case 2 -> startJumpAttack(player.getX(), player.getY());
+                case 0 -> startGroundStomp();
+                case 1 -> startJumpAttack(player.getX(), player.getY());
             }
             lastSpecialAttackTime = currentTime;
-        }
-
-        if (isCircleAttack) {
-            circleAttack(player);
         }
 
         if (isStomping) {
             groundStomp(player);
         }
 
-        if (!isBurrowing && !isStomping && !isCircleAttack && !isJumpAttack) {
+        if (!isBurrowing && !isStomping && !isJumpAttack) {
             moveTowards(player.getX(), player.getY());
         }
-    }
-
-    private void circleAttack(Player player) {
-        long currentTime = System.currentTimeMillis();
-        double progress = (double) (currentTime - circleAttackStartTime) / CIRCLE_ATTACK_DURATION;
-
-        if (progress < 1.0) {
-            circleRadius = (int) (200 * progress);
-
-            int deltaX = player.getX() - circleX;
-            int deltaY = player.getY() - circleY;
-            double distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-            if (distance > 10) {
-                double speed = 3.0;
-                circleX += (int) (deltaX / distance * speed);
-                circleY += (int) (deltaY / distance * speed);
-            }
-        } else {
-            isCircleAttack = false;
-            isFalling = true;
-            fallStartTime = currentTime;
-        }
-
-        if (isFalling) {
-            double fallProgress = (double) (currentTime - fallStartTime) / FALL_DURATION;
-
-            if (fallProgress < 1.0) {
-                double slowDown = 1.0 - fallProgress;
-                circleRadius = (int) (300 * slowDown);
-            } else {
-                isFalling = false;
-                double distance = Math.sqrt(Math.pow(player.getX() - circleX, 2) +
-                        Math.pow(player.getY() - circleY, 2));
-                if (distance <= circleRadius) {
-                    player.hit(3);
-                }
-            }
-        }
-    }
-
-    private void startCircleAttack(Player player) {
-        isCircleAttack = true;
-        circleAttackStartTime = System.currentTimeMillis();
-        circleX = player.getX();
-        circleY = player.getY();
-        circleRadius = 0;
     }
 
     private void startGroundStomp() {
