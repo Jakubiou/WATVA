@@ -18,7 +18,7 @@ public class GamePanel extends JPanel implements ActionListener {
     public static int mapWidth, mapHeight;
     private Player player;
     private CopyOnWriteArrayList<Enemy> enemies;
-    private CopyOnWriteArrayList<Arrow> arrows;
+    private CopyOnWriteArrayList<PlayerProjectile> playerProjectiles;
     private Timer timer;
     private boolean gameOver = false;
     private boolean isPaused = false;
@@ -38,6 +38,10 @@ public class GamePanel extends JPanel implements ActionListener {
     protected static Soundtrack backgroundMusic;
     private UpgradePanel upgradePanel;
     private Font pixelPurlFont;
+    private boolean mousePressed = false;
+    private long lastShotTime = 0;
+    private long attackSpeedInterval = 200;
+    private int currentMouseX, currentMouseY;
 
     public GamePanel(Game game, Player player) {
         this.game = game;
@@ -108,7 +112,7 @@ public class GamePanel extends JPanel implements ActionListener {
         stopGame();
         backgroundMusic.stop();
         enemies.clear();
-        arrows.clear();
+        playerProjectiles.clear();
         collisions = null;
         spawningEnemies = null;
         game.dispose();
@@ -187,22 +191,23 @@ public class GamePanel extends JPanel implements ActionListener {
     }
 
     private void initGame() {
-        String saveFilePath = "player_save.dat";
-
         if (player == null) {
             player = new Player(mapWidth * BLOCK_SIZE / 2, mapHeight * BLOCK_SIZE / 2, 100);
             //savePlayerStatus();
         } else {
-            player = Player.loadState(saveFilePath);
+            loadPlayerStatus();
             player.setX(mapWidth * BLOCK_SIZE / 2);
             player.setY(mapHeight * BLOCK_SIZE / 2);
         }
+
+        updateAttackSpeed();
+
         System.out.println("Player initialized: x=" + player.getX() + ", y=" + player.getY() +
                 ", hp=" + player.getHp() + ", coins=" + player.getCoins() + ", defence=" + player.getDefense());
 
         enemies = new CopyOnWriteArrayList<>();
-        arrows = new CopyOnWriteArrayList<>();
-        collisions = new Collisions(player, enemies, arrows);
+        playerProjectiles = new CopyOnWriteArrayList<>();
+        collisions = new Collisions(player, enemies, playerProjectiles);
         gameOverPanel = new GameOverPanel(game, this);
         gameOverPanel.setVisible(false);
         add(gameOverPanel);
@@ -221,38 +226,37 @@ public class GamePanel extends JPanel implements ActionListener {
             }
         });
 
-
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
                 if (!isPaused) {
-                    int mouseX = e.getX() + cameraX;
-                    int mouseY = e.getY() + cameraY;
+                    mousePressed = true;
+                    currentMouseX = e.getX() + cameraX;
+                    currentMouseY = e.getY() + cameraY;
+                    tryToShoot();
+                }
+            }
 
-                    if (player.isExplosionActive() && player.canUseExplosion()) {
-                        player.triggerExplosion();
-                    } else {
-                        int centerX = player.getX() + Player.WIDTH / 2;
-                        int centerY = player.getY() + Player.HEIGHT / 2;
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                mousePressed = false;
+            }
+        });
 
-                        int piercingLevel = player.getPiercingLevel();
-                        int fireLevel = player.getFireLevel();
-                        boolean hasSlow = player.hasSlowEnemies();
+        addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                if (!isPaused) {
+                    currentMouseX = e.getX() + cameraX;
+                    currentMouseY = e.getY() + cameraY;
+                }
+            }
 
-                        if (player.isDoubleShotActive() && player.isForwardBackwardShotActive()) {
-                            arrows.add(new Arrow(centerX, centerY, mouseX + 20, mouseY, piercingLevel, fireLevel, hasSlow));
-                            arrows.add(new Arrow(centerX, centerY, mouseX - 20, mouseY, piercingLevel, fireLevel, hasSlow));
-                            arrows.add(new Arrow(centerX, centerY, centerX - (mouseX - centerX), centerY - (mouseY - centerY), piercingLevel, fireLevel, hasSlow));
-                        } else if (player.isDoubleShotActive()) {
-                            arrows.add(new Arrow(centerX, centerY, mouseX + 20, mouseY, piercingLevel, fireLevel, hasSlow));
-                            arrows.add(new Arrow(centerX, centerY, mouseX - 20, mouseY, piercingLevel, fireLevel, hasSlow));
-                        } else if (player.isForwardBackwardShotActive()) {
-                            arrows.add(new Arrow(centerX, centerY, mouseX, mouseY, piercingLevel, fireLevel, hasSlow));
-                            arrows.add(new Arrow(centerX, centerY, centerX - (mouseX - centerX), centerY - (mouseY - centerY), piercingLevel, fireLevel, hasSlow));
-                        } else {
-                            arrows.add(new Arrow(centerX, centerY, mouseX, mouseY, piercingLevel, fireLevel, hasSlow));
-                        }
-                    }
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (!isPaused) {
+                    currentMouseX = e.getX() + cameraX;
+                    currentMouseY = e.getY() + cameraY;
                 }
             }
         });
@@ -268,16 +272,57 @@ public class GamePanel extends JPanel implements ActionListener {
         timer.start();
     }
 
+    private void updateAttackSpeed() {
+        int baseInterval = 200;
+        int speedReduction = player.getAttackSpeed() * 10;
+        attackSpeedInterval = Math.max(100, baseInterval - speedReduction);
+    }
+
+    private void tryToShoot() {
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastShotTime >= attackSpeedInterval) {
+            shoot(currentMouseX, currentMouseY);
+            lastShotTime = currentTime;
+        }
+    }
+
+    private void shoot(int mouseX, int mouseY) {
+        if (player.isExplosionActive() && player.canUseExplosion()) {
+            player.triggerExplosion();
+        } else {
+            int centerX = player.getX() + Player.WIDTH / 2;
+            int centerY = player.getY() + Player.HEIGHT / 2;
+
+            int piercingLevel = player.getPiercingLevel();
+            int fireLevel = player.getFireLevel();
+            boolean hasSlow = player.hasSlowEnemies();
+
+            if (player.isDoubleShotActive() && player.isForwardBackwardShotActive()) {
+                playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX + 20, mouseY, piercingLevel, fireLevel, hasSlow));
+                playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX - 20, mouseY, piercingLevel, fireLevel, hasSlow));
+                playerProjectiles.add(new PlayerProjectile(centerX, centerY, centerX - (mouseX - centerX), centerY - (mouseY - centerY), piercingLevel, fireLevel, hasSlow));
+            } else if (player.isDoubleShotActive()) {
+                playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX + 20, mouseY, piercingLevel, fireLevel, hasSlow));
+                playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX - 20, mouseY, piercingLevel, fireLevel, hasSlow));
+            } else if (player.isForwardBackwardShotActive()) {
+                playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX, mouseY, piercingLevel, fireLevel, hasSlow));
+                playerProjectiles.add(new PlayerProjectile(centerX, centerY, centerX - (mouseX - centerX), centerY - (mouseY - centerY), piercingLevel, fireLevel, hasSlow));
+            } else {
+                playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX, mouseY, piercingLevel, fireLevel, hasSlow));
+            }
+        }
+    }
+
     private void nextWave() {
         spawningEnemies.stopCurrentSpawn();
         enemies.clear();
         waveNumber++;
-        arrows.clear();
+        playerProjectiles.clear();
         killCount = 0;
 
         boolean isBossWave = (waveNumber % 10 == 0);
 
-        if (waveNumber % 5 == 0) {
+        if (waveNumber % 5 == 0 && !(waveNumber % 10 == 0)) {
             spawningEnemies.spawnBunnyBoss();
         }
 
@@ -288,7 +333,7 @@ public class GamePanel extends JPanel implements ActionListener {
         if (!isBossWave) {
             switch (waveNumber) {
                 case 1:
-                    spawningEnemies.spawnEnemies(1, 0, 0, 0, 0);
+                    spawningEnemies.spawnEnemies(1, 0, 1, 0, 1);
                     break;
                 case 2:
                     spawningEnemies.spawnEnemies(5, 2, 1, 2, 1);
@@ -307,6 +352,7 @@ public class GamePanel extends JPanel implements ActionListener {
 
     public void startNextWaveAfterAbility() {
         abilityPanel.hidePanel();
+        menuButton.setVisible(true);
         nextWave();
     }
 
@@ -316,6 +362,10 @@ public class GamePanel extends JPanel implements ActionListener {
             if (abilityPanel.isVisible()) {
                 abilityPanel.updateAbilityPanel();
             }
+            if (mousePressed) {
+                tryToShoot();
+            }
+            updateAttackSpeed();
             player.move();
 
             collisions.checkCollisions();
@@ -361,6 +411,7 @@ public class GamePanel extends JPanel implements ActionListener {
 
             if (waveComplete && !gameOver) {
                 stopGame();
+                menuButton.setVisible(false);
                 abilityPanel.showPanel();
             }
 
@@ -440,7 +491,7 @@ public class GamePanel extends JPanel implements ActionListener {
         }
     }
     private void drawPlayer(Graphics g) {
-        player.draw(g);
+        player.getGraphics().draw(g);
     }
     public void drawEnemies(Graphics g) {
         for (int i = 0; i < enemies.size(); i++) {
@@ -454,8 +505,8 @@ public class GamePanel extends JPanel implements ActionListener {
         }
     }
     private void drawArrows(Graphics g) {
-        for (Arrow arrow : arrows) {
-            arrow.draw(g);
+        for (PlayerProjectile playerProjectile : playerProjectiles) {
+            playerProjectile.draw(g);
         }
     }
     private void drawUI(Graphics g) {
