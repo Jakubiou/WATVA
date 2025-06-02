@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="WATVA:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/WATVA_jar</output-path>
+    <root id="archive" name="WATVA.jar">
+      <element id="module-output" name="WATVA" />
+      <element id="dir-copy" path="$PROJECT_DIR$/res" />
+    </root>
+  </artifact>
+</component>

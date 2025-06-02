@@ -46,7 +46,6 @@ public class Player implements Serializable {
 
     private int mouseX, mouseY;
     private static final long serialVersionUID = 1L;
-    protected static Soundtrack punchSound;
 
     private boolean isExplosionActive = false;
     private boolean isDoubleShotActive = false;
@@ -72,7 +71,6 @@ public class Player implements Serializable {
         this.y = y;
         this.hp = Math.min(hp, 500);
         this.maxHp = Math.min(hp, 500);
-        punchSound = new Soundtrack("res/watva/Music/493915__damnsatinist__retro-punch.wav");
         initializeTransientFields();
         addMouseMotionListener(new MouseMotionListener() {
             @Override
@@ -115,16 +113,30 @@ public class Player implements Serializable {
     }
 
     public void saveState(String filePath) {
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(filePath))) {
-            oos.writeObject(this);
-            System.out.println("Player state saved successfully: x=" + x + ", y=" + y +
-                    ", hp=" + hp + ", coins=" + coins + ", damage=" + damage);
+        try {
+            File file = new File(filePath);
+            File parent = file.getParentFile();
+            if (parent != null && !parent.exists()) {
+                parent.mkdirs();
+            }
+
+            try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(filePath))) {
+                oos.writeObject(this);
+                System.out.println("Player state saved successfully: x=" + x + ", y=" + y +
+                        ", hp=" + hp + ", coins=" + coins + ", damage=" + damage);
+            }
         } catch (IOException e) {
             System.err.println("Error saving player state: " + e.getMessage());
         }
     }
 
     public static Player loadState(String filePath) {
+        File file = new File(filePath);
+        if (!file.exists()) {
+            System.out.println("No saved player file found, creating new player");
+            return null;
+        }
+
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(filePath))) {
             Player player = (Player) ois.readObject();
             player.initializeTransientFields();
@@ -140,31 +152,39 @@ public class Player implements Serializable {
     public void saveCoins(String filePath) {
         try {
             Player existingPlayer = loadState(filePath);
-            if (existingPlayer != null) {
-                existingPlayer.setCoins(this.coins);
-                try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(filePath))) {
-                    oos.writeObject(existingPlayer);
-                    System.out.println("Coins saved successfully into player file: " + coins);
-                }
-            } else {
-                System.err.println("No existing player found to save coins.");
+            if (existingPlayer == null) {
+                existingPlayer = new Player(0, 0, 100);
             }
+
+            existingPlayer.setCoins(this.coins);
+            saveState(filePath, existingPlayer);
+            System.out.println("Coins saved successfully: " + coins);
         } catch (Exception e) {
-            System.err.println("Error saving coins to player file: " + e.getMessage());
+            System.err.println("Error saving coins: " + e.getMessage());
         }
     }
+
     public void saveLocation(String filePath) {
         try {
             Player existingPlayer = loadState(filePath);
-            if (existingPlayer != null) {
-                existingPlayer.setX(this.x);
-                existingPlayer.setY(this.y);
-                try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(filePath))) {
-                    oos.writeObject(existingPlayer);
-                }
+            if (existingPlayer == null) {
+                existingPlayer = new Player(0, 0, 100);
             }
+
+            existingPlayer.setX(this.x);
+            existingPlayer.setY(this.y);
+            saveState(filePath, existingPlayer);
+            System.out.println("Location saved successfully: x=" + x + ", y=" + y);
         } catch (Exception e) {
-            System.err.println("Error saving coins to player file: " + e.getMessage());
+            System.err.println("Error saving location: " + e.getMessage());
+        }
+    }
+
+    private void saveState(String filePath, Player player) {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(filePath))) {
+            oos.writeObject(player);
+        } catch (IOException e) {
+            System.err.println("Error saving player state: " + e.getMessage());
         }
     }
 
@@ -172,16 +192,6 @@ public class Player implements Serializable {
         return new Rectangle(x, y, 45, 45);
     }
 
-    public void moveAwayFrom(int x, int y) {
-        int dx = this.x - x;
-        int dy = this.y - y;
-
-        if (Math.abs(dx) > Math.abs(dy)) {
-            this.x += (dx > 0) ? 1 : -1;
-        } else {
-            this.y += (dy > 0) ? 1 : -1;
-        }
-    }
 
     public int getHp() { return hp; }
     public int getCoins() { return coins; }

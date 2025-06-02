@@ -22,8 +22,8 @@ public class MenuPanel extends JPanel {
         this.gamePanel = gamePanel;
 
         try {
-            FileInputStream fontStream = new FileInputStream("res/fonts/PixelPurl.ttf");
-            pixelPurlFont = Font.createFont(Font.TRUETYPE_FONT, fontStream).deriveFont(24f);
+            pixelPurlFont = Font.createFont(Font.TRUETYPE_FONT,
+                    getClass().getResourceAsStream("/fonts/PixelPurl.ttf")).deriveFont(24f);
         } catch (Exception e) {
             pixelPurlFont = new Font("Arial", Font.BOLD, 24);
             e.printStackTrace();
@@ -40,7 +40,10 @@ public class MenuPanel extends JPanel {
 
         resumeButton = createMenuButton("RESUME", 200, 50);
         resumeButton.setBounds((menuPanelWidth - 200) / 2, 50, 200, 50);
-        resumeButton.addActionListener(e -> gamePanel.toggleMenu());
+        resumeButton.addActionListener(e -> {
+            gamePanel.toggleMenu();
+            gameLogic.resumeGame();
+        });
         add(resumeButton);
 
         restartButton = createMenuButton("RESTART", 300, 50);
