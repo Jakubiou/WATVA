@@ -53,13 +53,13 @@ public class BunnyBoss extends Enemy {
 
         try {
             for (int i = 0; i < 6; i++) {
-                bunnyTexturesRight[i] = ImageIO.read(getClass().getResourceAsStream("watva/boss/bunny/bunny" + (i + 7) + ".png"));
+                bunnyTexturesRight[i] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Boss/Bunny/Bunny" + (i + 7) + ".png"));
             }
             bunnyTexturesLeft[0] = bunnyTexturesRight[0];
             for (int i = 0; i < 6; i++) {
-                bunnyTexturesLeft[i] = ImageIO.read(getClass().getResourceAsStream("watva/boss/bunny/bunny" + (i + 1) + ".png"));
+                bunnyTexturesLeft[i] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Boss/Bunny/Bunny" + (i + 1) + ".png"));
             }
-            hpBarFrame1 = ImageIO.read(getClass().getResourceAsStream("watva/boss/bunny/BunnyHPBar1.png"));
+            hpBarFrame1 = ImageIO.read(getClass().getResourceAsStream("/WATVA/Boss/Bunny/BunnyHPBar1.png"));
         } catch (IOException e) {
             e.printStackTrace();
         }

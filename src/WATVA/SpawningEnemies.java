@@ -101,7 +101,7 @@ public class SpawningEnemies {
     public void spawnDarkMageBoss() {
         Point spawnPoint = getSpawnPointBehindCamera();
         if (spawnPoint != null) {
-            DarkMageBoss darkMageBoss = new DarkMageBoss(spawnPoint.x, spawnPoint.y, 100 * GameLogic.getWaveNumber());
+            DarkMageBoss darkMageBoss = new DarkMageBoss(spawnPoint.x, spawnPoint.y, 1000 * GameLogic.getWaveNumber());
             enemies.add(darkMageBoss);
         }
     }
@@ -112,7 +112,7 @@ public class SpawningEnemies {
     public void spawnBunnyBoss() {
         Point spawnPoint = getSpawnPointBehindCamera();
         if (spawnPoint != null) {
-            BunnyBoss bunnyBoss = new BunnyBoss(spawnPoint.x, spawnPoint.y, 100 * GameLogic.getWaveNumber());
+            BunnyBoss bunnyBoss = new BunnyBoss(spawnPoint.x, spawnPoint.y, 200 * GameLogic.getWaveNumber());
             enemies.add(bunnyBoss);
         }
     }
