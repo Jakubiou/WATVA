@@ -234,7 +234,7 @@ public class GameRenderer {
         int x = (GamePanel.PANEL_WIDTH / 2) - (barWidth / 2) + GameLogic.cameraX;
         int y = 60 + GameLogic.cameraY;
 
-        int maxKills = GamePanel.getWaveNumber() * 20;
+        int maxKills = GamePanel.getWaveNumber() * 50;
         float progress = Math.min((float) killCount / maxKills, 1.0f);
         int filledWidth = (int) (barWidth * progress);
 

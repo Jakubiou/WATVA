@@ -88,7 +88,7 @@ public class Collisions {
                 if (darkMageBoss.isDead()) {
                     enemiesToRemove.add(enemy);
                     int x = 0;
-                    while(x <= GamePanel.getWaveNumber() * 20) {
+                    while(x <= GamePanel.getWaveNumber() * 50) {
                         x++;
                         GameLogic.killCountPlus();
                     }

@@ -210,7 +210,7 @@ public class GameLogic {
         if (bossExists) {
             waveComplete = bossDeathAnimationComplete;
         } else {
-            waveComplete = killCount >= waveNumber * 20;
+            waveComplete = killCount >= waveNumber * 50;
         }
 
         if (waveComplete && !gameOver) {
@@ -315,7 +315,7 @@ public class GameLogic {
         if (!isBossWave) {
             switch (waveNumber) {
                 case 1:
-                    spawningEnemies.spawnEnemies(1, 0, 1, 0, 1);
+                    spawningEnemies.spawnEnemies(1, 1, 1, 1, 1);
                     break;
                 case 2:
                     spawningEnemies.spawnEnemies(5, 2, 1, 2, 1);
