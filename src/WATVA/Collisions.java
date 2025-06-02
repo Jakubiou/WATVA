@@ -6,12 +6,24 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+/**
+ * Handles all collision detection and resolution in the game.
+ */
 public class Collisions {
     private Player player;
     private CopyOnWriteArrayList<Enemy> enemies;
     private CopyOnWriteArrayList<PlayerProjectile> playerProjectiles;
     private boolean gameOver;
+    private static final int EDGE_LIMIT = 50;
+    private static final int SCREEN_WIDTH = GamePanel.PANEL_WIDTH * 4;
+    private static final int SCREEN_HEIGHT = GamePanel.PANEL_HEIGHT * 4;
 
+    /**
+     * Creates a new Collisions handler for the specified game objects.
+     * @param player The player character
+     * @param enemies List of enemies in the game
+     * @param playerProjectiles List of player projectiles
+     */
     public Collisions(Player player, CopyOnWriteArrayList<Enemy> enemies, CopyOnWriteArrayList<PlayerProjectile> playerProjectiles) {
         this.player = player;
         this.enemies = enemies;
@@ -19,6 +31,9 @@ public class Collisions {
         this.gameOver = false;
     }
 
+    /**
+     * Checks all possible collisions in the game.
+     */
     public void checkCollisions() {
         checkBossProjectileCollisions();
         checkEnemyProjectileCollisions();
@@ -29,6 +44,9 @@ public class Collisions {
         resolveEnemyCollisions();
     }
 
+    /**
+     * Checks collisions between boss projectiles and player.
+     */
     private void checkBossProjectileCollisions() {
         for (Enemy enemy : enemies) {
             if (enemy instanceof DarkMageBoss) {
@@ -37,6 +55,9 @@ public class Collisions {
         }
     }
 
+    /**
+     * Checks collisions between enemy projectiles and player.
+     */
     private void checkEnemyProjectileCollisions() {
         for (Enemy enemy : enemies) {
             if (enemy.getType() == Enemy.Type.SHOOTING) {
@@ -56,6 +77,9 @@ public class Collisions {
         }
     }
 
+    /**
+     * Removes dead bosses from the game.
+     */
     private void checkDeadBosses() {
         List<Enemy> enemiesToRemove = new ArrayList<>();
 
@@ -74,6 +98,9 @@ public class Collisions {
         enemies.removeAll(enemiesToRemove);
     }
 
+    /**
+     * Checks collisions between player and enemies.
+     */
     private void checkPlayerEnemyCollisions() {
         Rectangle playerCollider = player.getCollider();
 
@@ -84,8 +111,32 @@ public class Collisions {
 
             Rectangle enemyCollider = enemy.getCollider();
             if (playerCollider.intersects(enemyCollider)) {
-                player.moveAwayFrom(enemy.getX(), enemy.getY());
-                enemy.moveAwayFrom(player.getX(), player.getY());
+                int newPlayerX = player.getX();
+                int newPlayerY = player.getY();
+                int newEnemyX = enemy.getX();
+                int newEnemyY = enemy.getY();
+
+                if (player.getX() < enemy.getX()) {
+                    newPlayerX = Math.max(EDGE_LIMIT, player.getX() - 1);
+                    newEnemyX = Math.min(SCREEN_WIDTH - enemy.getWidth() - EDGE_LIMIT, enemy.getX() + 1);
+                } else {
+                    newPlayerX = Math.min(SCREEN_WIDTH - Player.WIDTH - EDGE_LIMIT, player.getX() + 1);
+                    newEnemyX = Math.max(EDGE_LIMIT, enemy.getX() - 1);
+                }
+
+                if (player.getY() < enemy.getY()) {
+                    newPlayerY = Math.max(EDGE_LIMIT, player.getY() - 1);
+                    newEnemyY = Math.min(SCREEN_HEIGHT - enemy.getHeight() - EDGE_LIMIT, enemy.getY() + 1);
+                } else {
+                    newPlayerY = Math.min(SCREEN_HEIGHT - Player.HEIGHT - EDGE_LIMIT, player.getY() + 1);
+                    newEnemyY = Math.max(EDGE_LIMIT, enemy.getY() - 1);
+                }
+
+                player.setX(newPlayerX);
+                player.setY(newPlayerY);
+                enemy.setX(newEnemyX);
+                enemy.setY(newEnemyY);
+
                 if (enemy.canAttack()) {
                     player.hit(enemy.getDamage());
                     if (player.getHp() <= 0) {
@@ -96,6 +147,9 @@ public class Collisions {
         }
     }
 
+    /**
+     * Checks collisions between explosions and enemies.
+     */
     private void checkExplosionCollisions() {
         List<Enemy> enemiesToRemove = new ArrayList<>();
         List<Explosion> explosionsToRemove = new ArrayList<>();
@@ -131,6 +185,9 @@ public class Collisions {
         player.getExplosions().removeAll(explosionsToRemove);
     }
 
+    /**
+     * Checks collisions between player projectiles and enemies.
+     */
     private void checkPlayerProjectileCollisions() {
         List<Enemy> enemiesToRemove = new ArrayList<>();
         List<PlayerProjectile> arrowsToRemove = new ArrayList<>();
@@ -176,6 +233,9 @@ public class Collisions {
         enemies.removeAll(enemiesToRemove);
     }
 
+    /**
+     * Resolves collisions between enemies.
+     */
     private void resolveEnemyCollisions() {
         for (int i = 0; i < enemies.size(); i++) {
             for (int j = i + 1; j < enemies.size(); j++) {

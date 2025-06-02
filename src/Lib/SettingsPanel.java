@@ -10,7 +10,9 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.FileInputStream;
-
+/**
+ * Settings panel that provides volume control and navigation options.
+ */
 public class SettingsPanel extends JPanel {
     private JSlider volumeSlider;
     private JLabel volumeLabel;
@@ -27,13 +29,18 @@ public class SettingsPanel extends JPanel {
     private static final Color TEXT_COLOR = new Color(220, 220, 220);
     private static final Color ACCENT_COLOR = new Color(100, 150, 255);
 
+    /**
+     * Creates a new SettingsPanel with references to soundtrack and menu panel.
+     * @param soundtrack The soundtrack controller for volume adjustment
+     * @param menuPanel The parent menu panel for navigation back
+     */
     public SettingsPanel(Soundtrack soundtrack, MenuPanel menuPanel) {
         this.soundtrack = soundtrack;
         this.menuPanel = menuPanel;
 
         try {
-            FileInputStream fontStream = new FileInputStream("res/fonts/PixelPurl.ttf");
-            pixelPurlFont = Font.createFont(Font.TRUETYPE_FONT, fontStream).deriveFont(24f);
+            pixelPurlFont = Font.createFont(Font.TRUETYPE_FONT,
+                    getClass().getResourceAsStream("/fonts/PixelPurl.ttf")).deriveFont(24f);
         } catch (Exception e) {
             pixelPurlFont = new Font("Arial", Font.BOLD, 24);
             e.printStackTrace();
@@ -43,6 +50,9 @@ public class SettingsPanel extends JPanel {
         setupEventListeners();
     }
 
+    /**
+     * Initializes all UI components including volume slider and buttons.
+     */
     private void initializeUI() {
         setOpaque(false);
         setLayout(null);
@@ -59,7 +69,7 @@ public class SettingsPanel extends JPanel {
         titleLabel.setBounds(0, 30, panelWidth, 40);
         add(titleLabel);
 
-        volumeLabel = new JLabel("🔊 VOLUME CONTROL", JLabel.CENTER);
+        volumeLabel = new JLabel("VOLUME CONTROL", JLabel.CENTER);
         volumeLabel.setFont(pixelPurlFont.deriveFont(18f));
         volumeLabel.setForeground(TEXT_COLOR);
         volumeLabel.setBounds(0, 100, panelWidth, 30);
@@ -76,12 +86,12 @@ public class SettingsPanel extends JPanel {
         setupSliderAppearance();
         add(volumeSlider);
 
-        testButton = createStyledButton("🎵 TEST SOUND", panelWidth - 100, 50);
+        testButton = createStyledButton("TEST SOUND", panelWidth - 100, 50);
         testButton.setBounds(50, 260, panelWidth - 100, 50);
         testButton.addActionListener(e -> soundtrack.playOnce());
         add(testButton);
 
-        resetButton = createStyledButton("↻ RESET", panelWidth - 100, 50);
+        resetButton = createStyledButton("RESET", panelWidth - 100, 50);
         resetButton.setBounds(50, 330, panelWidth - 100, 50);
         resetButton.addActionListener(e -> {
             volumeSlider.setValue(50);
@@ -101,6 +111,9 @@ public class SettingsPanel extends JPanel {
         setVisible(false);
     }
 
+    /**
+     * Configures the visual appearance of the volume slider with custom styling.
+     */
     private void setupSliderAppearance() {
         volumeSlider.setBackground(new Color(0, 0, 0, 0));
         volumeSlider.setForeground(TEXT_COLOR);
@@ -143,6 +156,13 @@ public class SettingsPanel extends JPanel {
         volumeSlider.setFont(labelFont);
     }
 
+    /**
+     * Creates a styled button with hover effects and consistent appearance.
+     * @param text The button text to display
+     * @param width The button width
+     * @param height The button height
+     * @return The created JButton with custom styling
+     */
     private JButton createStyledButton(String text, int width, int height) {
         JButton button = new JButton(text);
         button.setFont(pixelPurlFont.deriveFont(16f));
@@ -174,6 +194,9 @@ public class SettingsPanel extends JPanel {
         return button;
     }
 
+    /**
+     * Sets up event listeners for the volume slider to handle volume changes.
+     */
     private void setupEventListeners() {
         volumeSlider.addChangeListener(new ChangeListener() {
             @Override
@@ -196,6 +219,10 @@ public class SettingsPanel extends JPanel {
         });
     }
 
+    /**
+     * Paints the panel background with rounded corners and border.
+     * @param g The Graphics object to protect
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);

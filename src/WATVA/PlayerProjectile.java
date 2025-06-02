@@ -5,6 +5,10 @@ import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 
+/**
+ * Represents a projectile fired by the player.
+ * Handles projectile movement, animation, and special effects.
+ */
 public class PlayerProjectile {
     public static final int SIZE = 64;
     private int x, y;
@@ -20,6 +24,17 @@ public class PlayerProjectile {
     private int fireDamageLevel;
     private boolean slowEffect;
 
+    /**
+     * Creates a new player projectile.
+     *
+     * @param x Starting X position
+     * @param y Starting Y position
+     * @param targetX Target X position (for direction)
+     * @param targetY Target Y position (for direction)
+     * @param piercingLevel Number of additional enemies projectile can pierce
+     * @param fireLevel Level of additional fire damage
+     * @param hasSlowEffect Whether projectile slows enemies
+     */
     public PlayerProjectile(int x, int y, int targetX, int targetY, int piercingLevel, int fireLevel, boolean hasSlowEffect) {
         this.x = x;
         this.y = y;
@@ -33,16 +48,21 @@ public class PlayerProjectile {
 
         bulletTextures = new Image[5];
         try {
-            bulletTextures[0] = ImageIO.read(new File("res/watva/weapons/knife/knife1.png"));
-            bulletTextures[1] = ImageIO.read(new File("res/watva/weapons/knife/knife2.png"));
-            bulletTextures[2] = ImageIO.read(new File("res/watva/weapons/knife/knife3.png"));
-            bulletTextures[3] = ImageIO.read(new File("res/watva/weapons/knife/knife4.png"));
-            bulletTextures[4] = ImageIO.read(new File("res/watva/weapons/knife/knife5.png"));
+            bulletTextures[0] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Weapons/Knife/Knife1.png"));
+            bulletTextures[1] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Weapons/Knife/Knife2.png"));
+            bulletTextures[2] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Weapons/Knife/Knife3.png"));
+            bulletTextures[3] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Weapons/Knife/Knife4.png"));
+            bulletTextures[4] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Weapons/Knife/Knife5.png"));
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    /**
+     * Updates projectile position and animation.
+     *
+     * @return true if projectile should be removed (out of bounds, max distance, or no pierce left)
+     */
     public boolean move() {
         double angle = Math.atan2(targetY - y, targetX - x);
         x += speed * Math.cos(angle);

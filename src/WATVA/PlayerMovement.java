@@ -3,6 +3,14 @@ package WATVA;
 import java.awt.event.KeyEvent;
 import java.util.Iterator;
 
+/**
+ * Handles all player movement logic including:
+ * - Basic directional movement (WASD/arrow keys)
+ * - Dash ability with cooldown
+ * - Explosion ability management
+ * - Player idle state detection
+ * - Movement boundary enforcement
+ */
 public class PlayerMovement {
     private Player player;
     private boolean up, down, left, right, idle;
@@ -10,13 +18,29 @@ public class PlayerMovement {
     private int dashDirectionX = 0, dashDirectionY = 0;
     private int dashProgress = 0;
 
+    /**
+     * Creates a new PlayerMovement instance tied to a specific player.
+     *
+     * @param player The Player instance this movement controller will manage
+     */
     public PlayerMovement(Player player) {
         this.player = player;
     }
 
+    /**
+     * Main movement update method called every game tick.
+     * Handles:
+     * - Shield regeneration
+     * - Health regeneration
+     * - Dash movement
+     * - Normal movement
+     * - Idle state detection
+     * - Animation frame updates
+     * - Explosion updates
+     */
     public void move() {
         boolean moving = false;
-        int edgeLimit = 54;
+        int edgeLimit = 50;
         long currentTime = System.currentTimeMillis();
 
         if (player.getShieldLevel() > 0 && currentTime - player.getLastShieldRegenerationTime() >= Player.SHIELD_REGENERATION_INTERVAL) {
@@ -103,6 +127,10 @@ public class PlayerMovement {
         updateExplosions();
     }
 
+    /**
+     * Updates all active explosion effects.
+     * Removes completed explosions from the player's explosion list.
+     */
     private void updateExplosions() {
         Iterator<Explosion> iterator = player.getExplosions().iterator();
         while (iterator.hasNext()) {
@@ -114,6 +142,11 @@ public class PlayerMovement {
         }
     }
 
+    /**
+     * Handles key press events for player movement and abilities.
+     *
+     * @param e The KeyEvent containing key press information
+     */
     public void keyPressed(KeyEvent e) {
         int key = e.getKeyCode();
 
@@ -129,6 +162,11 @@ public class PlayerMovement {
         }
     }
 
+    /**
+     * Handles key release events for player movement.
+     *
+     * @param e The KeyEvent containing key release information
+     */
     public void keyReleased(KeyEvent e) {
         int key = e.getKeyCode();
 
@@ -138,10 +176,19 @@ public class PlayerMovement {
         if (key == KeyEvent.VK_D || key == KeyEvent.VK_RIGHT) { right = false; }
     }
 
+    /**
+     * Checks if the dash ability is off cooldown and available for use.
+     *
+     * @return true if dash can be used, false otherwise
+     */
     private boolean canDash() {
         return System.currentTimeMillis() - player.getLastDashTime() >= player.getDashCooldown();
     }
 
+    /**
+     * Initiates a dash in the current movement direction.
+     * Calculates dash vector based on active movement keys.
+     */
     private void startDash() {
         dashing = true;
         dashProgress = 0;

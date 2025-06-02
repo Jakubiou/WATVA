@@ -6,6 +6,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+/**
+ * The Dark Mage boss enemy with special attacks and abilities.
+ */
 public class DarkMageBoss extends Enemy {
     private static final int BOSS_SIZE = 128;
     private long lastSpecialAttackTime = 0;
@@ -46,6 +49,12 @@ public class DarkMageBoss extends Enemy {
     private CopyOnWriteArrayList<DarkMageProjectile> projectiles = new CopyOnWriteArrayList<>();
     private int projectilePhase = 0;
 
+    /**
+     * Creates a new Dark Mage boss at specified position with given health.
+     * @param x The x-coordinate of the boss
+     * @param y The y-coordinate of the boss
+     * @param hp The initial health points of the boss
+     */
     public DarkMageBoss(int x, int y, int hp) {
         super(x, y, hp, Type.DARK_MAGE_BOSS);
         this.baseSpeed = 1;
@@ -56,19 +65,23 @@ public class DarkMageBoss extends Enemy {
         deathTextures = new Image[10];
         try {
             for (int i = 0; i < 5; i++) {
-                bossTexturesLeft[i] = ImageIO.read(new File("res/watva/boss/darkMage/darkMage" + (i + 1) + ".png"));
-                bossTexturesRight[i] = ImageIO.read(new File("res/watva/boss/darkMage/darkMage" + (i + 6) + ".png"));
-                bossAreaAttackTextures[i] = ImageIO.read(new File("res/watva/boss/darkMage/darkMage" + (i + 6) + ".png"));
+                bossTexturesLeft[i] = ImageIO.read(getClass().getResourceAsStream("/watva/boss/darkMage/darkMage" + (i + 1) + ".png"));
+                bossTexturesRight[i] = ImageIO.read(getClass().getResourceAsStream("/watva/boss/darkMage/darkMage" + (i + 6) + ".png"));
+                bossAreaAttackTextures[i] = ImageIO.read(getClass().getResourceAsStream("/watva/boss/darkMage/darkMage" + (i + 6) + ".png"));
             }
             for (int i = 0; i < 10; i++) {
-                deathTextures[i] = ImageIO.read(new File("res/watva/boss/darkMage/darkMage" + (i + 11) + ".png"));
+                deathTextures[i] = ImageIO.read(getClass().getResourceAsStream("/watva/boss/darkMage/darkMage" + (i + 11) + ".png"));
             }
-            hpBarFrame1 = ImageIO.read(new File("res/watva/boss/darkMage/DarkMageHPBar1.png"));
+            hpBarFrame1 = ImageIO.read(getClass().getResourceAsStream("/watva/boss/darkMage/DarkMageHPBar1.png"));
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    /**
+     * Draws the boss with animations and health bar.
+     * @param g The Graphics object to draw with
+     */
     @Override
     public void draw(Graphics g) {
         if (isDying) {
@@ -144,6 +157,11 @@ public class DarkMageBoss extends Enemy {
         }
     }
 
+    /**
+     * Performs a dash attack towards the target position.
+     * @param playerX The target x-coordinate
+     * @param playerY The target y-coordinate
+     */
     public void dashAttack(int playerX, int playerY) {
         long currentTime = System.currentTimeMillis();
 
@@ -165,6 +183,11 @@ public class DarkMageBoss extends Enemy {
         }
     }
 
+    /**
+     * Moves the boss towards the player position.
+     * @param playerX The player's x-coordinate
+     * @param playerY The player's y-coordinate
+     */
     @Override
     public void moveTowards(int playerX, int playerY) {
         double deltaX = playerX - x;
@@ -179,6 +202,10 @@ public class DarkMageBoss extends Enemy {
         }
     }
 
+    /**
+     * Summons minion enemies around the boss.
+     * @param enemies The list to add new minions to
+     */
     public void summonMinions(CopyOnWriteArrayList<Enemy> enemies) {
         int radius = 150;
         int minionCount = 9;
@@ -192,6 +219,10 @@ public class DarkMageBoss extends Enemy {
         }
     }
 
+    /**
+     * Performs an area attack that damages the player.
+     * @param player The player to damage
+     */
     public void areaAttack(Player player) {
         long currentTime = System.currentTimeMillis();
 
@@ -218,6 +249,9 @@ public class DarkMageBoss extends Enemy {
         }
     }
 
+    /**
+     * Starts the projectile attack phase.
+     */
     private void startProjectileAttack() {
         isShootingProjectiles = true;
         projectileAttackStartTime = System.currentTimeMillis();
@@ -225,6 +259,10 @@ public class DarkMageBoss extends Enemy {
         projectilePhase = 0;
     }
 
+    /**
+     * Updates the projectile attack state.
+     * @param player The player target
+     */
     private void updateProjectileAttack(Player player) {
         long currentTime = System.currentTimeMillis();
 
@@ -247,6 +285,10 @@ public class DarkMageBoss extends Enemy {
         projectiles.removeIf(p -> !p.isActive());
     }
 
+    /**
+     * Shoots projectiles in different patterns based on attack phase.
+     * @param player The player target
+     */
     private void shootProjectiles(Player player) {
         int centerX = x + BOSS_SIZE / 2;
         int centerY = y + BOSS_SIZE / 2;
@@ -304,6 +346,10 @@ public class DarkMageBoss extends Enemy {
         }
     }
 
+    /**
+     * Checks for projectile collisions with player.
+     * @param player The player to check collisions against
+     */
     public void checkProjectileCollisions(Player player) {
         Rectangle playerCollider = player.getCollider();
 
@@ -315,6 +361,11 @@ public class DarkMageBoss extends Enemy {
         }
     }
 
+    /**
+     * Updates boss behavior and attack patterns.
+     * @param player The player target
+     * @param enemies The enemy list for minion summoning
+     */
     public void updateBossBehavior(Player player, CopyOnWriteArrayList<Enemy> enemies) {
         if (isDead) return;
 
@@ -363,6 +414,9 @@ public class DarkMageBoss extends Enemy {
         }
     }
 
+    /**
+     * @return The collision bounds of the boss
+     */
     @Override
     public Rectangle getCollider() {
         return new Rectangle(x +(BOSS_SIZE / 2) / 2, y +(BOSS_SIZE / 2) / 2, BOSS_SIZE / 2, BOSS_SIZE / 2);

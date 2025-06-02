@@ -3,6 +3,10 @@ package WATVA;
 import javax.swing.*;
 import java.awt.*;
 
+/**
+ * The main game window and entry point for the WATVA game application.
+ * Handles window creation, scaling, and serves as the root container for the game panel.
+ */
 public class Game extends JFrame {
     private GamePanel gamePanel;
     private Player player;
@@ -10,6 +14,11 @@ public class Game extends JFrame {
     private static double realScreenWidth;
     private static double realScreenHeight;
 
+    /**
+     * Constructs and initializes the main game window.
+     * Sets up fullscreen display, calculates scaling factors, and creates game components.
+     * The window is undecorated (no borders/titlebar) and maximized to full screen.
+     */
     public Game() {
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         int screenWidth = (int) screenSize.getWidth();

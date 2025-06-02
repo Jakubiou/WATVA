@@ -5,6 +5,11 @@ import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 
+/**
+ * Represents a Slime enemy in the game.
+ * Implements unique jumping movement behavior and animations.
+ * Extends the base Enemy class with slime-specific characteristics.
+ */
 public class Slime extends Enemy {
     private static final int SLIME_SIZE = 64;
     private long lastJumpTime = 0;
@@ -24,17 +29,24 @@ public class Slime extends Enemy {
     private int targetX, targetY;
     private double jumpProgress = 0;
 
+    /**
+     * Creates a new Slime enemy.
+     *
+     * @param x Initial x-coordinate
+     * @param y Initial y-coordinate
+     * @param hp Initial health points
+     */
     public Slime(int x, int y, int hp) {
         super(x, y, hp, Type.SLIME);
         this.baseSpeed = 0;
 
         try {
             for (int i = 0; i < 6; i++) {
-                slimeTexturesRight[i] = ImageIO.read(new File("res/watva/enemy/slime/slime" + (i + 1) + ".png"));
+                slimeTexturesRight[i] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Enemy/Slime/Slime" + (i + 1) + ".png"));
             }
             slimeTexturesLeft[0] = slimeTexturesRight[0];
             for (int i = 1; i < 6; i++) {
-                slimeTexturesLeft[i] = ImageIO.read(new File("res/watva/enemy/slime/slime" + (i + 6) + ".png"));
+                slimeTexturesLeft[i] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Enemy/Slime/Slime" + (i + 6) + ".png"));
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -44,6 +56,12 @@ public class Slime extends Enemy {
         this.startY = y;
     }
 
+    /**
+     * Moves the slime towards the target player position using jumping behavior.
+     *
+     * @param targetPlayerX Player's x-coordinate
+     * @param targetPlayerY Player's y-coordinate
+     */
     @Override
     public void moveTowards(int targetPlayerX, int targetPlayerY) {
         long currentTime = System.currentTimeMillis();
@@ -103,6 +121,11 @@ public class Slime extends Enemy {
         }
     }
 
+    /**
+     * Draws the slime at its current position with appropriate animation frame.
+     *
+     * @param g Graphics context to draw to
+     */
     @Override
     public void draw(Graphics g) {
         Image currentTexture;
@@ -119,6 +142,11 @@ public class Slime extends Enemy {
         }
     }
 
+    /**
+     * Gets the collision bounds of the slime.
+     *
+     * @return Rectangle representing the collision area
+     */
     @Override
     public Rectangle getCollider() {
         return new Rectangle(x + 30, y + 24, SLIME_SIZE - 48, SLIME_SIZE - 48);

@@ -2,19 +2,31 @@ package WATVA;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
-import java.io.File;
 import java.io.IOException;
 
+/**
+ * Handles all visual rendering for the player character.
+ * Manages player animations, health bar display, and ability cooldown indicators.
+ */
 public class PlayerGraphics {
     private Player player;
     private transient Image[] rightTextures, leftTextures, idleTextures, upTextures, downTextures;
     private transient Image hpBarFrame1, hpBarFrame2, hpBarFrame3;
 
+    /**
+     * Creates a new PlayerGraphics instance tied to a specific player.
+     *
+     * @param player The Player instance this graphics object will represent
+     */
     public PlayerGraphics(Player player) {
         this.player = player;
         loadTextures();
     }
 
+    /**
+     * Loads all texture assets required for player rendering.
+     * Includes directional sprites, idle animations, and health bar frames.
+     */
     private void loadTextures() {
         rightTextures = loadTextures("Player1", "Player2", "Player3", "Player4");
         leftTextures = loadTextures("Player5", "Player6", "Player7", "Player8");
@@ -22,19 +34,25 @@ public class PlayerGraphics {
         downTextures = loadTextures("Player13", "Player14", "Player15", "Player16");
         idleTextures = loadTextures("Player17", "Player18", "Player19", "Player20");
         try {
-            hpBarFrame1 = ImageIO.read(new File("res/watva/player/HPBar1.png"));
-            hpBarFrame2 = ImageIO.read(new File("res/watva/player/HPBar2.png"));
-            hpBarFrame3 = ImageIO.read(new File("res/watva/player/HPBar3.png"));
+            hpBarFrame1 = ImageIO.read(getClass().getResourceAsStream("/WATVA/Player/HPBar1.png"));
+            hpBarFrame2 = ImageIO.read(getClass().getResourceAsStream("/WATVA/Player/HPBar2.png"));
+            hpBarFrame3 = ImageIO.read(getClass().getResourceAsStream("/WATVA/Player/HPBar3.png"));
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    /**
+     * Helper method to load a set of textures from resource files.
+     *
+     * @param filenames Array of filenames (without extension) to load
+     * @return Array of loaded Image objects
+     */
     private Image[] loadTextures(String... filenames) {
         Image[] textures = new Image[filenames.length];
         try {
             for (int i = 0; i < filenames.length; i++) {
-                textures[i] = ImageIO.read(new File("res/watva/player/" + filenames[i] + ".png"));
+                textures[i] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Player/" + filenames[i] + ".png"));
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -42,6 +60,11 @@ public class PlayerGraphics {
         return textures;
     }
 
+    /**
+     * Main rendering method that draws the player and associated UI elements.
+     *
+     * @param g The Graphics context to render to
+     */
     public void draw(Graphics g) {
         Image[] textures = idleTextures;
 
@@ -68,6 +91,12 @@ public class PlayerGraphics {
         drawHealthBar(g);
     }
 
+    /**
+     * Draws the player's health bar with visual progression.
+     * Shows different colors and frames based on current health level.
+     *
+     * @param g The Graphics context to render to
+     */
     private void drawHealthBar(Graphics g) {
         int hpBarWidth = (int)(270 * Game.getScaleFactor());
         int hpBarHeight = (int)(30 * Game.getScaleFactor());
@@ -122,6 +151,12 @@ public class PlayerGraphics {
         }
     }
 
+    /**
+     * Draws the dash ability cooldown indicator.
+     * Shows remaining cooldown as a circular progress meter.
+     *
+     * @param g The Graphics context to render to
+     */
     private void drawDashCooldown(Graphics g) {
         long timeSinceLastDash = System.currentTimeMillis() - player.getLastDashTime();
         if (timeSinceLastDash < player.getDashCooldown()) {
@@ -136,6 +171,12 @@ public class PlayerGraphics {
         }
     }
 
+    /**
+     * Draws the explosion ability cooldown indicator.
+     * Shows remaining cooldown as a circular progress meter.
+     *
+     * @param g The Graphics context to render to
+     */
     private void drawExplosionCooldown(Graphics g) {
         long timeSinceLastExplosion = System.currentTimeMillis() - player.getLastExplosionTime();
         if (timeSinceLastExplosion < player.getExplosionCooldown()) {

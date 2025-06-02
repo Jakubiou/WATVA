@@ -1,23 +1,33 @@
 package WATVA;
 
 import Lib.SettingsPanel;
-import Lib.Soundtrack;
 import MainMenu.MainMenuPanel;
 import javax.swing.*;
 import java.awt.*;
-import java.io.FileInputStream;
 
+/**
+ * The in-game menu panel that provides game control options during gameplay.
+ * This panel appears when the game is paused and offers options to resume, restart,
+ * return to main menu, adjust settings, or quit the game entirely.
+ */
 public class MenuPanel extends JPanel {
     private JButton resumeButton;
     private JButton restartButton;
     private JButton mainMenuButton;
     private JButton quitButton;
     private JButton settingsButton;
-    private Soundtrack backgroundMusic;
     private Font pixelPurlFont;
     private SettingsPanel settingsPanel;
     private GamePanel gamePanel;
 
+    /**
+     * Constructs a new MenuPanel with all necessary game control options.
+     * Initializes the panel layout, loads custom font, and creates all interactive buttons.
+     *
+     * @param game The main Game instance that manages the application window
+     * @param gamePanel The GamePanel instance that handles game rendering and input
+     * @param gameLogic The GameLogic instance that manages game state and rules
+     */
     public MenuPanel(Game game, GamePanel gamePanel, GameLogic gameLogic) {
         this.gamePanel = gamePanel;
 
@@ -80,6 +90,15 @@ public class MenuPanel extends JPanel {
         setVisible(false);
     }
 
+    /**
+     * Creates a styled menu button with consistent appearance and hover effects.
+     * All buttons in the menu use this standardized styling.
+     *
+     * @param text The display text for the button
+     * @param width The width of the button in pixels
+     * @param height The height of the button in pixels
+     * @return A configured JButton with the specified styling
+     */
     private JButton createMenuButton(String text, int width, int height) {
         JButton button = new JButton(text);
         button.setFont(pixelPurlFont);
@@ -107,6 +126,12 @@ public class MenuPanel extends JPanel {
         return button;
     }
 
+    /**
+     * Renders the menu panel with a semi-transparent rounded rectangle background.
+     * This provides visual separation from the game while maintaining visibility.
+     *
+     * @param g The Graphics object used for rendering
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);

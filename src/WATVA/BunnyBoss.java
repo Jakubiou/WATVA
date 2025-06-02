@@ -6,6 +6,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+/**
+ * The Bunny boss enemy with jumping and stomping attacks.
+ */
 public class BunnyBoss extends Enemy {
     private static final int BUNNY_SIZE = 128;
     private long lastJumpTime = 0;
@@ -38,20 +41,25 @@ public class BunnyBoss extends Enemy {
     private static final int JUMP_ATTACK_MAX_COUNT = 5;
     private transient Image hpBarFrame1;
 
-
+    /**
+     * Creates a new Bunny boss at specified position with given health.
+     * @param x The x-coordinate of the boss
+     * @param y The y-coordinate of the boss
+     * @param hp The initial health points of the boss
+     */
     public BunnyBoss(int x, int y, int hp) {
         super(x, y, hp, Type.BUNNY_BOSS);
         this.baseSpeed = 0;
 
         try {
             for (int i = 0; i < 6; i++) {
-                bunnyTexturesRight[i] = ImageIO.read(new File("res/watva/boss/bunny/bunny" + (i + 7) + ".png"));
+                bunnyTexturesRight[i] = ImageIO.read(getClass().getResourceAsStream("watva/boss/bunny/bunny" + (i + 7) + ".png"));
             }
             bunnyTexturesLeft[0] = bunnyTexturesRight[0];
             for (int i = 0; i < 6; i++) {
-                bunnyTexturesLeft[i] = ImageIO.read(new File("res/watva/boss/bunny/bunny" + (i + 1) + ".png"));
+                bunnyTexturesLeft[i] = ImageIO.read(getClass().getResourceAsStream("watva/boss/bunny/bunny" + (i + 1) + ".png"));
             }
-            hpBarFrame1 = ImageIO.read(new File("res/watva/boss/bunny/BunnyHPBar1.png"));
+            hpBarFrame1 = ImageIO.read(getClass().getResourceAsStream("watva/boss/bunny/BunnyHPBar1.png"));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -60,6 +68,11 @@ public class BunnyBoss extends Enemy {
         this.startY = y;
     }
 
+    /**
+     * Moves the boss towards the target position using jumping mechanics.
+     * @param targetPlayerX The target x-coordinate
+     * @param targetPlayerY The target y-coordinate
+     */
     @Override
     public void moveTowards(int targetPlayerX, int targetPlayerY) {
         long currentTime = System.currentTimeMillis();
@@ -129,7 +142,10 @@ public class BunnyBoss extends Enemy {
         }
     }
 
-
+    /**
+     * Draws the boss with animations and health bar.
+     * @param g The Graphics object to draw with
+     */
     @Override
     public void draw(Graphics g) {
             Image currentTexture;
@@ -189,12 +205,19 @@ public class BunnyBoss extends Enemy {
         }
     }
 
+    /**
+     * @return The collision bounds of the boss
+     */
     @Override
     public Rectangle getCollider() {
         return new Rectangle(x + 30, y + 24, BUNNY_SIZE - 48, BUNNY_SIZE - 48);
     }
 
-
+    /**
+     * Starts a jump attack sequence towards the target position.
+     * @param targetPlayerX The target x-coordinate
+     * @param targetPlayerY The target y-coordinate
+     */
     private void startJumpAttack(int targetPlayerX, int targetPlayerY) {
         isJumpAttack = true;
         preJump = true;
@@ -211,7 +234,11 @@ public class BunnyBoss extends Enemy {
         jumpingRight = targetX > x;
     }
 
-
+    /**
+     * Updates boss behavior and attack patterns.
+     * @param player The player target
+     * @param enemies The enemy list (unused in this implementation)
+     */
     public void updateBossBehavior(Player player, CopyOnWriteArrayList<Enemy> enemies) {
         long currentTime = System.currentTimeMillis();
 
@@ -233,11 +260,18 @@ public class BunnyBoss extends Enemy {
         }
     }
 
+    /**
+     * Initiates the ground stomp attack.
+     */
     private void startGroundStomp() {
         isStomping = true;
         stompStartTime = System.currentTimeMillis();
     }
 
+    /**
+     * Performs the ground stomp attack that damages nearby players.
+     * @param player The player to damage
+     */
     private void groundStomp(Player player) {
         long currentTime = System.currentTimeMillis();
         if (currentTime - stompStartTime < STOMP_DURATION) {

@@ -11,6 +11,10 @@ import java.util.ArrayList;
 
 import static com.sun.java.accessibility.util.AWTEventMonitor.addMouseMotionListener;
 
+/**
+ * Represents the player character in the game with all attributes, abilities, and state.
+ * Handles player movement, combat, upgrades, and persistence.
+ */
 public class Player implements Serializable {
     public static int WIDTH = (int)(50 * Game.getScaleFactor());
     public static final int HEIGHT = (int)(50 * Game.getScaleFactor());
@@ -65,7 +69,14 @@ public class Player implements Serializable {
     private transient PlayerGraphics graphics;
     private transient PlayerMovement movement;
 
-
+    /**
+     * Constructs a new Player at specified coordinates with given health.
+     * Initializes all player systems including graphics, movement, and input handling.
+     *
+     * @param x The initial x-coordinate
+     * @param y The initial y-coordinate
+     * @param hp The initial health points
+     */
     public Player(int x, int y, int hp) {
         this.x = x;
         this.y = y;
@@ -86,10 +97,16 @@ public class Player implements Serializable {
             }
         });
     }
+
+    /**
+     * Initializes transient fields after deserialization.
+     * Required because graphics and movement systems shouldn't be serialized.
+     */
     private void initializeTransientFields() {
         this.graphics = new PlayerGraphics(this);
         this.movement = new PlayerMovement(this);
     }
+
 
     public void move() {
         movement.move();
@@ -107,11 +124,20 @@ public class Player implements Serializable {
         return System.currentTimeMillis() - lastExplosionTime >= explosionCooldown;
     }
 
+    /**
+     * Triggers an explosion centered on player's current position.
+     * Creates explosion effect and starts cooldown timer.
+     */
     public void triggerExplosion() {
         explosions.add(new Explosion(x + WIDTH / 2, y + HEIGHT / 2, explosionRange));
         lastExplosionTime = System.currentTimeMillis();
     }
 
+    /**
+     * Saves complete player state to file.
+     *
+     * @param filePath Path to save file
+     */
     public void saveState(String filePath) {
         try {
             File file = new File(filePath);
@@ -130,6 +156,12 @@ public class Player implements Serializable {
         }
     }
 
+    /**
+     * Loads player state from file.
+     *
+     * @param filePath Path to save file
+     * @return Loaded Player instance or null if load fails
+     */
     public static Player loadState(String filePath) {
         File file = new File(filePath);
         if (!file.exists()) {
@@ -149,6 +181,11 @@ public class Player implements Serializable {
         }
     }
 
+    /**
+     * Saves only player's coins to file while preserving other stats.
+     *
+     * @param filePath Path to save file
+     */
     public void saveCoins(String filePath) {
         try {
             Player existingPlayer = loadState(filePath);
@@ -164,6 +201,11 @@ public class Player implements Serializable {
         }
     }
 
+    /**
+     * Saves only player's location to file while preserving other stats.
+     *
+     * @param filePath Path to save file
+     */
     public void saveLocation(String filePath) {
         try {
             Player existingPlayer = loadState(filePath);
@@ -188,6 +230,11 @@ public class Player implements Serializable {
         }
     }
 
+    /**
+     * Gets player's collision bounds.
+     *
+     * @return Rectangle representing collision area
+     */
     public Rectangle getCollider() {
         return new Rectangle(x, y, 45, 45);
     }
@@ -249,6 +296,9 @@ public class Player implements Serializable {
     public boolean isIdle() { return movement.isIdle(); }
     public void setSlowEnemiesUnlocked(boolean unlocked) { slowEnemiesUnlocked = unlocked; }
 
+    /**
+     * Upgrades player's slow ability, increasing effectiveness.
+     */
     public void upgradeSlow() {
         if (slowEnemiesLevel < 3) {
             slowEnemiesLevel++;
@@ -256,10 +306,16 @@ public class Player implements Serializable {
         slowEnemiesUnlocked = true;
     }
 
+    /**
+     * Upgrades arrow piercing ability.
+     */
     public void upgradePiercing() {
         if (piercingArrowsLevel < 3) piercingArrowsLevel += 2;
     }
 
+    /**
+     * Upgrades fire damage ability.
+     */
     public void upgradeFire() {
         if (fireDamageLevel < 3) {
             fireDamageLevel++;
@@ -282,6 +338,11 @@ public class Player implements Serializable {
         }
     }
 
+    /**
+     * Applies damage to player, considering defense and shield.
+     *
+     * @param damage Raw damage amount before reductions
+     */
     public void hit(int damage) {
         int reducedDamage = damage;
         if (defense > 0) {

@@ -7,6 +7,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Handles enemy spawning logic in the game.
+ * Manages concurrent spawning of different enemy types with configurable rates.
+ * Implements spawn points selection outside player's view.
+ */
 public class SpawningEnemies {
     private static final int EDGE_OFFSET = 1;
     private GamePanel gamePanel;
@@ -14,12 +19,27 @@ public class SpawningEnemies {
     private ExecutorService spawnExecutor;
     private volatile boolean stopSpawning = false;
 
+    /**
+     * Creates a new SpawningEnemies controller.
+     *
+     * @param gamePanel Reference to the game panel
+     * @param enemies Thread-safe list to add spawned enemies to
+     */
     public SpawningEnemies(GamePanel gamePanel, CopyOnWriteArrayList<Enemy> enemies) {
         this.gamePanel = gamePanel;
         this.enemies = enemies;
         this.spawnExecutor = Executors.newSingleThreadExecutor();
     }
 
+    /**
+     * Starts spawning enemies of different types with specified rates.
+     *
+     * @param normalPerSecond Spawn rate for normal enemies
+     * @param giantPerSecond Spawn rate for giant enemies
+     * @param smallPerSecond Spawn rate for small enemies
+     * @param shootingPerSecond Spawn rate for shooting enemies
+     * @param slimePerSecond Spawn rate for slime enemies
+     */
     public void spawnEnemies(int normalPerSecond, int giantPerSecond, int smallPerSecond, int shootingPerSecond, int slimePerSecond) {
         stopSpawning = false;
 
@@ -30,6 +50,13 @@ public class SpawningEnemies {
         spawnEnemyType(slimePerSecond, Enemy.Type.SLIME, 4 * gamePanel.getWaveNumber());
     }
 
+    /**
+     * Spawns a specific enemy type at given rate.
+     *
+     * @param rate Enemies per second to spawn
+     * @param type Type of enemy to spawn
+     * @param hp Health points for spawned enemies
+     */
     private void spawnEnemyType(int rate, Enemy.Type type, int hp) {
         if (rate <= 0) return;
 
@@ -52,6 +79,9 @@ public class SpawningEnemies {
         });
     }
 
+    /**
+     * Stops all current spawning activities.
+     */
     public void stopCurrentSpawn() {
         stopSpawning = true;
         spawnExecutor.shutdownNow();
@@ -65,22 +95,33 @@ public class SpawningEnemies {
         spawnExecutor = Executors.newCachedThreadPool();
     }
 
+    /**
+     * Spawns a Dark Mage boss enemy.
+     */
     public void spawnDarkMageBoss() {
         Point spawnPoint = getSpawnPointBehindCamera();
         if (spawnPoint != null) {
-            DarkMageBoss darkMageBoss = new DarkMageBoss(spawnPoint.x, spawnPoint.y, 50);
+            DarkMageBoss darkMageBoss = new DarkMageBoss(spawnPoint.x, spawnPoint.y, 100 * GameLogic.getWaveNumber());
             enemies.add(darkMageBoss);
         }
     }
+
+    /**
+     * Spawns a Bunny boss enemy.
+     */
     public void spawnBunnyBoss() {
         Point spawnPoint = getSpawnPointBehindCamera();
         if (spawnPoint != null) {
-            BunnyBoss bunnyBoss = new BunnyBoss(spawnPoint.x, spawnPoint.y, 500);
+            BunnyBoss bunnyBoss = new BunnyBoss(spawnPoint.x, spawnPoint.y, 100 * GameLogic.getWaveNumber());
             enemies.add(bunnyBoss);
         }
     }
 
-
+    /**
+     * Gets all available spawn points at map edges outside camera view.
+     *
+     * @return List of available spawn points
+     */
     private ArrayList<Point> getAvailableEdgeBlocks() {
         ArrayList<Point> availableBlocks = new ArrayList<>();
 
@@ -112,6 +153,11 @@ public class SpawningEnemies {
         return availableBlocks;
     }
 
+    /**
+     * Gets a random spawn point behind camera view.
+     *
+     * @return Random spawn point or null if none available
+     */
     private Point getSpawnPointBehindCamera() {
         ArrayList<Point> availableBlocks = getAvailableEdgeBlocks();
 
@@ -121,6 +167,13 @@ public class SpawningEnemies {
         return null;
     }
 
+    /**
+     * Checks if a map block is available for spawning (not occupied by enemies).
+     *
+     * @param x Block x coordinate
+     * @param y Block y coordinate
+     * @return true if block is available for spawning
+     */
     private boolean isBlockAvailable(int x, int y) {
         Rectangle blockRect = new Rectangle(x * GamePanel.BLOCK_SIZE, y * GamePanel.BLOCK_SIZE, GamePanel.BLOCK_SIZE, GamePanel.BLOCK_SIZE);
         for (Enemy enemy : enemies) {

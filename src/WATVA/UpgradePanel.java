@@ -2,10 +2,13 @@ package WATVA;
 
 import java.awt.*;
 import javax.swing.*;
-import java.io.FileInputStream;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Upgrade panel that appears between waves, allowing players to upgrade their stats.
+ * Displays available upgrades and current player statistics.
+ */
 public class UpgradePanel extends JPanel {
     private final Player player;
     private final GamePanel gamePanel;
@@ -15,20 +18,29 @@ public class UpgradePanel extends JPanel {
     private Map<String, Integer> maxLevels;
     private Font pixelPurlFont;
 
+    /**
+     * Creates a new upgrade panel.
+     *
+     * @param gamePanel Reference to the game panel
+     * @param player Reference to the player
+     */
     public UpgradePanel(GamePanel gamePanel, Player player) {
         this.gamePanel = gamePanel;
         this.player = player;
         initializeBaseCosts();
         initializeUpgradePanel();
         try {
-            FileInputStream fontStream = new FileInputStream("res/fonts/PixelPurl.ttf");
-            pixelPurlFont = Font.createFont(Font.TRUETYPE_FONT, fontStream).deriveFont(24f);
+            pixelPurlFont = Font.createFont(Font.TRUETYPE_FONT,
+                    getClass().getResourceAsStream("/fonts/PixelPurl.ttf")).deriveFont(24f);
         } catch (Exception e) {
             pixelPurlFont = new Font("Arial", Font.BOLD, 24);
             e.printStackTrace();
         }
     }
 
+    /**
+     * Initializes base costs for all upgrades.
+     */
     private void initializeBaseCosts() {
         baseCosts = new HashMap<>();
         baseCosts.put("Damage", 50);
@@ -41,6 +53,9 @@ public class UpgradePanel extends JPanel {
         maxLevels.put("Defense", 50);
     }
 
+    /**
+     * Initializes panel components and layout.
+     */
     private void initializeUpgradePanel() {
         setLayout(new BorderLayout());
 
@@ -92,6 +107,12 @@ public class UpgradePanel extends JPanel {
         setVisible(false);
     }
 
+    /**
+     * Creates a custom upgrade button for a specific stat.
+     *
+     * @param statName The stat to upgrade
+     * @return Configured JButton
+     */
     private JButton createUpgradeButton(String statName) {
         JButton button = new JButton() {
             @Override
@@ -148,6 +169,12 @@ public class UpgradePanel extends JPanel {
         return button;
     }
 
+    /**
+     * Gets current value of specified stat.
+     *
+     * @param statName The stat name
+     * @return Current stat value
+     */
     private int getCurrentStatValue(String statName) {
         switch (statName) {
             case "Damage":
@@ -161,6 +188,12 @@ public class UpgradePanel extends JPanel {
         }
     }
 
+    /**
+     * Calculates current upgrade cost for a stat.
+     *
+     * @param statName The stat name
+     * @return Current upgrade cost
+     */
     private int calculateCost(String statName) {
         int baseCost = baseCosts.get(statName);
         int currentLevel = getCurrentUpgradeLevel(statName);
@@ -168,6 +201,12 @@ public class UpgradePanel extends JPanel {
         return (int) (baseCost * Math.pow(1.2, currentLevel));
     }
 
+    /**
+     * Gets current upgrade level for a stat.
+     *
+     * @param statName The stat name
+     * @return Current upgrade level
+     */
     private int getCurrentUpgradeLevel(String statName) {
         switch (statName) {
             case "Damage":
@@ -182,11 +221,22 @@ public class UpgradePanel extends JPanel {
         }
     }
 
+    /**
+     * Checks if stat is at maximum level.
+     *
+     * @param statName The stat name
+     * @return True if max level reached
+     */
     private boolean isStatMaxed(String statName) {
         int currentLevel = getCurrentUpgradeLevel(statName);
         return currentLevel >= maxLevels.get(statName);
     }
 
+    /**
+     * Upgrades the specified player stat.
+     *
+     * @param stat The stat to upgrade
+     */
     private void upgradeStat(String stat) {
         if (isStatMaxed(stat)) {
             return;
@@ -214,18 +264,27 @@ public class UpgradePanel extends JPanel {
         }
     }
 
+    /**
+     * Updates the panel display.
+     */
     public void updateAbilityPanel() {
         coinsLabel.setFont(pixelPurlFont);
         coinsLabel.setText("Coins: " + player.getCoins());
         repaint();
     }
 
+    /**
+     * Shows the panel.
+     */
     public void showPanel() {
         setVisible(true);
         updateAbilityPanel();
         visible = true;
     }
 
+    /**
+     * Hides the panel.
+     */
     public void hidePanel() {
         setVisible(false);
         visible = false;

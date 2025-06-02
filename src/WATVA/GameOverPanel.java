@@ -6,11 +6,21 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.FileInputStream;
 
+/**
+ * A JPanel that displays when the player dies, providing game over options.
+ * Includes buttons to restart the game, view upgrades, or return to main menu.
+ */
 public class GameOverPanel extends JPanel {
     private Game game;
     private GamePanel gamePanel;
     private Font pixelPurlFont;
 
+    /**
+     * Constructs a GameOverPanel with references to game components.
+     *
+     * @param game The main Game instance
+     * @param gamePanel The GamePanel instance for game control
+     */
     public GameOverPanel(Game game, GamePanel gamePanel) {
         this.game = game;
         this.gamePanel = gamePanel;
@@ -18,16 +28,24 @@ public class GameOverPanel extends JPanel {
         initializeComponents();
     }
 
+    /**
+     * Loads the custom pixel font from resources.
+     * Falls back to Arial if custom font cannot be loaded.
+     */
     private void loadCustomFont() {
         try {
-            FileInputStream fontStream = new FileInputStream("res/fonts/PixelPurl.ttf");
-            pixelPurlFont = Font.createFont(Font.TRUETYPE_FONT, fontStream).deriveFont(24f);
+            pixelPurlFont = Font.createFont(Font.TRUETYPE_FONT,
+                    getClass().getResourceAsStream("/fonts/PixelPurl.ttf")).deriveFont(24f);
         } catch (Exception e) {
             pixelPurlFont = new Font("Arial", Font.BOLD, 24);
             e.printStackTrace();
         }
     }
 
+    /**
+     * Initializes and lays out all UI components.
+     * Creates game over message and action buttons with event handlers.
+     */
     private void initializeComponents() {
         setLayout(new GridLayout(4, 1, 10, 10));
         setBackground(new Color(0, 0, 0, 150));
@@ -60,6 +78,12 @@ public class GameOverPanel extends JPanel {
         add(mainMenuButton);
     }
 
+    /**
+     * Creates a styled button with consistent appearance.
+     *
+     * @param text The button text to display
+     * @return The created JButton with custom styling
+     */
     private JButton createButton(String text) {
         JButton button = new JButton(text);
         button.setFont(pixelPurlFont);

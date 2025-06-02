@@ -7,6 +7,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Panel that displays and manages ability selection between game waves.
+ */
 public class AbilityPanel extends JPanel {
     private final Player player;
     private final GamePanel gamePanel;
@@ -17,20 +20,28 @@ public class AbilityPanel extends JPanel {
     private boolean buttonsVisible = false;
     private Font pixelPurlFont;
 
+    /**
+     * Creates an AbilityPanel for the specified game panel and player.
+     * @param gamePanel The parent game panel
+     * @param player The player to apply abilities to
+     */
     public AbilityPanel(GamePanel gamePanel, Player player) {
         this.gamePanel = gamePanel;
         this.player = player;
         initializeAbilities();
         initializeAbilityPanel();
         try {
-            FileInputStream fontStream = new FileInputStream("res/fonts/PixelPurl.ttf");
-            pixelPurlFont = Font.createFont(Font.TRUETYPE_FONT, fontStream).deriveFont(24f);
+            pixelPurlFont = Font.createFont(Font.TRUETYPE_FONT,
+                    getClass().getResourceAsStream("/fonts/PixelPurl.ttf")).deriveFont(24f);
         } catch (Exception e) {
             pixelPurlFont = new Font("Arial", Font.BOLD, 24);
             e.printStackTrace();
         }
     }
 
+    /**
+     * Initializes all possible abilities in the game.
+     */
     private void initializeAbilities() {
         allAbilities = new ArrayList<>();
         allAbilities.add(new Ability("Double Shot", "Shoot two arrows at once",  "double"));
@@ -44,6 +55,9 @@ public class AbilityPanel extends JPanel {
         allAbilities.add(new Ability("Shield", "Damage absorption",  "shield"));
     }
 
+    /**
+     * Sets up the ability panel's basic properties and appearance.
+     */
     private void initializeAbilityPanel() {
         setLayout(new BorderLayout());
         setBackground(new Color(30, 30, 30, 200));
@@ -52,6 +66,11 @@ public class AbilityPanel extends JPanel {
         setBounds((GamePanel.PANEL_WIDTH - 500) / 2, (GamePanel.PANEL_HEIGHT - 400) / 2, 500, 400);
     }
 
+    /**
+     * Checks if an ability can be selected (not maxed out).
+     * @param ability The ability to check
+     * @return True if the ability is available for selection
+     */
     private boolean isAbilityAvailable(Ability ability) {
         switch (ability.getType()) {
             case "double":
@@ -77,6 +96,10 @@ public class AbilityPanel extends JPanel {
         }
     }
 
+    /**
+     * Gets all currently available abilities.
+     * @return List of available abilities
+     */
     private List<Ability> getAvailableAbilities() {
         List<Ability> availableAbilities = new ArrayList<>();
         for (Ability ability : allAbilities) {
@@ -87,6 +110,9 @@ public class AbilityPanel extends JPanel {
         return availableAbilities;
     }
 
+    /**
+     * Shows 3 random available abilities for selection.
+     */
     public void showRandomAbilities() {
         removeAll();
         buttonsVisible = false;
@@ -121,11 +147,15 @@ public class AbilityPanel extends JPanel {
         repaint();
         setVisible(true);
 
-        delayTimer = new Timer(500, e -> showButtons(availableAbilities));
+        delayTimer = new Timer(300, e -> showButtons(availableAbilities));
         delayTimer.setRepeats(false);
         delayTimer.start();
     }
 
+    /**
+     * Displays the ability selection buttons after a delay.
+     * @param availableAbilities List of abilities to show
+     */
     private void showButtons(List<Ability> availableAbilities) {
         buttonsVisible = true;
         buttonPanel.removeAll();
@@ -141,6 +171,11 @@ public class AbilityPanel extends JPanel {
         buttonPanel.repaint();
     }
 
+    /**
+     * Creates a styled button for an ability.
+     * @param ability The ability to create button for
+     * @return The created JButton
+     */
     private JButton createAbilityButton(Ability ability) {
         String buttonText = "<html><center>" + ability.getName();
 
@@ -189,6 +224,10 @@ public class AbilityPanel extends JPanel {
         return btn;
     }
 
+    /**
+     * Applies the selected ability to the player.
+     * @param ability The ability to apply
+     */
     private void applyAbility(Ability ability) {
         switch (ability.getType()) {
             case "double":
@@ -226,6 +265,9 @@ public class AbilityPanel extends JPanel {
         updateAbilityPanel();
     }
 
+    /**
+     * Updates the coins display in the panel.
+     */
     public void updateAbilityPanel() {
         if (coinsLabel != null) {
             coinsLabel.setText("Coins: " + player.getCoins());
@@ -233,6 +275,9 @@ public class AbilityPanel extends JPanel {
         }
     }
 
+    /**
+     * Shows the ability selection panel.
+     */
     public void showPanel() {
         List<Ability> availableAbilities = getAvailableAbilities();
         if (availableAbilities.isEmpty()) {
@@ -246,6 +291,9 @@ public class AbilityPanel extends JPanel {
         repaint();
     }
 
+    /**
+     * Hides the ability selection panel.
+     */
     public void hidePanel() {
         setVisible(false);
         if (delayTimer != null && delayTimer.isRunning()) {

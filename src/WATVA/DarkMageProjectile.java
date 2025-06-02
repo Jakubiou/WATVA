@@ -2,6 +2,9 @@ package WATVA;
 
 import java.awt.*;
 
+/**
+ * Projectile fired by the Dark Mage boss with fading effect.
+ */
 public class DarkMageProjectile {
     private int x, y;
     private double dx, dy;
@@ -14,6 +17,13 @@ public class DarkMageProjectile {
     private float fadeAlpha = 1.0f;
     private static final float FADE_SPEED = 0.1f;
 
+    /**
+     * Creates a new projectile at specified position with given direction.
+     * @param startX The starting x-coordinate
+     * @param startY The starting y-coordinate
+     * @param dirX The x-direction component
+     * @param dirY The y-direction component
+     */
     public DarkMageProjectile(int startX, int startY, double dirX, double dirY) {
         this.x = startX;
         this.y = startY;
@@ -21,6 +31,9 @@ public class DarkMageProjectile {
         this.dy = dirY * SPEED;
     }
 
+    /**
+     * Updates the projectile position and fade state.
+     */
     public void update() {
         if (!active) return;
 
@@ -37,6 +50,10 @@ public class DarkMageProjectile {
         distanceTraveled += SPEED;
     }
 
+    /**
+     * Draws the projectile with glow and fade effects.
+     * @param g The Graphics object to draw with
+     */
     public void draw(Graphics g) {
         if (!active) return;
 
@@ -55,6 +72,9 @@ public class DarkMageProjectile {
         g2d.dispose();
     }
 
+    /**
+     * @return The collision bounds of the projectile
+     */
     public Rectangle getCollider() {
         return new Rectangle(x - SIZE / 2, y - SIZE / 2, SIZE, SIZE);
     }

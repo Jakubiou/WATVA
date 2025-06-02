@@ -7,6 +7,10 @@ import java.util.ArrayList;
 import java.util.concurrent.CopyOnWriteArrayList;
 import javax.swing.Timer;
 
+/**
+ * The core game logic controller that manages game state, wave progression,
+ * collisions, and player/enemy interactions.
+ */
 public class GameLogic {
     public static int[][] map;
     public static int mapWidth, mapHeight;
@@ -26,19 +30,34 @@ public class GameLogic {
     private long attackSpeedInterval = 200;
     private GamePanel gamePanel;
 
+    /**
+     * Initializes the game logic with references to game panel and player.
+     * Loads game map, initializes game state, and starts background music.
+     *
+     * @param gamePanel The game panel for rendering
+     * @param player The player character
+     */
     public GameLogic(GamePanel gamePanel, Player player) {
         this.gamePanel = gamePanel;
         this.player = player;
 
-        backgroundMusic = new Soundtrack("res/watva/Music/MainMenuSong.wav");
+        backgroundMusic = new Soundtrack("/WATVA/Music/MainSong.wav");
         backgroundMusic.playLoop();
 
-        loadMap("map1.txt");
+        loadMap("Map1.txt");
         initializeGame();
     }
 
+    /**
+     * Loads game map from resource file.
+     * Parses text file into 2D integer array representing the game world.
+     *
+     * @param filename The map file to load from resources
+     */
     private void loadMap(String filename) {
-        try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream(filename);
+             BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+
             ArrayList<int[]> mapList = new ArrayList<>();
             String line;
             while ((line = br.readLine()) != null) {
@@ -65,14 +84,19 @@ public class GameLogic {
             for (int i = 0; i < mapHeight; i++) {
                 map[i] = mapList.get(i);
             }
-        } catch (IOException e) {
+        } catch (IOException | NullPointerException e) {
             e.printStackTrace();
         }
     }
 
+    /**
+     * Initializes core game systems and components.
+     * Sets up player, enemies, projectiles, collisions, and spawner.
+     */
     private void initializeGame() {
         if (player == null) {
             player = new Player(mapWidth * GamePanel.BLOCK_SIZE / 2, mapHeight * GamePanel.BLOCK_SIZE / 2, 100);
+            //savePlayerStatus();
         } else {
             loadPlayerStatus();
             player.setX(mapWidth * GamePanel.BLOCK_SIZE / 2);
@@ -80,9 +104,6 @@ public class GameLogic {
         }
 
         updateAttackSpeed();
-
-        System.out.println("Player initialized: x=" + player.getX() + ", y=" + player.getY() +
-                ", hp=" + player.getHp() + ", coins=" + player.getCoins() + ", defence=" + player.getDefense());
 
         enemies = new CopyOnWriteArrayList<>();
         playerProjectiles = new CopyOnWriteArrayList<>();
@@ -93,6 +114,10 @@ public class GameLogic {
         waveNumber = 0;
     }
 
+    /**
+     * Starts a new game session.
+     * Begins first wave after short delay.
+     */
     public void startNewGame() {
         try {
             Thread.sleep(100);
@@ -103,6 +128,10 @@ public class GameLogic {
         timer.start();
     }
 
+    /**
+     * Main game update loop called each frame.
+     * Handles player movement, collisions, enemy updates, and game state checks.
+     */
     public void update() {
         if (!gameOver && !isPaused) {
             updateAttackSpeed();
@@ -117,6 +146,10 @@ public class GameLogic {
         }
     }
 
+    /**
+     * Updates all active enemies including bosses.
+     * Handles death states and special boss behaviors.
+     */
     private void updateEnemies() {
         boolean bossExists = false;
         boolean bossDeathAnimationComplete = false;
@@ -151,6 +184,11 @@ public class GameLogic {
         }
     }
 
+    /**
+     * Checks if current wave completion conditions are met.
+     * For normal waves: enough enemies killed.
+     * For boss waves: boss defeated.
+     */
     private void checkWaveCompletion() {
         boolean bossExists = false;
         boolean bossDeathAnimationComplete = false;
@@ -181,21 +219,35 @@ public class GameLogic {
         }
     }
 
+    /**
+     * Checks game over conditions (player death).
+     * Saves player state if game ends.
+     */
     private void checkGameOver() {
         if (player.getHp() <= 0) {
             gameOver = true;
+            spawningEnemies.stopCurrentSpawn();
             savePlayerCoins();
             player.saveLocation("player_save.dat");
             loadPlayerStatus();
         }
     }
 
+    /**
+     * Updates player's attack speed based on upgrades.
+     */
     private void updateAttackSpeed() {
         int baseInterval = 200;
         int speedReduction = player.getAttackSpeed() * 10;
         attackSpeedInterval = Math.max(100, baseInterval - speedReduction);
     }
 
+    /**
+     * Attempts to fire player projectiles if attack cooldown allows.
+     *
+     * @param mouseX Target x-coordinate
+     * @param mouseY Target y-coordinate
+     */
     public void tryToShoot(int mouseX, int mouseY) {
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastShotTime >= attackSpeedInterval) {
@@ -204,6 +256,13 @@ public class GameLogic {
         }
     }
 
+    /**
+     * Creates and fires player projectiles based on current abilities.
+     * Handles different firing patterns (double shot, backward shot, etc).
+     *
+     * @param mouseX Target x-coordinate
+     * @param mouseY Target y-coordinate
+     */
     private void shoot(int mouseX, int mouseY) {
         if (player.isExplosionActive() && player.canUseExplosion()) {
             player.triggerExplosion();
@@ -231,6 +290,11 @@ public class GameLogic {
         }
     }
 
+    /**
+     * Advances to next wave of enemies.
+     * Spawns regular enemies or bosses based on wave number.
+     * Clears current enemies and resets counters.
+     */
     public void nextWave() {
         spawningEnemies.stopCurrentSpawn();
         enemies.clear();
@@ -268,18 +332,27 @@ public class GameLogic {
         resumeGame();
     }
 
+    /**
+     * Pauses game including timer and music.
+     */
     public void pauseGame() {
         timer.stop();
         isPaused = true;
         backgroundMusic.stop();
     }
 
+    /**
+     * Resumes paused game including timer and music.
+     */
     public void resumeGame() {
         timer.start();
         isPaused = false;
         backgroundMusic.playLoop();
     }
 
+    /**
+     * Stops game completely and cleans up resources.
+     */
     public void stopGame() {
         pauseGame();
         backgroundMusic.stop();
@@ -289,20 +362,36 @@ public class GameLogic {
         spawningEnemies = null;
     }
 
+    /**
+     * Increments enemy kill counter.
+     */
     public static void killCountPlus(){
         killCount++;
     }
 
-    public void savePlayerStatus(){
-        player.saveState("player_save.dat");
-    }
-
+    /**
+     * Saves player's coin count to file.
+     */
     public void savePlayerCoins(){
         player.saveCoins("player_save.dat");
     }
 
-    public void loadPlayerStatus(){
-        player = Player.loadState("player_save.dat");
+    /**
+     * Loads player status from save file.
+     * Creates new player if load fails.
+     */
+    public void loadPlayerStatus() {
+        try {
+            player = Player.loadState("player_save.dat");
+            if (player == null) {
+                player = new Player(mapWidth * GamePanel.BLOCK_SIZE / 2,
+                        mapHeight * GamePanel.BLOCK_SIZE / 2, 100);
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading player, creating new one: " + e.getMessage());
+            player = new Player(mapWidth * GamePanel.BLOCK_SIZE / 2,
+                    mapHeight * GamePanel.BLOCK_SIZE / 2, 100);
+        }
     }
 
     public Player getPlayer() {
@@ -339,9 +428,5 @@ public class GameLogic {
 
     public int getCameraY() {
         return cameraY;
-    }
-
-    public Timer getTimer() {
-        return timer;
     }
 }
