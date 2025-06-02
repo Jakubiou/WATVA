@@ -48,8 +48,10 @@ public class PlayerMovement {
             player.setLastShieldRegenerationTime(currentTime);
         }
 
-        if (player.getRegenerationLevel() > 0 && player.getHp() < 100) {
+        if (player.getRegenerationLevel() > 0 && player.getHp() < 100 &&
+                currentTime - player.getLastHpRegenerationTime() >= Player.HP_REGENERATION_INTERVAL) {
             player.setHp(Math.min(player.getHp() + player.getRegenerationLevel(), 100));
+            player.setLastHpRegenerationTime(currentTime);
         }
 
         if (dashing) {

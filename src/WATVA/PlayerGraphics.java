@@ -113,6 +113,11 @@ public class PlayerGraphics {
             g.fillRect(hpBarX, hpBarY + hpBarHeight + 5, shieldWidth, hpBarHeight);
             g.setColor(Color.BLACK);
             g.drawRect(hpBarX, hpBarY + hpBarHeight + 5, hpBarWidth, hpBarHeight);
+            g.setColor(Color.BLACK);
+            for (int i = 1; i <= 9; i++) {
+                int dividerX = hpBarX + (i * hpBarWidth / 10);
+                g.drawLine(dividerX, hpBarY + hpBarHeight + 5, dividerX, hpBarY + hpBarHeight + 5 + hpBarHeight);
+            }
         }
 
         if (player.getHp() > 0) {
@@ -142,7 +147,7 @@ public class PlayerGraphics {
             }
         }
 
-        if (player.getHp() > 0) {
+        if (player.getHp() > 0 ) {
             g.setColor(Color.BLACK);
             for (int i = 1; i <= 9; i++) {
                 int dividerX = hpBarX + (i * hpBarWidth / 10);

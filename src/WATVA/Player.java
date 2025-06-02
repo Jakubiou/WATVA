@@ -22,6 +22,7 @@ public class Player implements Serializable {
     public static final int PANEL_HEIGHT = GamePanel.PANEL_HEIGHT * 4;
     public static final int MAX_SHIELD_HP = 100;
     public static final long SHIELD_REGENERATION_INTERVAL = 1000;
+    public static final long HP_REGENERATION_INTERVAL = 1000; // 1 second for HP regen
     public static final long IDLE_TRIGGER_DELAY = 500;
 
     private ArrayList<Explosion> explosions = new ArrayList<>();
@@ -64,6 +65,7 @@ public class Player implements Serializable {
     private int shieldLevel = 0;
     private int shieldHP = 0;
     private long lastShieldRegenerationTime = 0;
+    private long lastHpRegenerationTime = 0;
     private int slowEnemiesLevel = 0;
 
     private transient PlayerGraphics graphics;
@@ -82,6 +84,7 @@ public class Player implements Serializable {
         this.y = y;
         this.hp = Math.min(hp, 500);
         this.maxHp = Math.min(hp, 500);
+        this.lastHpRegenerationTime = System.currentTimeMillis();
         initializeTransientFields();
         addMouseMotionListener(new MouseMotionListener() {
             @Override
@@ -172,6 +175,9 @@ public class Player implements Serializable {
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(filePath))) {
             Player player = (Player) ois.readObject();
             player.initializeTransientFields();
+            if (player.lastHpRegenerationTime == 0) {
+                player.lastHpRegenerationTime = System.currentTimeMillis();
+            }
             System.out.println("Player state loaded successfully: x=" + player.getX() +
                     ", y=" + player.getY() + ", hp=" + player.getHp() + ", coins=" + player.getCoins());
             return player;
@@ -275,7 +281,9 @@ public class Player implements Serializable {
     public long getLastExplosionTime() { return lastExplosionTime; }
     public long getExplosionCooldown() { return explosionCooldown; }
     public long getLastShieldRegenerationTime() { return lastShieldRegenerationTime; }
+    public long getLastHpRegenerationTime() { return lastHpRegenerationTime; } // New getter
     public void setLastShieldRegenerationTime(long time) { lastShieldRegenerationTime = time; }
+    public void setLastHpRegenerationTime(long time) { lastHpRegenerationTime = time; } // New setter
     public void setIdleAnimationStartTime(long time) { idleAnimationStartTime = time; }
     public void setLastMovementTime(long time) { lastMovementTime = time; }
     public void setLastFrameChange(long time) { lastFrameChange = time; }
