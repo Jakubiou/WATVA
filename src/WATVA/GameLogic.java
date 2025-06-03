@@ -266,7 +266,7 @@ public class GameLogic {
         if (player.isExplosionActive() && player.canUseExplosion()) {
             player.triggerExplosion();
         } else {
-            int centerX = player.getX() + Player.WIDTH / 2;
+            int centerX = player.getX() + Player.WIDTH / 2 - (int)(25 * Game.getScaleFactor());
             int centerY = player.getY() + Player.HEIGHT / 2;
 
             int piercingLevel = player.getPiercingLevel();

@@ -226,7 +226,7 @@ public class GameRenderer {
      */
     private void drawWaveProgressBar(Graphics2D g2d, boolean gameOver, boolean isPaused,
                                      CopyOnWriteArrayList<Enemy> enemies, int killCount) {
-        if (gameOver || isPaused || enemies.isEmpty()) return;
+        if (gameOver || isPaused || enemies.isEmpty()  || GameLogic.getWaveNumber() % 5 == 0 || GameLogic.getWaveNumber() % 10 == 0) return;
 
         int barWidth = (int)(390 * Game.getScaleFactor());
         int barHeight = (int)(30 * Game.getScaleFactor());

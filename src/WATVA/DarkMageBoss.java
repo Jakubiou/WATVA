@@ -48,6 +48,7 @@ public class DarkMageBoss extends Enemy {
     private long lastProjectileTime = 0;
     private CopyOnWriteArrayList<DarkMageProjectile> projectiles = new CopyOnWriteArrayList<>();
     private int projectilePhase = 0;
+    protected int maxHp;
 
     /**
      * Creates a new Dark Mage boss at specified position with given health.
@@ -58,6 +59,7 @@ public class DarkMageBoss extends Enemy {
     public DarkMageBoss(int x, int y, int hp) {
         super(x, y, hp, Type.DARK_MAGE_BOSS);
         this.baseSpeed = 1;
+        this.maxHp = hp;
 
         bossTexturesLeft = new Image[5];
         bossTexturesRight = new Image[5];
@@ -131,7 +133,7 @@ public class DarkMageBoss extends Enemy {
             g.fillRect(hpBarX + GameLogic.cameraX, hpBarY + GameLogic.cameraY, hpBarWidth, hpBarHeight);
 
             g.setColor(Color.RED);
-            int redWidth = (int)(Math.min(this.hp, 500) * hpBarWidth / 500);
+            int redWidth = (int)(Math.min(this.hp, this.maxHp) * hpBarWidth / this.maxHp);
             g.fillRect(hpBarX + GameLogic.cameraX, hpBarY + GameLogic.cameraY, redWidth, hpBarHeight);
 
             g.setColor(Color.BLACK);

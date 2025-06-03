@@ -39,6 +39,7 @@ public class BunnyBoss extends Enemy {
     private int jumpAttackCount = 0;
     private static final int JUMP_ATTACK_MAX_COUNT = 5;
     private transient Image hpBarFrame1;
+    protected int maxHp;
 
     /**
      * Creates a new Bunny boss at specified position with given health.
@@ -49,6 +50,7 @@ public class BunnyBoss extends Enemy {
     public BunnyBoss(int x, int y, int hp) {
         super(x, y, hp, Type.BUNNY_BOSS);
         this.baseSpeed = 0;
+        this.maxHp = hp;
 
         try {
             for (int i = 0; i < 6; i++) {
@@ -178,7 +180,7 @@ public class BunnyBoss extends Enemy {
             g.fillRect(hpBarX + GameLogic.cameraX, hpBarY + GameLogic.cameraY, hpBarWidth, hpBarHeight);
 
             g.setColor(Color.RED);
-            int redWidth = (int)(Math.min(this.hp, 500) * hpBarWidth / 500);
+            int redWidth = (int)(Math.min(this.hp, this.maxHp) * hpBarWidth / this.maxHp);
             g.fillRect(hpBarX + GameLogic.cameraX, hpBarY + GameLogic.cameraY, redWidth, hpBarHeight);
 
             g.setColor(Color.BLACK);
