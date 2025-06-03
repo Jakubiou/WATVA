@@ -492,9 +492,6 @@ public class Enemy {
      * @return Rectangle representing collision area
      */
     public Rectangle getCollider() {
-        if (type == Type.NORMAL) {
-            return new Rectangle(x + 24, y + 3, NORMAL_SIZE - 32, NORMAL_SIZE - 9);
-        }
         return new Rectangle(x + getWidth() / 2, y + getHeight() / 2, getWidth(), getHeight());
     }
 

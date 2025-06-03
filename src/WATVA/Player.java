@@ -22,7 +22,7 @@ public class Player implements Serializable {
     public static final int PANEL_HEIGHT = GamePanel.PANEL_HEIGHT * 4;
     public static final int MAX_SHIELD_HP = 100;
     public static final long SHIELD_REGENERATION_INTERVAL = 1000;
-    public static final long HP_REGENERATION_INTERVAL = 1000; // 1 second for HP regen
+    public static final long HP_REGENERATION_INTERVAL = 1000;
     public static final long IDLE_TRIGGER_DELAY = 500;
 
     private ArrayList<Explosion> explosions = new ArrayList<>();
@@ -281,9 +281,9 @@ public class Player implements Serializable {
     public long getLastExplosionTime() { return lastExplosionTime; }
     public long getExplosionCooldown() { return explosionCooldown; }
     public long getLastShieldRegenerationTime() { return lastShieldRegenerationTime; }
-    public long getLastHpRegenerationTime() { return lastHpRegenerationTime; } // New getter
+    public long getLastHpRegenerationTime() { return lastHpRegenerationTime; }
     public void setLastShieldRegenerationTime(long time) { lastShieldRegenerationTime = time; }
-    public void setLastHpRegenerationTime(long time) { lastHpRegenerationTime = time; } // New setter
+    public void setLastHpRegenerationTime(long time) { lastHpRegenerationTime = time; }
     public void setIdleAnimationStartTime(long time) { idleAnimationStartTime = time; }
     public void setLastMovementTime(long time) { lastMovementTime = time; }
     public void setLastFrameChange(long time) { lastFrameChange = time; }

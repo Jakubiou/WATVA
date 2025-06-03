@@ -21,7 +21,7 @@ public class BunnyBoss extends Enemy {
     private Image[] bunnyTexturesRight = new Image[6];
     private Image[] bunnyTexturesLeft = new Image[6];
     private int currentFrame = 0;
-    private int animationSpeed = 5; // Faster animation speed
+    private int animationSpeed = 5;
     private int animationCounter = 0;
 
     private int startX, startY;
@@ -31,7 +31,6 @@ public class BunnyBoss extends Enemy {
     private long lastSpecialAttackTime = 0;
     private static final long SPECIAL_ATTACK_INTERVAL = 3000;
     private boolean isBurrowing = false;
-    private static final long BURROW_DURATION = 1000;
     private boolean isStomping = false;
     private long stompStartTime = 0;
     private static final long STOMP_DURATION = 500;

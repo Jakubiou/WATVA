@@ -96,7 +96,6 @@ public class GameLogic {
     private void initializeGame() {
         if (player == null) {
             player = new Player(mapWidth * GamePanel.BLOCK_SIZE / 2, mapHeight * GamePanel.BLOCK_SIZE / 2, 100);
-            //savePlayerStatus();
         } else {
             loadPlayerStatus();
             player.setX(mapWidth * GamePanel.BLOCK_SIZE / 2);

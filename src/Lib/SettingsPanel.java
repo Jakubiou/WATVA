@@ -9,7 +9,6 @@ import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.FileInputStream;
 /**
  * Settings panel that provides volume control and navigation options.
  */
@@ -24,8 +23,6 @@ public class SettingsPanel extends JPanel {
     private MenuPanel menuPanel;
     private Font pixelPurlFont;
 
-    private static final Color BACKGROUND_COLOR = new Color(45, 45, 50);
-    private static final Color PANEL_COLOR = new Color(60, 60, 65);
     private static final Color TEXT_COLOR = new Color(220, 220, 220);
     private static final Color ACCENT_COLOR = new Color(100, 150, 255);
 
@@ -94,9 +91,9 @@ public class SettingsPanel extends JPanel {
         resetButton = createStyledButton("RESET", panelWidth - 100, 50);
         resetButton.setBounds(50, 330, panelWidth - 100, 50);
         resetButton.addActionListener(e -> {
-            volumeSlider.setValue(50);
-            soundtrack.setVolume(0.5f);
-            volumeValueLabel.setText("50%");
+            volumeSlider.setValue(85);
+            soundtrack.setVolume(0.85f);
+            volumeValueLabel.setText("85%");
         });
         add(resetButton);
 
