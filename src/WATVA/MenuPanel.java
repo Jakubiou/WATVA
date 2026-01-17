@@ -1,6 +1,5 @@
 package WATVA;
 
-import Lib.SettingsPanel;
 import MainMenu.MainMenuPanel;
 import javax.swing.*;
 import java.awt.*;

@@ -1,7 +1,5 @@
 package WATVA;
 
-import Lib.Soundtrack;
-
 import java.io.*;
 import java.util.ArrayList;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -29,6 +27,7 @@ public class GameLogic {
     private long lastShotTime = 0;
     private long attackSpeedInterval = 200;
     private GamePanel gamePanel;
+    private MapManager mapManager;
 
     /**
      * Initializes the game logic with references to game panel and player.
@@ -37,63 +36,26 @@ public class GameLogic {
      * @param gamePanel The game panel for rendering
      * @param player The player character
      */
-    public GameLogic(GamePanel gamePanel, Player player) {
+    public GameLogic(GamePanel gamePanel, Player player,DamageNumberManager damageManager) {
         this.gamePanel = gamePanel;
         this.player = player;
 
         backgroundMusic = new Soundtrack("/WATVA/Music/MainSong.wav");
         backgroundMusic.playLoop();
 
-        loadMap("Map1.txt");
-        initializeGame();
+        mapManager = new MapManager("Map1.txt");
+
+        mapWidth = mapManager.getBaseWidth();
+        mapHeight = mapManager.getBaseHeight();
+        initializeGame(damageManager);
     }
 
-    /**
-     * Loads game map from resource file.
-     * Parses text file into 2D integer array representing the game world.
-     *
-     * @param filename The map file to load from resources
-     */
-    private void loadMap(String filename) {
-        try (InputStream is = getClass().getClassLoader().getResourceAsStream(filename);
-             BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
-
-            ArrayList<int[]> mapList = new ArrayList<>();
-            String line;
-            while ((line = br.readLine()) != null) {
-                if (line.trim().isEmpty()) {
-                    continue;
-                }
-
-                String[] tokens = line.split(" ");
-                int[] row = new int[tokens.length];
-                for (int i = 0; i < tokens.length; i++) {
-                    try {
-                        row[i] = Integer.parseInt(tokens[i].trim());
-                    } catch (NumberFormatException e) {
-                        row[i] = 0;
-                        System.err.println("Error parsing number: " + tokens[i]);
-                    }
-                }
-                mapList.add(row);
-            }
-
-            mapHeight = mapList.size();
-            mapWidth = mapList.isEmpty() ? 0 : mapList.get(0).length;
-            map = new int[mapHeight][mapWidth];
-            for (int i = 0; i < mapHeight; i++) {
-                map[i] = mapList.get(i);
-            }
-        } catch (IOException | NullPointerException e) {
-            e.printStackTrace();
-        }
-    }
 
     /**
      * Initializes core game systems and components.
      * Sets up player, enemies, projectiles, collisions, and spawner.
      */
-    private void initializeGame() {
+    private void initializeGame(DamageNumberManager damageManager) {
         if (player == null) {
             player = new Player(mapWidth * GamePanel.BLOCK_SIZE / 2, mapHeight * GamePanel.BLOCK_SIZE / 2, 100);
         } else {
@@ -106,7 +68,7 @@ public class GameLogic {
 
         enemies = new CopyOnWriteArrayList<>();
         playerProjectiles = new CopyOnWriteArrayList<>();
-        collisions = new Collisions(player, enemies, playerProjectiles);
+        collisions = new Collisions(player, enemies, playerProjectiles,damageManager);
         spawningEnemies = new SpawningEnemies(gamePanel, enemies);
 
         timer = new Timer(15, gamePanel);
@@ -131,15 +93,16 @@ public class GameLogic {
      * Main game update loop called each frame.
      * Handles player movement, collisions, enemy updates, and game state checks.
      */
-    public void update() {
+    public void update(DamageNumberManager damageManager) {
         if (!gameOver && !isPaused) {
+            damageManager.update();
             updateAttackSpeed();
             player.move();
 
             collisions.checkCollisions();
             gameOver = collisions.isGameOver();
 
-            updateEnemies();
+            updateEnemies(damageManager);
             checkWaveCompletion();
             checkGameOver();
         }
@@ -149,11 +112,12 @@ public class GameLogic {
      * Updates all active enemies including bosses.
      * Handles death states and special boss behaviors.
      */
-    private void updateEnemies() {
+    private void updateEnemies(DamageNumberManager damageManager) {
         boolean bossExists = false;
         boolean bossDeathAnimationComplete = false;
 
         for (Enemy enemy : enemies) {
+            enemy.update(damageManager);
             if (enemy instanceof DarkMageBoss) {
                 bossExists = true;
                 DarkMageBoss darkMageBoss = (DarkMageBoss) enemy;
@@ -274,12 +238,12 @@ public class GameLogic {
             boolean hasSlow = player.hasSlowEnemies();
 
             if (player.isDoubleShotActive() && player.isForwardBackwardShotActive()) {
-                playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX + 20, mouseY, piercingLevel, fireLevel, hasSlow));
-                playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX - 20, mouseY, piercingLevel, fireLevel, hasSlow));
+                playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX + 20, mouseY + 20, piercingLevel, fireLevel, hasSlow));
+                playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX - 20, mouseY - 20, piercingLevel, fireLevel, hasSlow));
                 playerProjectiles.add(new PlayerProjectile(centerX, centerY, centerX - (mouseX - centerX), centerY - (mouseY - centerY), piercingLevel, fireLevel, hasSlow));
             } else if (player.isDoubleShotActive()) {
-                playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX + 20, mouseY, piercingLevel, fireLevel, hasSlow));
-                playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX - 20, mouseY, piercingLevel, fireLevel, hasSlow));
+                playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX + 20, mouseY + 20, piercingLevel, fireLevel, hasSlow));
+                playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX - 20, mouseY - 20, piercingLevel, fireLevel, hasSlow));
             } else if (player.isForwardBackwardShotActive()) {
                 playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX, mouseY, piercingLevel, fireLevel, hasSlow));
                 playerProjectiles.add(new PlayerProjectile(centerX, centerY, centerX - (mouseX - centerX), centerY - (mouseY - centerY), piercingLevel, fireLevel, hasSlow));
@@ -332,21 +296,23 @@ public class GameLogic {
     }
 
     /**
-     * Pauses game including timer and music.
+     * Pauses game including timer, music, and enemy spawning.
      */
     public void pauseGame() {
         timer.stop();
         isPaused = true;
         backgroundMusic.stop();
+        spawningEnemies.pauseSpawning();
     }
 
     /**
-     * Resumes paused game including timer and music.
+     * Resumes paused game including timer, music, and enemy spawning.
      */
     public void resumeGame() {
         timer.start();
         isPaused = false;
         backgroundMusic.playLoop();
+        spawningEnemies.resumeSpawning();
     }
 
     /**
@@ -357,6 +323,7 @@ public class GameLogic {
         backgroundMusic.stop();
         enemies.clear();
         playerProjectiles.clear();
+        spawningEnemies.stopCurrentSpawn();
         collisions = null;
         spawningEnemies = null;
     }
@@ -393,6 +360,7 @@ public class GameLogic {
         }
     }
 
+
     public Player getPlayer() {
         return player;
     }
@@ -427,5 +395,9 @@ public class GameLogic {
 
     public int getCameraY() {
         return cameraY;
+    }
+
+    public MapManager getMapManager() {
+        return mapManager;
     }
 }

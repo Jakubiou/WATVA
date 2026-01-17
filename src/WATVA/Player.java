@@ -1,7 +1,5 @@
 package WATVA;
 
-import Lib.Soundtrack;
-
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
@@ -18,8 +16,6 @@ import static com.sun.java.accessibility.util.AWTEventMonitor.addMouseMotionList
 public class Player implements Serializable {
     public static int WIDTH = (int)(50 * Game.getScaleFactor());
     public static final int HEIGHT = (int)(50 * Game.getScaleFactor());
-    public static final int PANEL_WIDTH = GamePanel.PANEL_WIDTH * 4;
-    public static final int PANEL_HEIGHT = GamePanel.PANEL_HEIGHT * 4;
     public static final int MAX_SHIELD_HP = 100;
     public static final long SHIELD_REGENERATION_INTERVAL = 1000;
     public static final long HP_REGENERATION_INTERVAL = 1000;
@@ -35,6 +31,10 @@ public class Player implements Serializable {
     private long lastDashTime = 0;
     private int coins = 0;
     private int damage = 1;
+    private int critChance = 0; // Začíná na 0%
+    private static final int MAX_CRIT_CHANCE = 75; // Maximum 75%
+    private static final double MIN_CRIT_MULTIPLIER = 1.5;
+    private static final double MAX_CRIT_MULTIPLIER = 2.0;
     private int attackSpeed = 5;
     private int defense = 0;
     private static final int MAX_DEFENSE = 50;
@@ -303,6 +303,10 @@ public class Player implements Serializable {
     public boolean isRight() { return movement.isRight(); }
     public boolean isIdle() { return movement.isIdle(); }
     public void setSlowEnemiesUnlocked(boolean unlocked) { slowEnemiesUnlocked = unlocked; }
+    public int getCritChance() { return critChance; }
+    public void setCritChance(int critChance) {
+        this.critChance = Math.min(critChance, MAX_CRIT_CHANCE);
+    }
 
     /**
      * Upgrades player's slow ability, increasing effectiveness.

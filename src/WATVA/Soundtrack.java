@@ -1,7 +1,6 @@
-package Lib;
+package WATVA;
 
 import javax.sound.sampled.*;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 

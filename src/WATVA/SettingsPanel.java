@@ -1,7 +1,4 @@
-package Lib;
-
-import WATVA.GamePanel;
-import WATVA.MenuPanel;
+package WATVA;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;

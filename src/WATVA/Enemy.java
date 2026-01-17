@@ -15,9 +15,7 @@ public class Enemy {
     private static final long SHOOT_INTERVAL_MS = 5000;
     private static final long ATTACK_COOLDOWN_MS = 1000;
     private static final long FRAME_DURATION_MS = 100;
-    private static final int EDGE_LIMIT = 61;
-    public static final int SCREEN_WIDTH = GamePanel.PANEL_WIDTH * 4;
-    public static final int SCREEN_HEIGHT = GamePanel.PANEL_HEIGHT * 4;
+
 
     /**
      * Types of enemies in the game.
@@ -33,6 +31,7 @@ public class Enemy {
     public static final int ZOMBIE_SIZE = scale(50);
 
     private final List<EnemyProjectile> projectiles;
+    private final List<DamageNumber> damageNumbers;
     private final Type type;
     protected int x;
     protected int y;
@@ -70,11 +69,11 @@ public class Enemy {
         this.hp = hp;
         this.type = type;
         this.projectiles = new ArrayList<>();
+        this.damageNumbers = new ArrayList<>();
 
         initializeSpeed();
         loadTextures();
     }
-
 
     /**
      * Scales a value based on the game's scale factor.
@@ -153,15 +152,6 @@ public class Enemy {
         return ImageIO.read(getClass().getResourceAsStream(path));
     }
 
-    /**
-     * Checks if enemy is outside the visible game area.
-     *
-     * @return true if enemy is off-screen, false otherwise
-     */
-    public boolean isOffScreen() {
-        return x + getWidth() < 0 || x > SCREEN_WIDTH ||
-                y + getHeight() < 0 || y > SCREEN_HEIGHT;
-    }
 
     /**
      * Moves enemy towards a target position.
@@ -218,9 +208,6 @@ public class Enemy {
     private void move(double moveX, double moveY) {
         x += Math.round(moveX * currentSpeed);
         y += Math.round(moveY * currentSpeed);
-
-        x = Math.max(EDGE_LIMIT, Math.min(x, Player.PANEL_WIDTH - EDGE_LIMIT - getWidth()));
-        y = Math.max(EDGE_LIMIT, Math.min(y, Player.PANEL_HEIGHT - EDGE_LIMIT - getHeight()));
     }
 
     /**
@@ -250,7 +237,7 @@ public class Enemy {
     private int getFrameCount() {
         return type == Type.NORMAL ? 4 :
                 type == Type.ZOMBIE ? 4 :
-                type == Type.GIANT ? 6 : 1;
+                        type == Type.GIANT ? 6 : 1;
     }
 
     /**
@@ -348,14 +335,19 @@ public class Enemy {
     }
 
     /**
-     * Updates enemy state including status effects.
+     * Updates enemy state including status effects and damage numbers.
      */
-    public void update() {
+    public void update(DamageNumberManager damageManager) {
         updateStatusEffects();
 
         long currentTime = System.currentTimeMillis();
         if (isOnFire && currentTime % 1000 < 15) {
             hp -= fireDamage;
+
+            int centerX = x + getWidth() / 2;
+            int centerY = y - 10;
+            damageManager.addDamageNumber(centerX, centerY, fireDamage);
+
             if (hp <= 0) {
                 isAlive = false;
             }
@@ -368,11 +360,17 @@ public class Enemy {
      * @param damage Damage per tick
      * @param durationMs Duration of effect in milliseconds
      */
-    public void setFire(int damage, int durationMs) {
+    public void setFire(int damage, int durationMs, DamageNumberManager damageManager) {
         isOnFire = true;
         fireEndTime = System.currentTimeMillis() + durationMs;
         fireDamage = damage;
-        hp -= damage * 4;
+        int initialDamage = damage * 4;
+        hp -= initialDamage;
+
+        int centerX = x + getWidth() / 2;
+        int centerY = y - 10;
+        damageManager.addDamageNumber(centerX, centerY, initialDamage);
+
         if (hp <= 0) {
             isAlive = false;
         }
@@ -496,13 +494,20 @@ public class Enemy {
     }
 
     /**
-     * Applies damage to the enemy.
+     * Applies damage to the enemy and shows damage number.
      *
      * @param damage Amount of damage to apply
      */
-    public void hit(int damage) {
+    public void hit(int damage, DamageNumberManager damageManager) {
         hp -= damage;
-        isAlive = hp > 0;
+
+        int centerX = x + getWidth() / 2;
+        int centerY = y - 10;
+        damageManager.addDamageNumber(centerX, centerY, damage);
+
+        if (hp <= 0) {
+            isAlive = false;
+        }
     }
 
     public double getHp() {

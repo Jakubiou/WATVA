@@ -14,9 +14,7 @@ public class Collisions {
     private CopyOnWriteArrayList<Enemy> enemies;
     private CopyOnWriteArrayList<PlayerProjectile> playerProjectiles;
     private boolean gameOver;
-    private static final int EDGE_LIMIT = 50;
-    private static final int SCREEN_WIDTH = GamePanel.PANEL_WIDTH * 4;
-    private static final int SCREEN_HEIGHT = GamePanel.PANEL_HEIGHT * 4;
+    private DamageNumberManager damageManager;
 
     /**
      * Creates a new Collisions handler for the specified game objects.
@@ -24,10 +22,11 @@ public class Collisions {
      * @param enemies List of enemies in the game
      * @param playerProjectiles List of player projectiles
      */
-    public Collisions(Player player, CopyOnWriteArrayList<Enemy> enemies, CopyOnWriteArrayList<PlayerProjectile> playerProjectiles) {
+    public Collisions(Player player, CopyOnWriteArrayList<Enemy> enemies, CopyOnWriteArrayList<PlayerProjectile> playerProjectiles, DamageNumberManager damageManager) {
         this.player = player;
         this.enemies = enemies;
         this.playerProjectiles = playerProjectiles;
+        this.damageManager = damageManager;
         this.gameOver = false;
     }
 
@@ -117,19 +116,19 @@ public class Collisions {
                 int newEnemyY = enemy.getY();
 
                 if (player.getX() < enemy.getX()) {
-                    newPlayerX = Math.max(EDGE_LIMIT, player.getX() - 1);
-                    newEnemyX = Math.min(SCREEN_WIDTH - enemy.getWidth() - EDGE_LIMIT, enemy.getX() + 1);
+                    newPlayerX = player.getX() - 1;
+                    newEnemyX = enemy.getX() + 1;
                 } else {
-                    newPlayerX = Math.min(SCREEN_WIDTH - Player.WIDTH - EDGE_LIMIT, player.getX() + 1);
-                    newEnemyX = Math.max(EDGE_LIMIT, enemy.getX() - 1);
+                    newPlayerX = player.getX() + 1;
+                    newEnemyX = enemy.getX() - 1;
                 }
 
                 if (player.getY() < enemy.getY()) {
-                    newPlayerY = Math.max(EDGE_LIMIT, player.getY() - 1);
-                    newEnemyY = Math.min(SCREEN_HEIGHT - enemy.getHeight() - EDGE_LIMIT, enemy.getY() + 1);
+                    newPlayerY = player.getY() - 1;
+                    newEnemyY = enemy.getY() + 1;
                 } else {
-                    newPlayerY = Math.min(SCREEN_HEIGHT - Player.HEIGHT - EDGE_LIMIT, player.getY() + 1);
-                    newEnemyY = Math.max(EDGE_LIMIT, enemy.getY() - 1);
+                    newPlayerY = player.getY() + 1;
+                    newEnemyY = enemy.getY() - 1;
                 }
 
                 player.setX(newPlayerX);
@@ -160,7 +159,7 @@ public class Collisions {
             for (Enemy enemy : enemies) {
                 if (explosion.isInRange(enemy.getX(), enemy.getY())) {
                     if (!explosion.hasDamaged()) {
-                        enemy.hit(100);
+                        enemy.hit(100, damageManager);
                         explosionDamaged = true;
                     }
 
@@ -199,10 +198,10 @@ public class Collisions {
             for (Enemy enemy : enemies) {
                 Rectangle enemyCollider = enemy.getCollider();
                 if (arrowCollider.intersects(enemyCollider)) {
-                    enemy.hit(player.getDamage());
+                    enemy.hit(player.getDamage(), damageManager);
 
                     if (playerProjectile.getFireDamageLevel() > 0) {
-                        enemy.setFire(playerProjectile.getFireDamageLevel() * 5, 3000);
+                        enemy.setFire(playerProjectile.getFireDamageLevel() * 5, 3000, damageManager);
                     }
 
                     if (playerProjectile.hasSlowEffect()) {

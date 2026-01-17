@@ -60,7 +60,6 @@ public class DarkMageProjectile {
         Graphics2D g2d = (Graphics2D)g.create();
 
         if (!isFading) {
-            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.4f));
             g2d.setColor(new Color(200, 0, 255));
             g2d.fillOval(x - SIZE, y - SIZE, SIZE * 2, SIZE* 2);
         }

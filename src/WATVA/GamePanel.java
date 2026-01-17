@@ -31,6 +31,7 @@ public class GamePanel extends JPanel implements ActionListener {
     private GameLogic gameLogic;
     private boolean mousePressed = false;
     private int currentMouseX, currentMouseY;
+    private DamageNumberManager damageManager = new DamageNumberManager();
 
     /**
      * Constructs the game panel with references to game and player.
@@ -46,7 +47,7 @@ public class GamePanel extends JPanel implements ActionListener {
         setFocusable(true);
         setLayout(null);
 
-        gameLogic = new GameLogic(this, player);
+        gameLogic = new GameLogic(this, player,damageManager);
 
         initializeMenu();
         initializeAbilityPanel();
@@ -152,8 +153,11 @@ public class GamePanel extends JPanel implements ActionListener {
             public void mousePressed(MouseEvent e) {
                 if (!gameLogic.isPaused()) {
                     mousePressed = true;
-                    currentMouseX = e.getX() + gameLogic.getCameraX();
-                    currentMouseY = e.getY() + gameLogic.getCameraY();
+                    currentMouseX = e.getX() + getCameraX();
+                    currentMouseY = e.getY() + getCameraY();
+
+                    System.out.println("MOUSE CLICK: screen(" + e.getX() + "," + e.getY() + ") camera(" + getCameraX() + "," + getCameraY() + ") world(" + currentMouseX + "," + currentMouseY + ")");
+
                     gameLogic.tryToShoot(currentMouseX, currentMouseY);
                 }
             }
@@ -168,16 +172,20 @@ public class GamePanel extends JPanel implements ActionListener {
             @Override
             public void mouseMoved(MouseEvent e) {
                 if (!gameLogic.isPaused()) {
-                    currentMouseX = e.getX() + gameLogic.getCameraX();
-                    currentMouseY = e.getY() + gameLogic.getCameraY();
+                    currentMouseX = e.getX() + getCameraX();
+                    currentMouseY = e.getY() + getCameraY();
+
+                    if (Math.random() < 0.1) {
+                        System.out.println("MOUSE MOVE: screen(" + e.getX() + "," + e.getY() + ") camera(" + getCameraX() + "," + getCameraY() + ") world(" + currentMouseX + "," + currentMouseY + ")");
+                    }
                 }
             }
 
             @Override
             public void mouseDragged(MouseEvent e) {
                 if (!gameLogic.isPaused()) {
-                    currentMouseX = e.getX() + gameLogic.getCameraX();
-                    currentMouseY = e.getY() + gameLogic.getCameraY();
+                    currentMouseX = e.getX() + getCameraX();
+                    currentMouseY = e.getY() + getCameraY();
                 }
             }
         });
@@ -267,7 +275,7 @@ public class GamePanel extends JPanel implements ActionListener {
             gameLogic.tryToShoot(currentMouseX, currentMouseY);
         }
 
-        gameLogic.update();
+        gameLogic.update(damageManager);
         repaint();
     }
 
@@ -284,7 +292,7 @@ public class GamePanel extends JPanel implements ActionListener {
         renderer.render(g, gameLogic.getPlayer(), gameLogic.getEnemies(),
                 gameLogic.getPlayerProjectiles(), gameLogic.isGameOver(),
                 gameLogic.isPaused(), abilityPanelVisible, upgradePanelVisible,
-                gameLogic.getKillCount());
+                gameLogic.getKillCount(),damageManager);
 
         if (gameLogic.isGameOver() && !upgradePanelVisible) {
             onGameOver();
@@ -305,5 +313,9 @@ public class GamePanel extends JPanel implements ActionListener {
 
     public static int getWaveNumber() {
         return GameLogic.getWaveNumber();
+    }
+
+    public GameLogic getGameLogic() {
+        return gameLogic;
     }
 }

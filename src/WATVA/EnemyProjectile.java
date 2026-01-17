@@ -11,8 +11,6 @@ public class EnemyProjectile {
     private double directionX, directionY;
     private double speed = 10;
     private boolean active = true;
-    private static final int MAP_WIDTH = GamePanel.PANEL_WIDTH * 4;
-    private static final int MAP_HEIGHT = GamePanel.PANEL_HEIGHT * 4;
 
     /**
      * Creates a new enemy projectile that moves toward the player.
@@ -43,10 +41,6 @@ public class EnemyProjectile {
     public void move() {
         x += directionX * speed;
         y += directionY * speed;
-
-        if (x < 0 || x > MAP_WIDTH || y < 0 || y > MAP_HEIGHT) {
-            active = false;
-        }
     }
 
     /**

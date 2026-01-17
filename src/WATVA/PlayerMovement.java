@@ -40,7 +40,6 @@ public class PlayerMovement {
      */
     public void move() {
         boolean moving = false;
-        int edgeLimit = 50;
         long currentTime = System.currentTimeMillis();
 
         if (player.getShieldLevel() > 0 && currentTime - player.getLastShieldRegenerationTime() >= Player.SHIELD_REGENERATION_INTERVAL) {
@@ -55,14 +54,6 @@ public class PlayerMovement {
         }
 
         if (dashing) {
-            int newX = player.getX() + dashDirectionX * player.getDashSpeed();
-            int newY = player.getY() + dashDirectionY * player.getDashSpeed();
-
-            if (newX >= edgeLimit && newX + Player.WIDTH <= GameLogic.mapWidth * GamePanel.BLOCK_SIZE - edgeLimit &&
-                    newY >= edgeLimit && newY + Player.HEIGHT <= GameLogic.mapHeight * GamePanel.BLOCK_SIZE - edgeLimit) {
-                player.setX(newX);
-                player.setY(newY);
-            }
 
             dashProgress += player.getDashSpeed();
 
@@ -76,34 +67,26 @@ public class PlayerMovement {
 
         if (up) {
             int newY = player.getY() - player.getSpeed();
-            if (newY >= edgeLimit) {
                 player.setY(newY);
                 moving = true;
-            }
         }
 
         if (down) {
             int newY = player.getY() + player.getSpeed();
-            if (newY + Player.HEIGHT <= GameLogic.mapHeight * GamePanel.BLOCK_SIZE - edgeLimit) {
                 player.setY(newY);
                 moving = true;
-            }
         }
 
         if (left) {
             int newX = player.getX() - player.getSpeed();
-            if (newX >= edgeLimit) {
                 player.setX(newX);
                 moving = true;
-            }
         }
 
         if (right) {
             int newX = player.getX() + player.getSpeed();
-            if (newX + Player.WIDTH <= GameLogic.mapWidth * GamePanel.BLOCK_SIZE - edgeLimit) {
                 player.setX(newX);
                 moving = true;
-            }
         }
 
         if (moving) {

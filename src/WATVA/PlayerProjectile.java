@@ -12,7 +12,7 @@ import java.io.IOException;
 public class PlayerProjectile {
     public static final int SIZE = 64;
     private int x, y;
-    private int targetX, targetY;
+    private double velocityX, velocityY;
     private int speed = 10;
     private double distanceTravelled = 0;
     private static final double MAX_DISTANCE = 30000;
@@ -42,9 +42,17 @@ public class PlayerProjectile {
         this.fireDamageLevel = fireLevel;
         this.slowEffect = hasSlowEffect;
 
-        double angle = Math.atan2(targetY - y, targetX - x);
-        this.targetX = (int) (x + MAX_DISTANCE * Math.cos(angle));
-        this.targetY = (int) (y + MAX_DISTANCE * Math.sin(angle));
+        double dx = targetX - x;
+        double dy = targetY - y;
+        double distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance > 0) {
+            this.velocityX = (dx / distance) * speed;
+            this.velocityY = (dy / distance) * speed;
+        } else {
+            this.velocityX = speed;
+            this.velocityY = 0;
+        }
 
         bulletTextures = new Image[5];
         try {
@@ -64,9 +72,8 @@ public class PlayerProjectile {
      * @return true if projectile should be removed (out of bounds, max distance, or no pierce left)
      */
     public boolean move() {
-        double angle = Math.atan2(targetY - y, targetX - x);
-        x += speed * Math.cos(angle);
-        y += speed * Math.sin(angle);
+        x += velocityX;
+        y += velocityY;
         distanceTravelled += speed;
 
         long currentTime = System.currentTimeMillis();
@@ -75,7 +82,7 @@ public class PlayerProjectile {
             lastFrameChange = currentTime;
         }
 
-        return x < 0 || x > GamePanel.PANEL_WIDTH * 4 || y < 0 || y > GamePanel.PANEL_HEIGHT * 4 || distanceTravelled >= MAX_DISTANCE || pierceCount <= 0;
+        return distanceTravelled >= MAX_DISTANCE || pierceCount <= 0;
     }
 
     public void setPierceCount(int count) {

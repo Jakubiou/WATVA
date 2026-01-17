@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Handles enemy spawning logic in the game.
  * Manages concurrent spawning of different enemy types with configurable rates.
- * Implements spawn points selection outside player's view.
+ * Implements spawn points selection outside player's view and proper pause synchronization.
  */
 public class SpawningEnemies {
     private static final int EDGE_OFFSET = 1;
@@ -18,6 +18,7 @@ public class SpawningEnemies {
     private CopyOnWriteArrayList<Enemy> enemies;
     private ExecutorService spawnExecutor;
     private volatile boolean stopSpawning = false;
+    private volatile boolean pauseSpawning = false;
 
     /**
      * Creates a new SpawningEnemies controller.
@@ -42,6 +43,7 @@ public class SpawningEnemies {
      */
     public void spawnEnemies(int normalPerSecond, int giantPerSecond, int smallPerSecond, int shootingPerSecond, int slimePerSecond) {
         stopSpawning = false;
+        pauseSpawning = false;
 
         spawnEnemyType(normalPerSecond, Enemy.Type.NORMAL, 5 * gamePanel.getWaveNumber());
         spawnEnemyType(giantPerSecond, Enemy.Type.GIANT, 15 * gamePanel.getWaveNumber());
@@ -62,14 +64,17 @@ public class SpawningEnemies {
 
         spawnExecutor.execute(() -> {
             while (!stopSpawning) {
-                Point spawnPoint = getSpawnPointBehindCamera();
-                if (spawnPoint != null) {
-                    if (type == Enemy.Type.SLIME) {
-                        enemies.add(new Slime(spawnPoint.x, spawnPoint.y, hp));
-                    } else {
-                        enemies.add(new Enemy(spawnPoint.x, spawnPoint.y, hp, type));
+                if (!pauseSpawning) {
+                    Point spawnPoint = getSpawnPointBehindCamera();
+                    if (spawnPoint != null) {
+                        if (type == Enemy.Type.SLIME) {
+                            enemies.add(new Slime(spawnPoint.x, spawnPoint.y, hp));
+                        } else {
+                            enemies.add(new Enemy(spawnPoint.x, spawnPoint.y, hp, type));
+                        }
                     }
                 }
+
                 try {
                     TimeUnit.MILLISECONDS.sleep(1000 / rate);
                 } catch (InterruptedException e) {
@@ -80,10 +85,26 @@ public class SpawningEnemies {
     }
 
     /**
+     * Pauses enemy spawning without stopping the threads.
+     * Enemies will not be spawned but spawning threads remain active.
+     */
+    public void pauseSpawning() {
+        pauseSpawning = true;
+    }
+
+    /**
+     * Resumes enemy spawning after pause.
+     */
+    public void resumeSpawning() {
+        pauseSpawning = false;
+    }
+
+    /**
      * Stops all current spawning activities.
      */
     public void stopCurrentSpawn() {
         stopSpawning = true;
+        pauseSpawning = false;
         spawnExecutor.shutdownNow();
         try {
             if (!spawnExecutor.awaitTermination(800, TimeUnit.MILLISECONDS)) {
@@ -125,28 +146,25 @@ public class SpawningEnemies {
     private ArrayList<Point> getAvailableEdgeBlocks() {
         ArrayList<Point> availableBlocks = new ArrayList<>();
 
-        Player player = gamePanel.getPlayer();
         int cameraX = gamePanel.getCameraX();
         int cameraY = gamePanel.getCameraY();
 
         int leftBound = cameraX - GamePanel.BLOCK_SIZE * 6;
         int rightBound = cameraX + GamePanel.PANEL_WIDTH + GamePanel.BLOCK_SIZE * 4;
         int topBound = cameraY - GamePanel.BLOCK_SIZE * 6;
-        int bottomBound = cameraY + GamePanel.PANEL_HEIGHT + GamePanel.BLOCK_SIZE *4;
+        int bottomBound = cameraY + GamePanel.PANEL_HEIGHT + GamePanel.BLOCK_SIZE * 4;
 
-        for (int y = EDGE_OFFSET; y < GameLogic.mapHeight - EDGE_OFFSET; y++) {
-            for (int x = EDGE_OFFSET; x < GameLogic.mapWidth - EDGE_OFFSET; x++) {
-                int worldX = x * GamePanel.BLOCK_SIZE;
-                int worldY = y * GamePanel.BLOCK_SIZE;
+        for (int y = topBound; y < bottomBound; y += GamePanel.BLOCK_SIZE) {
+            for (int x = leftBound; x < rightBound; x += GamePanel.BLOCK_SIZE) {
 
                 boolean justOutsideCamera =
-                        (worldX >= leftBound && worldX <= rightBound &&
-                                worldY >= topBound && worldY <= bottomBound &&
-                                (worldX < cameraX || worldX > cameraX + GamePanel.PANEL_WIDTH ||
-                                        worldY < cameraY || worldY > cameraY + GamePanel.PANEL_HEIGHT));
+                        (x >= leftBound && x <= rightBound &&
+                                y >= topBound && y <= bottomBound &&
+                                (x < cameraX || x > cameraX + GamePanel.PANEL_WIDTH ||
+                                        y < cameraY || y > cameraY + GamePanel.PANEL_HEIGHT));
 
-                if (justOutsideCamera && isBlockAvailable(x, y)) {
-                    availableBlocks.add(new Point(worldX, worldY));
+                if (justOutsideCamera && isBlockAvailable(x / GamePanel.BLOCK_SIZE, y / GamePanel.BLOCK_SIZE)) {
+                    availableBlocks.add(new Point(x, y));
                 }
             }
         }

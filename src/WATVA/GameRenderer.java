@@ -3,6 +3,7 @@ package WATVA;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.CopyOnWriteArrayList;
 import javax.imageio.ImageIO;
 
@@ -33,19 +34,31 @@ public class GameRenderer {
      */
     private void loadBlockImages() {
         blockImages = new Image[26];
-        try {
-            for (int i = 0; i < blockImages.length; i++) {
-                Image original = ImageIO.read(getClass().getResourceAsStream("/WATVA/Background/Block" + i + ".png"));
-                blockImages[i] = original.getScaledInstance(
-                        GamePanel.BLOCK_SIZE,
-                        GamePanel.BLOCK_SIZE,
-                        Image.SCALE_SMOOTH
+        for (int i = 0; i < blockImages.length; i++) {
+            try (InputStream is = getClass().getResourceAsStream("/WATVA/Background/Block" + i + ".png")) {
+                if (is != null) {
+                    Image original = ImageIO.read(is);
+                    if (original != null) {
+                        blockImages[i] = original.getScaledInstance(
+                                GamePanel.BLOCK_SIZE,
+                                GamePanel.BLOCK_SIZE,
+                                Image.SCALE_SMOOTH
+                        );
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println(" Nelze načíst Block" + i + ".png – používám prázdný blok.");
+            }
+
+            if (blockImages[i] == null) {
+                blockImages[i] = new java.awt.image.BufferedImage(
+                        GamePanel.BLOCK_SIZE, GamePanel.BLOCK_SIZE,
+                        java.awt.image.BufferedImage.TYPE_INT_ARGB
                 );
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
+
 
     /**
      * Main rendering method that draws all game elements.
@@ -63,15 +76,16 @@ public class GameRenderer {
     public void render(Graphics g, Player player, CopyOnWriteArrayList<Enemy> enemies,
                        CopyOnWriteArrayList<PlayerProjectile> playerProjectiles,
                        boolean gameOver, boolean isPaused, boolean abilityPanelVisible,
-                       boolean upgradePanelVisible, int killCount) {
+                       boolean upgradePanelVisible, int killCount, DamageNumberManager damageManager) {
 
         updateCamera(player);
         Graphics2D g2d = (Graphics2D) g;
 
         g2d.translate(-GameLogic.cameraX, -GameLogic.cameraY);
 
-        drawBackground(g2d);
+        drawBackground(g2d,player);
         drawEnemies(g2d, enemies);
+        damageManager.draw(g);
         drawArrows(g2d, playerProjectiles);
         drawUI(g2d, player);
         drawBossEnemies(g2d,enemies);
@@ -101,9 +115,10 @@ public class GameRenderer {
         int targetCameraX = player.getX() - GamePanel.CAMERA_WIDTH * 2;
         int targetCameraY = player.getY() - GamePanel.CAMERA_HEIGHT * 2;
 
-        GameLogic.cameraX = Math.max(0, Math.min(targetCameraX, GameLogic.mapWidth * GamePanel.BLOCK_SIZE - GamePanel.PANEL_WIDTH));
-        GameLogic.cameraY = Math.max(0, Math.min(targetCameraY, GameLogic.mapHeight * GamePanel.BLOCK_SIZE - GamePanel.PANEL_HEIGHT));
+        GameLogic.cameraX = targetCameraX;
+        GameLogic.cameraY = targetCameraY;
     }
+
 
     /**
      * Draws boss enemies with special handling.
@@ -115,12 +130,7 @@ public class GameRenderer {
         for (int i = 0; i < enemies.size(); i++) {
             Enemy enemy = enemies.get(i);
             if (enemy.getType() == Enemy.Type.BUNNY_BOSS || enemy.getType() == Enemy.Type.DARK_MAGE_BOSS) {
-                if (enemy.isOffScreen()) {
-                    enemies.remove(i);
-                    i--;
-                } else {
                     enemy.draw(g);
-                }
             }
         }
     }
@@ -130,16 +140,13 @@ public class GameRenderer {
      *
      * @param g The Graphics context
      */
-    private void drawBackground(Graphics g) {
-        for (int y = 0; y < GameLogic.mapHeight; y++) {
-            for (int x = 0; x < GameLogic.mapWidth; x++) {
-                int blockType = GameLogic.map[y][x];
-                Image blockImage = blockImages[blockType];
-                g.drawImage(blockImage, x * GamePanel.BLOCK_SIZE, y * GamePanel.BLOCK_SIZE,
-                        GamePanel.BLOCK_SIZE, GamePanel.BLOCK_SIZE, null);
-            }
+    private void drawBackground(Graphics g, Player player) {
+        MapManager mm = gamePanel.getGameLogic().getMapManager();
+        if (mm != null) {
+            mm.drawBackground(g, player);
         }
     }
+
 
     /**
      * Draws the player character.
@@ -160,12 +167,7 @@ public class GameRenderer {
     private void drawEnemies(Graphics g, CopyOnWriteArrayList<Enemy> enemies) {
         for (int i = 0; i < enemies.size(); i++) {
             Enemy enemy = enemies.get(i);
-            if (enemy.isOffScreen()) {
-                enemies.remove(i);
-                i--;
-            } else {
                 enemy.draw(g);
-            }
         }
     }
 
@@ -226,7 +228,7 @@ public class GameRenderer {
      */
     private void drawWaveProgressBar(Graphics2D g2d, boolean gameOver, boolean isPaused,
                                      CopyOnWriteArrayList<Enemy> enemies, int killCount) {
-        if (gameOver || isPaused || enemies.isEmpty()  || GameLogic.getWaveNumber() % 5 == 0 || GameLogic.getWaveNumber() % 10 == 0) return;
+        if (gameOver || isPaused || enemies.isEmpty()  || GameLogic.getWaveNumber() % 10 == 0) return;
 
         int barWidth = (int)(390 * Game.getScaleFactor());
         int barHeight = (int)(30 * Game.getScaleFactor());
@@ -242,9 +244,7 @@ public class GameRenderer {
         g2d.fillRoundRect(x, y, barWidth, barHeight, 15, 15);
 
         if (filledWidth > 0) {
-            GradientPaint gradient = new GradientPaint(
-                    x, y, Color.BLUE,
-                    x + filledWidth, y, Color.CYAN
+            GradientPaint gradient = new GradientPaint(x, y, Color.BLUE, x + filledWidth, y, Color.CYAN
             );
             g2d.setPaint(gradient);
             g2d.fillRoundRect(x, y, filledWidth, barHeight, 15, 15);
