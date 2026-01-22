@@ -1,5 +1,5 @@
 package MainMenu;
-import WATVA.Game;
+import Core.Game;
 
 import javax.swing.*;
 import java.awt.*;

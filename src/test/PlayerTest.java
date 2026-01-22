@@ -1,6 +1,6 @@
 /*package test;
 
-import WATVA.Player;
+import Player.Player;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
