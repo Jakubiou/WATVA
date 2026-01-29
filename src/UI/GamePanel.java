@@ -13,10 +13,8 @@ import javax.swing.*;
 
 /**
  * The main game panel that handles rendering, input, and UI management.
- * Acts as the central hub coordinating game logic, rendering, and user interface components.
  */
 public class GamePanel extends JPanel implements ActionListener {
-    // Použití škálovaných hodnot z Game
     public static final int PANEL_WIDTH = Game.getScaledGameWidth();
     public static final int PANEL_HEIGHT = Game.getScaledGameHeight();
     public static final int BLOCK_SIZE = Game.scale(64);
@@ -38,13 +36,10 @@ public class GamePanel extends JPanel implements ActionListener {
     private boolean mousePressed = false;
     private int currentMouseX, currentMouseY;
     private DamageNumberManager damageManager = new DamageNumberManager();
+    private LevelMapPanel levelMapPanel;
 
     /**
      * Constructs the game panel with references to game and player.
-     * Initializes all game systems, UI components, and input handlers.
-     *
-     * @param game The main Game instance
-     * @param player The player character
      */
     public GamePanel(Game game, Player player) {
         this.game = game;
@@ -59,14 +54,15 @@ public class GamePanel extends JPanel implements ActionListener {
         initializeAbilityPanel();
         initializeFont();
         initializeInput();
+        initializeLevelMap();
 
         renderer = new GameRenderer(this, pixelPurlFont);
-        gameLogic.startNewGame();
+
+        showLevelMap();
     }
 
     /**
      * Loads and initializes the custom pixel font.
-     * Falls back to system font if custom font cannot be loaded.
      */
     private void initializeFont() {
         try {
@@ -82,7 +78,6 @@ public class GamePanel extends JPanel implements ActionListener {
 
     /**
      * Initializes the in-game menu button and menu panel.
-     * Sets up button appearance and click behavior.
      */
     private void initializeMenu() {
         int buttonWidth = Game.scale(100);
@@ -127,20 +122,31 @@ public class GamePanel extends JPanel implements ActionListener {
     }
 
     /**
-     * Initializes the upgrade panel for player progression.
+     * Initializes the level map.
+     */
+    private void initializeLevelMap() {
+        levelMapPanel = new LevelMapPanel(game, gameLogic.getLevelManager());
+        levelMapPanel.setGamePanel(this);
+        add(levelMapPanel);
+    }
+
+    /**
+     * Initializes the upgrade panel.
      */
     public void initializeUpgradePanel() {
-        upgradePanel = new UpgradePanel(this, gameLogic.getPlayer());
-        add(upgradePanel);
+        if (upgradePanel == null) {
+            upgradePanel = new UpgradePanel(this, gameLogic.getPlayer(), gameLogic.getLevelManager());
+            add(upgradePanel);
+        }
         upgradePanel.showPanel();
-        gameOverPanel.setVisible(false);
+        if (gameOverPanel != null) {
+            gameOverPanel.setVisible(false);
+        }
         upgradePanelVisible = true;
     }
 
     /**
-     * Sets up all input handlers for keyboard and mouse.
-     * Handles player movement, shooting, and UI interactions.
-     * DŮLEŽITÉ: Souřadnice myši se musí aktualizovat s pozicí kamery!
+     * Sets up all input handlers.
      */
     private void initializeInput() {
         addKeyListener(new KeyAdapter() {
@@ -160,10 +166,8 @@ public class GamePanel extends JPanel implements ActionListener {
             public void mousePressed(MouseEvent e) {
                 if (!gameLogic.isPaused()) {
                     mousePressed = true;
-                    // Přepočítání souřadnic myši do world space
                     currentMouseX = e.getX() + getCameraX();
                     currentMouseY = e.getY() + getCameraY();
-
                     gameLogic.tryToShoot(currentMouseX, currentMouseY);
                 }
             }
@@ -178,7 +182,6 @@ public class GamePanel extends JPanel implements ActionListener {
             @Override
             public void mouseMoved(MouseEvent e) {
                 if (!gameLogic.isPaused()) {
-                    // Neustálá aktualizace pozice myši s kamerou
                     currentMouseX = e.getX() + getCameraX();
                     currentMouseY = e.getY() + getCameraY();
                 }
@@ -187,7 +190,6 @@ public class GamePanel extends JPanel implements ActionListener {
             @Override
             public void mouseDragged(MouseEvent e) {
                 if (!gameLogic.isPaused()) {
-                    // KRITICKÉ: Při tažení myši musíme neustále aktualizovat pozici
                     currentMouseX = e.getX() + getCameraX();
                     currentMouseY = e.getY() + getCameraY();
                 }
@@ -196,8 +198,7 @@ public class GamePanel extends JPanel implements ActionListener {
     }
 
     /**
-     * Toggles the in-game menu visibility.
-     * Pauses/resumes game when menu is shown/hidden.
+     * Toggles the in-game menu.
      */
     public void toggleMenu() {
         if (menuPanel.isVisible()) {
@@ -214,8 +215,7 @@ public class GamePanel extends JPanel implements ActionListener {
     }
 
     /**
-     * Restarts the game from scratch.
-     * Creates new game instance and disposes current one.
+     * Restarts the game.
      */
     public void restartGame() {
         closeGame();
@@ -223,8 +223,7 @@ public class GamePanel extends JPanel implements ActionListener {
     }
 
     /**
-     * Closes the current game session.
-     * Stops all game systems and disposes the window.
+     * Closes the current game.
      */
     public void closeGame(){
         gameLogic.stopGame();
@@ -232,8 +231,7 @@ public class GamePanel extends JPanel implements ActionListener {
     }
 
     /**
-     * Starts the next wave after ability selection.
-     * Hides ability panel and resumes gameplay.
+     * Starts next wave after ability selection.
      */
     public void startNextWaveAfterAbility() {
         abilityPanel.hidePanel();
@@ -242,8 +240,7 @@ public class GamePanel extends JPanel implements ActionListener {
     }
 
     /**
-     * Handles game over state.
-     * Shows game over panel and hides menu button.
+     * Handles game over.
      */
     public void onGameOver() {
         if (gameOverPanel == null) {
@@ -256,7 +253,6 @@ public class GamePanel extends JPanel implements ActionListener {
 
     /**
      * Handles wave completion.
-     * Shows ability panel and hides menu button.
      */
     public void onWaveComplete() {
         menuButton.setVisible(false);
@@ -264,11 +260,41 @@ public class GamePanel extends JPanel implements ActionListener {
     }
 
     /**
-     * Main game loop called by timer.
-     * Updates game state, handles input, and triggers repaint.
-     * DŮLEŽITÉ: Souřadnice myši musí být aktualizovány KAŽDÝ frame!
-     *
-     * @param e The action event from timer
+     * Shows level map.
+     */
+    public void showLevelMap() {
+        menuButton.setVisible(false);
+        gameLogic.pauseGame();
+        levelMapPanel.showMap();
+    }
+
+    /**
+     * Starts selected level.
+     */
+    public void startLevel(int levelNumber) {
+        levelMapPanel.hideMap();
+        menuButton.setVisible(true);
+        gameLogic.startLevel(levelNumber);
+    }
+
+    /**
+     * Called when player completes a level (10 waves).
+     */
+    public void onLevelComplete() {
+        menuButton.setVisible(false);
+
+        JOptionPane.showMessageDialog(
+                this,
+                "LEVEL COMPLETE!\n\nNext level unlocked!",
+                "Victory!",
+                JOptionPane.INFORMATION_MESSAGE
+        );
+
+        showLevelMap();
+    }
+
+    /**
+     * Main game loop.
      */
     @Override
     public void actionPerformed(ActionEvent e) {
@@ -276,17 +302,12 @@ public class GamePanel extends JPanel implements ActionListener {
             abilityPanel.updateAbilityPanel();
         }
 
-        // KRITICKÁ OPRAVA: Aktualizujeme souřadnice myši PŘED střelbou
-        // protože kamera se mohla pohnout od posledního frame
         if (mousePressed && !gameLogic.isPaused()) {
-            // Získáme aktuální pozici myši na obrazovce
             Point mousePoint = getMousePosition();
             if (mousePoint != null) {
-                // Přepočítáme na world space s aktuální pozicí kamery
                 currentMouseX = mousePoint.x + getCameraX();
                 currentMouseY = mousePoint.y + getCameraY();
             }
-
             gameLogic.tryToShoot(currentMouseX, currentMouseY);
         }
 
@@ -296,9 +317,6 @@ public class GamePanel extends JPanel implements ActionListener {
 
     /**
      * Renders all game components.
-     * Delegates to GameRenderer for actual drawing.
-     *
-     * @param g The Graphics context for rendering
      */
     @Override
     protected void paintComponent(Graphics g) {

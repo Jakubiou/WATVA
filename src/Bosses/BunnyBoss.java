@@ -15,10 +15,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * The Bunny boss enemy with jumping and stomping attacks.
  */
 public class BunnyBoss extends Enemy {
-    private static final int BUNNY_SIZE = 128;
+    private static final int BUNNY_SIZE = Game.scale(128);
     private long lastJumpTime = 0;
     private static final long JUMP_INTERVAL = 1500;
-    private static final int JUMP_DISTANCE = 100;
+    private static final int JUMP_DISTANCE = Game.scale(100);
     private boolean isJumping = false;
     private boolean preJump = false;
     private boolean jumpingRight = true;
@@ -154,7 +154,7 @@ public class BunnyBoss extends Enemy {
      */
     @Override
     public void draw(Graphics g) {
-            Image currentTexture;
+        Image currentTexture;
         Image[] currentTextures = jumpingRight ? bunnyTexturesRight : bunnyTexturesLeft;
 
         if (preJump || isJumping) {
@@ -167,19 +167,19 @@ public class BunnyBoss extends Enemy {
             g.drawImage(currentTexture, x, y, BUNNY_SIZE, BUNNY_SIZE, null);
         }
 
-
         if (isStomping) {
             g.setColor(new Color(255, 0, 0, 100));
-            int shockwaveRadius = 200;
+            int shockwaveRadius = Game.scale(200);
             g.fillOval(x - shockwaveRadius / 2 + BUNNY_SIZE / 2,
                     y - shockwaveRadius / 2 + BUNNY_SIZE / 2,
                     shockwaveRadius, shockwaveRadius);
         }
+
         if (this.hp > 0) {
-            int hpBarWidth = (int)(300 * Game.getScaleFactor());
-            int hpBarHeight = (int)(30 * Game.getScaleFactor());
+            int hpBarWidth = Game.scale(300);
+            int hpBarHeight = Game.scale(30);
             int hpBarX = (GamePanel.PANEL_WIDTH - hpBarWidth) / 2;
-            int hpBarY = GamePanel.PANEL_HEIGHT - hpBarHeight - (int)(10 * Game.getScaleFactor());
+            int hpBarY = GamePanel.PANEL_HEIGHT - hpBarHeight - Game.scale(10);
 
             g.setColor(new Color(50, 50, 50));
             g.fillRect(hpBarX + GameLogic.cameraX, hpBarY + GameLogic.cameraY, hpBarWidth, hpBarHeight);
@@ -201,10 +201,10 @@ public class BunnyBoss extends Enemy {
             g.drawRect(hpBarX + GameLogic.cameraX, hpBarY + GameLogic.cameraY, hpBarWidth, hpBarHeight);
 
             if (hpBarFrame1 != null) {
-                int frameWidth = (int)((hpBarWidth + 96) * Game.getScaleFactor());
-                int frameHeight = (int)((hpBarHeight * 4.4) * Game.getScaleFactor());
-                int frameX = hpBarX + GameLogic.cameraX - (int)(54 * Game.getScaleFactor());
-                int frameY = hpBarY + GameLogic.cameraY - (int)(58 * Game.getScaleFactor());
+                int frameWidth = Game.scale(396);
+                int frameHeight = Game.scale(132);
+                int frameX = hpBarX + GameLogic.cameraX - Game.scale(54);
+                int frameY = hpBarY + GameLogic.cameraY - Game.scale(58);
 
                 g.drawImage(hpBarFrame1, frameX, frameY, frameWidth, frameHeight, null);
             }
@@ -216,7 +216,8 @@ public class BunnyBoss extends Enemy {
      */
     @Override
     public Rectangle getCollider() {
-        return new Rectangle(x + 30, y + 24, BUNNY_SIZE - 48, BUNNY_SIZE - 48);
+        return new Rectangle(x + Game.scale(30), y + Game.scale(24),
+                BUNNY_SIZE - Game.scale(48), BUNNY_SIZE - Game.scale(48));
     }
 
     /**
@@ -282,7 +283,7 @@ public class BunnyBoss extends Enemy {
         long currentTime = System.currentTimeMillis();
         if (currentTime - stompStartTime < STOMP_DURATION) {
             double distance = Math.sqrt(Math.pow(player.getX() - x, 2) + Math.pow(player.getY() - y, 2));
-            if (distance <= 200) {
+            if (distance <= Game.scale(200)) {
                 player.hit(2);
             }
         } else {

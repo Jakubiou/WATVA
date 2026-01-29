@@ -102,25 +102,27 @@ public class PlayerGraphics {
      * @param g The Graphics context to render to
      */
     private void drawHealthBar(Graphics g) {
-        int hpBarWidth = (int)(270 * Game.getScaleFactor());
-        int hpBarHeight = (int)(30 * Game.getScaleFactor());
-        int hpBarX = GamePanel.PANEL_WIDTH - hpBarWidth - 10 + GameLogic.cameraX;
-        int hpBarY = 35 + GameLogic.cameraY;
+        int hpBarWidth = Game.scale(270);
+        int hpBarHeight = Game.scale(30);
+        int hpBarX = GamePanel.PANEL_WIDTH - hpBarWidth - Game.scale(10) + GameLogic.cameraX;
+        int hpBarY = Game.scale(35) + GameLogic.cameraY;
 
         if (player.getHp() > 0) {
             g.setColor(Color.BLACK);
             g.drawRect(hpBarX, hpBarY, hpBarWidth, hpBarHeight);
         }
+
         if (player.getShieldLevel() > 0) {
             int shieldWidth = player.getShieldHP() * hpBarWidth / Player.MAX_SHIELD_HP;
             g.setColor(Color.BLUE);
-            g.fillRect(hpBarX, hpBarY + hpBarHeight + 5, shieldWidth, hpBarHeight);
+            g.fillRect(hpBarX, hpBarY + hpBarHeight + Game.scale(5), shieldWidth, hpBarHeight);
             g.setColor(Color.BLACK);
-            g.drawRect(hpBarX, hpBarY + hpBarHeight + 5, hpBarWidth, hpBarHeight);
+            g.drawRect(hpBarX, hpBarY + hpBarHeight + Game.scale(5), hpBarWidth, hpBarHeight);
             g.setColor(Color.BLACK);
             for (int i = 1; i <= 9; i++) {
                 int dividerX = hpBarX + (i * hpBarWidth / 10);
-                g.drawLine(dividerX, hpBarY + hpBarHeight + 5, dividerX, hpBarY + hpBarHeight + 5 + hpBarHeight);
+                g.drawLine(dividerX, hpBarY + hpBarHeight + Game.scale(5),
+                        dividerX, hpBarY + hpBarHeight + Game.scale(5) + hpBarHeight);
             }
         }
 
@@ -129,7 +131,11 @@ public class PlayerGraphics {
             g.setColor(Color.RED);
             g.fillRect(hpBarX, hpBarY, redWidth, hpBarHeight);
             if (hpBarFrame1 != null) {
-                g.drawImage(hpBarFrame1, hpBarX - 37, hpBarY - 30, hpBarWidth + 40, hpBarHeight + 45, null);
+                int frameWidth = Game.scale(307);
+                int frameHeight = Game.scale(75);
+                int frameX = hpBarX - Game.scale(37);
+                int frameY = hpBarY - Game.scale(30);
+                g.drawImage(hpBarFrame1, frameX, frameY, frameWidth, frameHeight, null);
             }
         }
 
@@ -138,7 +144,11 @@ public class PlayerGraphics {
             g.setColor(Color.MAGENTA);
             g.fillRect(hpBarX, hpBarY, purpleWidth, hpBarHeight);
             if (hpBarFrame2 != null) {
-                g.drawImage(hpBarFrame2, hpBarX - 37, hpBarY - 30, hpBarWidth + 40, hpBarHeight + 45, null);
+                int frameWidth = Game.scale(307);
+                int frameHeight = Game.scale(75);
+                int frameX = hpBarX - Game.scale(37);
+                int frameY = hpBarY - Game.scale(30);
+                g.drawImage(hpBarFrame2, frameX, frameY, frameWidth, frameHeight, null);
             }
         }
 
@@ -147,15 +157,19 @@ public class PlayerGraphics {
             g.setColor(Color.YELLOW);
             g.fillRect(hpBarX, hpBarY, goldWidth, hpBarHeight);
             if (hpBarFrame3 != null) {
-                g.drawImage(hpBarFrame3, hpBarX - 37, hpBarY - 30, hpBarWidth + 40, hpBarHeight + 45, null);
+                int frameWidth = Game.scale(307);
+                int frameHeight = Game.scale(75);
+                int frameX = hpBarX - Game.scale(37);
+                int frameY = hpBarY - Game.scale(30);
+                g.drawImage(hpBarFrame3, frameX, frameY, frameWidth, frameHeight, null);
             }
         }
 
-        if (player.getHp() > 0 ) {
+        if (player.getHp() > 0) {
             g.setColor(Color.BLACK);
             for (int i = 1; i <= 9; i++) {
                 int dividerX = hpBarX + (i * hpBarWidth / 10);
-                g.drawLine(dividerX, hpBarY , dividerX, hpBarY + hpBarHeight);
+                g.drawLine(dividerX, hpBarY, dividerX, hpBarY + hpBarHeight);
             }
         }
     }
@@ -171,12 +185,13 @@ public class PlayerGraphics {
         if (timeSinceLastDash < player.getDashCooldown()) {
             double percentage = 1 - (double) timeSinceLastDash / player.getDashCooldown();
 
-            int radius = 30;
-            int centerX = 50 + GameLogic.cameraX;
-            int centerY = GamePanel.PANEL_HEIGHT - 50 + GameLogic.cameraY;
+            int radius = Game.scale(30);
+            int centerX = Game.scale(50) + GameLogic.cameraX;
+            int centerY = GamePanel.PANEL_HEIGHT - Game.scale(50) + GameLogic.cameraY;
 
             g.setColor(Color.RED);
-            g.fillArc(centerX - radius, centerY - radius, radius * 2, radius * 2, 90, (int) (360 * percentage));
+            g.fillArc(centerX - radius, centerY - radius, radius * 2, radius * 2,
+                    90, (int) (360 * percentage));
         }
     }
 
@@ -191,12 +206,13 @@ public class PlayerGraphics {
         if (timeSinceLastExplosion < player.getExplosionCooldown()) {
             double percentage = 1 - (double) timeSinceLastExplosion / player.getExplosionCooldown();
 
-            int radius = 30;
-            int centerX = 100 + GameLogic.cameraX;
-            int centerY = GamePanel.PANEL_HEIGHT - 50 + GameLogic.cameraY;
+            int radius = Game.scale(30);
+            int centerX = Game.scale(100) + GameLogic.cameraX;
+            int centerY = GamePanel.PANEL_HEIGHT - Game.scale(50) + GameLogic.cameraY;
 
             g.setColor(Color.ORANGE);
-            g.fillArc(centerX - radius, centerY - radius, radius * 2, radius * 2, 90, (int) (360 * percentage));
+            g.fillArc(centerX - radius, centerY - radius, radius * 2, radius * 2,
+                    90, (int) (360 * percentage));
         }
     }
 

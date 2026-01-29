@@ -72,14 +72,14 @@ public class DarkMageBoss extends Enemy {
         deathTextures = new Image[10];
         try {
             for (int i = 0; i < 5; i++) {
-                bossTexturesLeft[i] = ImageIO.read(getClass().getResourceAsStream("/watva/boss/darkMage/darkMage" + (i + 1) + ".png"));
-                bossTexturesRight[i] = ImageIO.read(getClass().getResourceAsStream("/watva/boss/darkMage/darkMage" + (i + 6) + ".png"));
-                bossAreaAttackTextures[i] = ImageIO.read(getClass().getResourceAsStream("/watva/boss/darkMage/darkMage" + (i + 6) + ".png"));
+                bossTexturesLeft[i] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Boss/DarkMage/DarkMage" + (i + 1) + ".png"));
+                bossTexturesRight[i] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Boss/DarkMage/DarkMage" + (i + 6) + ".png"));
+                bossAreaAttackTextures[i] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Boss/DarkMage/DarkMage" + (i + 6) + ".png"));
             }
             for (int i = 0; i < 10; i++) {
-                deathTextures[i] = ImageIO.read(getClass().getResourceAsStream("/watva/boss/darkMage/darkMage" + (i + 11) + ".png"));
+                deathTextures[i] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Boss/DarkMage/DarkMage" + (i + 11) + ".png"));
             }
-            hpBarFrame1 = ImageIO.read(getClass().getResourceAsStream("/watva/boss/darkMage/DarkMageHPBar1.png"));
+            hpBarFrame1 = ImageIO.read(getClass().getResourceAsStream("/WATVA/Boss/DarkMage/DarkMageHPBar1.png"));
         } catch (IOException e) {
             e.printStackTrace();
         }

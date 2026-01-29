@@ -14,6 +14,7 @@ import java.awt.*;
  */
 public class MenuPanel extends JPanel {
     private JButton resumeButton;
+    private JButton levelMapButton;  // NOVÉ
     private JButton restartButton;
     private JButton mainMenuButton;
     private JButton quitButton;
@@ -44,7 +45,7 @@ public class MenuPanel extends JPanel {
         setOpaque(false);
         setLayout(null);
         int menuPanelWidth = 400;
-        int menuPanelHeight = 600;
+        int menuPanelHeight = 700;
         int menuPanelX = (GamePanel.PANEL_WIDTH - menuPanelWidth) / 2;
         int menuPanelY = (GamePanel.PANEL_HEIGHT - menuPanelHeight) / 2;
         setBounds(menuPanelX, menuPanelY, menuPanelWidth, menuPanelHeight);
@@ -58,13 +59,21 @@ public class MenuPanel extends JPanel {
         });
         add(resumeButton);
 
+        levelMapButton = createMenuButton("LEVEL MAP", 300, 50);
+        levelMapButton.setBounds((menuPanelWidth - 300) / 2, 150, 300, 50);
+        levelMapButton.addActionListener(e -> {
+            setVisible(false);
+            gamePanel.showLevelMap();
+        });
+        add(levelMapButton);
+
         restartButton = createMenuButton("RESTART", 300, 50);
-        restartButton.setBounds((menuPanelWidth - 300) / 2, 150, 300, 50);
+        restartButton.setBounds((menuPanelWidth - 300) / 2, 250, 300, 50);
         restartButton.addActionListener(e -> gamePanel.restartGame());
         add(restartButton);
 
         mainMenuButton = createMenuButton("MAIN MENU", 300, 50);
-        mainMenuButton.setBounds((menuPanelWidth - 300) / 2, 250, 300, 50);
+        mainMenuButton.setBounds((menuPanelWidth - 300) / 2, 350, 300, 50);
         mainMenuButton.addActionListener(e -> {
             gamePanel.closeGame();
             new MainMenuPanel();
@@ -73,7 +82,7 @@ public class MenuPanel extends JPanel {
         add(mainMenuButton);
 
         settingsButton = createMenuButton("SETTINGS", 300, 50);
-        settingsButton.setBounds((menuPanelWidth - 300) / 2, 350, 300, 50);
+        settingsButton.setBounds((menuPanelWidth - 300) / 2, 450, 300, 50);
         settingsButton.addActionListener(e -> {
             setVisible(false);
             if (settingsPanel == null) {
@@ -85,7 +94,7 @@ public class MenuPanel extends JPanel {
         add(settingsButton);
 
         quitButton = createMenuButton("QUIT GAME", 300, 50);
-        quitButton.setBounds((menuPanelWidth - 300) / 2, 450, 300, 50);
+        quitButton.setBounds((menuPanelWidth - 300) / 2, 550, 300, 50);
         quitButton.addActionListener(e -> System.exit(0));
         add(quitButton);
 

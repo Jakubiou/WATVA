@@ -1,5 +1,6 @@
 package Enemies;
 
+import Core.Game;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.io.IOException;
@@ -10,10 +11,10 @@ import java.io.IOException;
  * Extends the base Enemy class with slime-specific characteristics.
  */
 public class Slime extends Enemy {
-    private static final int SLIME_SIZE = 64;
+    private static final int SLIME_SIZE = Game.scale(64);
     private long lastJumpTime = 0;
     private static final long JUMP_INTERVAL = 1500;
-    private static final int JUMP_DISTANCE = 50;
+    private static final int JUMP_DISTANCE = Game.scale(50);
     private boolean isJumping = false;
     private boolean preJump = false;
     private boolean jumpingRight = true;
@@ -148,6 +149,7 @@ public class Slime extends Enemy {
      */
     @Override
     public Rectangle getCollider() {
-        return new Rectangle(x + 30, y + 24, SLIME_SIZE - 48, SLIME_SIZE - 48);
+        return new Rectangle(x + Game.scale(30), y + Game.scale(24),
+                SLIME_SIZE - Game.scale(48), SLIME_SIZE - Game.scale(48));
     }
 }

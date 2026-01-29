@@ -1,5 +1,6 @@
 package Logic.DamageNumber;
 
+import Core.Game;
 import java.awt.*;
 import java.util.Random;
 
@@ -13,11 +14,11 @@ public class DamageNumber {
     private int damage;
     private long creationTime;
     private static final long DURATION_MS = 1500;
-    private static final int FLOAT_SPEED = 2;
+    private static final int FLOAT_SPEED = Game.scale(2);
     private boolean isActive = true;
     private static final Random random = new Random();
 
-    private static final int RANDOM_OFFSET_RANGE = 40;
+    private static final int RANDOM_OFFSET_RANGE = Game.scale(40);
 
     private double velocityX;
     private double velocityY;
@@ -43,8 +44,6 @@ public class DamageNumber {
         this.velocityX = Math.sin(angle) * FLOAT_SPEED;
         this.velocityY = -Math.cos(angle) * FLOAT_SPEED;
     }
-
-
 
     /**
      * Updates the damage number position and checks if it should still be active.
@@ -94,11 +93,12 @@ public class DamageNumber {
         int drawX = (int)(x - textWidth / 2);
         int drawY = (int)(y + textHeight / 4);
 
+        int outlineSize = Game.scale(1);
         g2d.setColor(outlineColor);
-        g2d.drawString(damageText, drawX - 1, drawY);
-        g2d.drawString(damageText, drawX + 1, drawY);
-        g2d.drawString(damageText, drawX, drawY - 1);
-        g2d.drawString(damageText, drawX, drawY + 1);
+        g2d.drawString(damageText, drawX - outlineSize, drawY);
+        g2d.drawString(damageText, drawX + outlineSize, drawY);
+        g2d.drawString(damageText, drawX, drawY - outlineSize);
+        g2d.drawString(damageText, drawX, drawY + outlineSize);
 
         g2d.setColor(colorWithAlpha);
         g2d.drawString(damageText, drawX, drawY);
@@ -132,15 +132,15 @@ public class DamageNumber {
      */
     private int getFontSize(int damage) {
         if (damage <= 10) {
-            return 16;
+            return Game.scale(16);
         } else if (damage <= 25) {
-            return 18;
+            return Game.scale(18);
         } else if (damage <= 50) {
-            return 20;
+            return Game.scale(20);
         } else if (damage <= 100) {
-            return 22;
+            return Game.scale(22);
         } else {
-            return 24;
+            return Game.scale(24);
         }
     }
 

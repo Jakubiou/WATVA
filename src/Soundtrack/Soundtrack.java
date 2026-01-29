@@ -29,7 +29,7 @@ public class Soundtrack {
 
             volumeControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
 
-            setVolume(0.85f);
+            setVolume(0.00f);
 
         } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
             e.printStackTrace();

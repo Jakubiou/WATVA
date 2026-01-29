@@ -1,5 +1,6 @@
 package UI;
 
+import Logic.Level.LevelManager;
 import Player.Player;
 
 import java.awt.*;
@@ -14,6 +15,7 @@ import java.util.Map;
 public class UpgradePanel extends JPanel {
     private final Player player;
     private final GamePanel gamePanel;
+    private final LevelManager levelManager;
     private boolean visible;
     private JLabel coinsLabel;
     private Map<String, Integer> baseCosts;
@@ -25,10 +27,12 @@ public class UpgradePanel extends JPanel {
      *
      * @param gamePanel Reference to the game panel
      * @param player Reference to the player
+     * @param levelManager Reference to level manager
      */
-    public UpgradePanel(GamePanel gamePanel, Player player) {
+    public UpgradePanel(GamePanel gamePanel, Player player, LevelManager levelManager) {
         this.gamePanel = gamePanel;
         this.player = player;
+        this.levelManager = levelManager;
         initializeBaseCosts();
         initializeUpgradePanel();
         try {
@@ -42,6 +46,7 @@ public class UpgradePanel extends JPanel {
 
     /**
      * Initializes base costs for all upgrades.
+     * Max levels are now loaded from current level data.
      */
     private void initializeBaseCosts() {
         baseCosts = new HashMap<>();
@@ -50,6 +55,22 @@ public class UpgradePanel extends JPanel {
         baseCosts.put("Defense", 100);
 
         maxLevels = new HashMap<>();
+        updateMaxLevels();
+    }
+
+    private void updateMaxLevels() {
+        if (levelManager != null) {
+            int currentLevel = levelManager.getCurrentLevel();
+            var levelData = levelManager.getLevel(currentLevel);
+
+            if (levelData != null) {
+                maxLevels.put("Damage", levelData.getMaxDamageUpgrade());
+                maxLevels.put("HP", levelData.getMaxHpUpgrade());
+                maxLevels.put("Defense", levelData.getMaxDefenseUpgrade());
+                return;
+            }
+        }
+
         maxLevels.put("Damage", 999);
         maxLevels.put("HP", 40);
         maxLevels.put("Defense", 50);
@@ -230,6 +251,7 @@ public class UpgradePanel extends JPanel {
      * @return True if max level reached
      */
     private boolean isStatMaxed(String statName) {
+        updateMaxLevels();
         int currentLevel = getCurrentUpgradeLevel(statName);
         return currentLevel >= maxLevels.get(statName);
     }
@@ -279,6 +301,7 @@ public class UpgradePanel extends JPanel {
      * Shows the panel.
      */
     public void showPanel() {
+        updateMaxLevels();
         setVisible(true);
         updateAbilityPanel();
         visible = true;

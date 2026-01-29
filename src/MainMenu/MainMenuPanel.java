@@ -1,4 +1,5 @@
 package MainMenu;
+
 import Core.Game;
 
 import javax.swing.*;
@@ -6,19 +7,18 @@ import java.awt.*;
 import java.awt.event.*;
 
 /**
- * Main menu frame with interactive buttons and background image.
+ * Main menu panel with Play, Credits, and Quit buttons
  */
 public class MainMenuPanel extends JFrame {
     private Image backgroundImage;
     private JButton playButton;
-    private JButton settingsButton;
+    private JButton creditsButton;
     private JButton quitGameButton;
     private int originalButtonWidth;
     private int originalButtonHeight;
+    private ImageIcon playIcon1;
+    private ImageIcon playIcon2;
 
-    /**
-     * Creates and displays the main menu in fullscreen mode.
-     */
     public MainMenuPanel() {
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         int screenWidth = (int) screenSize.getWidth();
@@ -49,6 +49,7 @@ public class MainMenuPanel extends JFrame {
         gbc.insets = new Insets(20, 0, 20, 0);
 
         backgroundPanel.add(playButton, gbc);
+        backgroundPanel.add(creditsButton, gbc);
         backgroundPanel.add(quitGameButton, gbc);
 
         addActionListeners();
@@ -56,34 +57,29 @@ public class MainMenuPanel extends JFrame {
         setVisible(true);
     }
 
-    /**
-     * Creates and styles the menu buttons.
-     * @param screenWidth The screen width for button sizing
-     * @param screenHeight The screen height for button sizing
-     */
     private void createButtons(int screenWidth, int screenHeight) {
         originalButtonWidth = (int) (screenWidth * 0.28);
         originalButtonHeight = (int) (originalButtonWidth * 0.18);
 
-        ImageIcon playIcon1 = new ImageIcon(getClass().getClassLoader().getResource("Buttons/Play_button1.png"));
-        Image playImage1 = playIcon1.getImage().getScaledInstance(originalButtonWidth, originalButtonHeight, Image.SCALE_SMOOTH);
-        playIcon1 = new ImageIcon(playImage1);
+        // Play Button
+        playIcon1 = new ImageIcon(new ImageIcon(getClass().getClassLoader().getResource("Buttons/Play_button1.png"))
+                .getImage().getScaledInstance(originalButtonWidth, originalButtonHeight, Image.SCALE_SMOOTH));
 
-        ImageIcon playIcon2 = new ImageIcon(getClass().getClassLoader().getResource("Buttons/Play_button2.png"));
-        Image playImage2 = playIcon2.getImage().getScaledInstance((int)(originalButtonWidth * 1.1), (int)(originalButtonHeight * 1.1), Image.SCALE_SMOOTH);
-        playIcon2 = new ImageIcon(playImage2);
+        playIcon2 = new ImageIcon(new ImageIcon(getClass().getClassLoader().getResource("Buttons/Play_button2.png"))
+                .getImage().getScaledInstance((int)(originalButtonWidth * 1.1), (int)(originalButtonHeight * 1.1), Image.SCALE_SMOOTH));
 
         playButton = new JButton(playIcon1);
         styleButton(playButton, originalButtonWidth, originalButtonHeight);
 
+        // Credits Button (vytvoříme vlastní vzhled)
+        creditsButton = createStyledTextButton("CREDITS", originalButtonWidth, originalButtonHeight);
 
-        ImageIcon quitGameIcon1 = new ImageIcon(getClass().getClassLoader().getResource("Buttons/QuitGame_button1.png"));
-        Image quitGameImage1 = quitGameIcon1.getImage().getScaledInstance(originalButtonWidth, originalButtonHeight, Image.SCALE_SMOOTH);
-        quitGameIcon1 = new ImageIcon(quitGameImage1);
+        // Quit Button
+        ImageIcon quitGameIcon1 = new ImageIcon(new ImageIcon(getClass().getClassLoader().getResource("Buttons/QuitGame_button1.png"))
+                .getImage().getScaledInstance(originalButtonWidth, originalButtonHeight, Image.SCALE_SMOOTH));
 
-        ImageIcon quitGameIcon2 = new ImageIcon(getClass().getClassLoader().getResource("Buttons/QuitGame_button2.png"));
-        Image quitGameImage2 = quitGameIcon2.getImage().getScaledInstance((int)(originalButtonWidth * 1.1), (int)(originalButtonHeight * 1.1), Image.SCALE_SMOOTH);
-        quitGameIcon2 = new ImageIcon(quitGameImage2);
+        ImageIcon quitGameIcon2 = new ImageIcon(new ImageIcon(getClass().getClassLoader().getResource("Buttons/QuitGame_button2.png"))
+                .getImage().getScaledInstance((int)(originalButtonWidth * 1.1), (int)(originalButtonHeight * 1.1), Image.SCALE_SMOOTH));
 
         quitGameButton = new JButton(quitGameIcon1);
         styleButton(quitGameButton, originalButtonWidth, originalButtonHeight);
@@ -92,12 +88,50 @@ public class MainMenuPanel extends JFrame {
         addHoverEffects(quitGameButton, quitGameIcon1, quitGameIcon2);
     }
 
-    /**
-     * Applies visual styling to a button.
-     * @param button The button to style
-     * @param width The button width
-     * @param height The button height
-     */
+    private JButton createStyledTextButton(String text, int width, int height) {
+        JButton button = new JButton(text);
+
+        // Načtení fontu
+        Font buttonFont;
+        try {
+            buttonFont = Font.createFont(Font.TRUETYPE_FONT,
+                    getClass().getResourceAsStream("/fonts/PixelPurl.ttf")).deriveFont(Font.BOLD, 48f);
+        } catch (Exception e) {
+            buttonFont = new Font("Arial", Font.BOLD, 48);
+        }
+
+        button.setFont(buttonFont);
+        button.setForeground(Color.WHITE);
+        button.setBackground(new Color(50, 50, 70));
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(255, 165, 0), 4),
+                BorderFactory.createEmptyBorder(20, 40, 20, 40)
+        ));
+        button.setFocusPainted(false);
+        button.setPreferredSize(new Dimension(width, height));
+
+        // Hover efekt pro text button
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.setBackground(new Color(70, 70, 100));
+                button.setForeground(new Color(255, 215, 0));
+                button.setPreferredSize(new Dimension((int)(width * 1.1), (int)(height * 1.1)));
+                button.revalidate();
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(new Color(50, 50, 70));
+                button.setForeground(Color.WHITE);
+                button.setPreferredSize(new Dimension(width, height));
+                button.revalidate();
+            }
+        });
+
+        return button;
+    }
+
     private void styleButton(JButton button, int width, int height) {
         button.setBorderPainted(false);
         button.setContentAreaFilled(false);
@@ -106,20 +140,12 @@ public class MainMenuPanel extends JFrame {
         button.setPreferredSize(new Dimension(width, height));
     }
 
-     /**
-     * Adds hover effects to a button.
-     * @param button The button to enhance
-     * @param normalIcon The default button icon
-     * @param hoverIcon The icon to show on hover
-     */
     private void addHoverEffects(JButton button, ImageIcon normalIcon, ImageIcon hoverIcon) {
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
                 button.setIcon(hoverIcon);
-                int newWidth = (int)(originalButtonWidth * 1.1);
-                int newHeight = (int)(originalButtonHeight * 1.1);
-                button.setPreferredSize(new Dimension(newWidth, newHeight));
+                button.setPreferredSize(new Dimension((int)(originalButtonWidth * 1.1), (int)(originalButtonHeight * 1.1)));
                 button.revalidate();
             }
 
@@ -132,17 +158,38 @@ public class MainMenuPanel extends JFrame {
         });
     }
 
-    /**
-     * Adds action listeners to handle button clicks.
-     */
     private void addActionListeners() {
+        // Play button
         playButton.addActionListener(e -> {
-            new Game();
+            playButton.setIcon(playIcon1);
+            playButton.setPreferredSize(new Dimension(originalButtonWidth, originalButtonHeight));
+            playButton.revalidate();
+            playButton.repaint();
+
+            setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+
+            SwingWorker<Void, Void> worker = new SwingWorker<>() {
+                @Override
+                protected Void doInBackground() {
+                    new Game();
+                    return null;
+                }
+                @Override
+                protected void done() {
+                    setCursor(Cursor.getDefaultCursor());
+                    dispose();
+                }
+            };
+            worker.execute();
+        });
+
+        // Credits button
+        creditsButton.addActionListener(e -> {
+            new CreditsPanel();
             dispose();
         });
 
-        quitGameButton.addActionListener(e -> {
-            dispose();
-        });
+        // Quit button
+        quitGameButton.addActionListener(e -> dispose());
     }
 }
