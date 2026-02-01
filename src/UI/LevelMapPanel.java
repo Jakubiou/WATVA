@@ -25,7 +25,7 @@ public class LevelMapPanel extends JPanel {
         this.levelManager = levelManager;
 
         setLayout(null);
-        setBounds(0, 0, GamePanel.PANEL_WIDTH, GamePanel.PANEL_HEIGHT);
+        setBounds(0, 0, (int)Game.getRealScreenWidth(), (int)Game.getRealScreenHeight());
 
         loadResources();
         initializeLevelPositions();
@@ -51,19 +51,22 @@ public class LevelMapPanel extends JPanel {
 
     private void initializeLevelPositions() {
         levelPositions = new Point[10];
-        int startX = Game.scale(100);
-        int startY = Game.scale(1000);
 
-        levelPositions[0] = new Point(startX + Game.scale(250), startY);
-        levelPositions[1] = new Point(startX, startY - Game.scale(350));
-        levelPositions[2] = new Point(startX + Game.scale(150), startY - Game.scale(600));
-        levelPositions[3] = new Point(startX + Game.scale(450), startY - Game.scale(300));
-        levelPositions[4] = new Point(startX + Game.scale(700), startY - Game.scale(500));
-        levelPositions[5] = new Point(startX + Game.scale(850), startY - Game.scale(100));
-        levelPositions[6] = new Point(startX + Game.scale(1150), startY - Game.scale(100));
-        levelPositions[7] = new Point(startX + Game.scale(1350), startY - Game.scale(350));
-        levelPositions[8] = new Point(startX + Game.scale(1700), startY - Game.scale(350));
-        levelPositions[9] = new Point(startX + Game.scale(1650), startY - Game.scale(600));
+        double w = getWidth();
+        double h = getHeight();
+
+        double rx = w / 1920.0;
+        double ry = h / 1080.0;
+
+        int[] baseX = {350, 100, 250, 550, 800, 950, 1250, 1450, 1800, 1750};
+        int[] baseY = {950, 600, 350, 650, 450, 850, 850, 600, 600, 350};
+
+        for (int i = 0; i < 10; i++) {
+            levelPositions[i] = new Point(
+                    (int)(baseX[i] * rx),
+                    (int)(baseY[i] * ry)
+            );
+        }
     }
 
     private void setupMouseListener() {
@@ -137,6 +140,11 @@ public class LevelMapPanel extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+
+        if (getWidth() > 0 && getHeight() > 0) {
+            initializeLevelPositions();
+        }
+
         Graphics2D g2d = (Graphics2D) g;
 
         if (backgroundImage != null) {
@@ -153,12 +161,13 @@ public class LevelMapPanel extends JPanel {
         g2d.setColor(Color.WHITE);
         String title = "SELECT LEVEL";
         int titleWidth = g2d.getFontMetrics().stringWidth(title);
-        g2d.drawString(title, (GamePanel.PANEL_WIDTH - titleWidth) / 2, Game.scale(50));
+        g2d.drawString(title, (getWidth() - titleWidth) / 2, Game.scale(50));
 
-        drawPaths(g2d);
-
-        for (int i = 0; i < 10; i++) {
-            drawLevel(g2d, i + 1, levelPositions[i]);
+        if (levelPositions != null && levelPositions[0] != null) {
+            drawPaths(g2d);
+            for (int i = 0; i < 10; i++) {
+                drawLevel(g2d, i + 1, levelPositions[i]);
+            }
         }
 
         drawBackButton(g2d);

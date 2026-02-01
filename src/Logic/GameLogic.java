@@ -158,7 +158,7 @@ public class GameLogic {
         }
 
         if (waveComplete && !gameOver) {
-            if (waveNumber >= 10) {
+            if (waveNumber >= 1) {
                 onLevelComplete();
             } else {
                 pauseGame();

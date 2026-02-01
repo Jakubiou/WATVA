@@ -1,7 +1,5 @@
 package Logic.Level;
 
-import Enemies.Enemy;
-
 public class LevelData {
     private int levelNumber;
     private String mapTexture;
@@ -22,7 +20,7 @@ public class LevelData {
         this.maxDamageUpgrade = maxDamage;
         this.maxHpUpgrade = maxHp;
         this.maxDefenseUpgrade = maxDefense;
-        this.waves = new WaveData[10]; // 10 vln
+        this.waves = new WaveData[10];
     }
 
     public void setWave(int waveIndex, int normal, int giant, int small, int shooting, int slime) {

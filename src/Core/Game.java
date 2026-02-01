@@ -40,6 +40,8 @@ public class Game extends JFrame {
         scaledGameWidth = (int)(BASE_WIDTH * scaleFactor);
         scaledGameHeight = (int)(BASE_HEIGHT * scaleFactor);
 
+        scaleFactor *= 1.4;
+
         player = new Player(0, 0, 100);
         gamePanel = new GamePanel(this, player);
 
