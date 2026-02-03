@@ -3,6 +3,7 @@ package UI;
 import Core.Game;
 import Logic.DamageNumber.DamageNumberManager;
 import Logic.GameLogic;
+import MainMenu.MainMenuPanel;
 import Player.Player;
 
 import java.awt.*;
@@ -11,9 +12,6 @@ import java.io.*;
 import java.net.URL;
 import javax.swing.*;
 
-/**
- * The main game panel that handles rendering, input, and UI management.
- */
 public class GamePanel extends JPanel implements ActionListener {
     public static final int PANEL_WIDTH = Game.getScaledGameWidth();
     public static final int PANEL_HEIGHT = Game.getScaledGameHeight();
@@ -37,10 +35,8 @@ public class GamePanel extends JPanel implements ActionListener {
     private int currentMouseX, currentMouseY;
     private DamageNumberManager damageManager = new DamageNumberManager();
     private LevelMapPanel levelMapPanel;
+    private boolean menuVisible = false;
 
-    /**
-     * Constructs the game panel with references to game and player.
-     */
     public GamePanel(Game game, Player player) {
         this.game = game;
 
@@ -61,9 +57,6 @@ public class GamePanel extends JPanel implements ActionListener {
         showLevelMap();
     }
 
-    /**
-     * Loads and initializes the custom pixel font.
-     */
     private void initializeFont() {
         try {
             pixelPurlFont = Font.createFont(Font.TRUETYPE_FONT,
@@ -71,14 +64,10 @@ public class GamePanel extends JPanel implements ActionListener {
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(pixelPurlFont);
         } catch (FontFormatException | IOException e) {
             e.printStackTrace();
-            System.err.println("Using fallback font instead");
             pixelPurlFont = new Font("Courier New", Font.BOLD, Game.scale(20));
         }
     }
 
-    /**
-     * Initializes the in-game menu button and menu panel.
-     */
     private void initializeMenu() {
         int buttonWidth = Game.scale(100);
         int buttonHeight = Game.scale(40);
@@ -87,7 +76,7 @@ public class GamePanel extends JPanel implements ActionListener {
         URL hoverUrl = getClass().getResource("/Buttons/Menu_button2.png");
 
         if (normalUrl == null || hoverUrl == null) {
-            System.err.println("Chyba: Ikony menu tlačítka nebyly nalezeny!");
+            System.err.println("Error: Menu button icons not found!");
             return;
         }
 
@@ -102,9 +91,6 @@ public class GamePanel extends JPanel implements ActionListener {
         menuButton.setContentAreaFilled(false);
         menuButton.setFocusPainted(false);
         menuButton.setOpaque(false);
-        menuButton.setPreferredSize(new Dimension(buttonWidth, buttonHeight));
-        menuButton.setMaximumSize(new Dimension(buttonWidth, buttonHeight));
-        menuButton.setMinimumSize(new Dimension(buttonWidth, buttonHeight));
 
         menuButton.addActionListener(e -> toggleMenu());
         add(menuButton);
@@ -113,26 +99,17 @@ public class GamePanel extends JPanel implements ActionListener {
         add(menuPanel);
     }
 
-    /**
-     * Initializes the ability selection panel shown between waves.
-     */
     private void initializeAbilityPanel() {
         abilityPanel = new AbilityPanel(this, gameLogic.getPlayer());
         add(abilityPanel);
     }
 
-    /**
-     * Initializes the level map.
-     */
     private void initializeLevelMap() {
         levelMapPanel = new LevelMapPanel(game, gameLogic.getLevelManager());
         levelMapPanel.setGamePanel(this);
         add(levelMapPanel);
     }
 
-    /**
-     * Initializes the upgrade panel.
-     */
     public void initializeUpgradePanel() {
         if (upgradePanel == null) {
             upgradePanel = new UpgradePanel(this, gameLogic.getPlayer(), gameLogic.getLevelManager());
@@ -145,9 +122,6 @@ public class GamePanel extends JPanel implements ActionListener {
         upgradePanelVisible = true;
     }
 
-    /**
-     * Sets up all input handlers.
-     */
     private void initializeInput() {
         addKeyListener(new KeyAdapter() {
             @Override
@@ -197,51 +171,67 @@ public class GamePanel extends JPanel implements ActionListener {
         });
     }
 
-    /**
-     * Toggles the in-game menu.
-     */
     public void toggleMenu() {
         if (menuPanel.isVisible()) {
             menuPanel.setVisible(false);
             menuButton.setVisible(true);
+            menuVisible = false;
             if(!gameLogic.getEnemies().isEmpty()) {
                 gameLogic.resumeGame();
             }
         } else {
             menuPanel.setVisible(true);
             menuButton.setVisible(false);
+            menuVisible = true;
             gameLogic.pauseGame();
         }
     }
 
-    /**
-     * Restarts the game.
-     */
     public void restartGame() {
-        closeGame();
-        new Game();
+        gameLogic.stopGame();
+        removeAll();
+
+        Player newPlayer = new Player(0, 0, 100);
+        gameLogic = new GameLogic(this, newPlayer, damageManager);
+
+        initializeMenu();
+        initializeAbilityPanel();
+        initializeLevelMap();
+
+        renderer = new GameRenderer(this, pixelPurlFont);
+
+        menuVisible = false;
+        showLevelMap();
+        revalidate();
+        repaint();
     }
 
-    /**
-     * Closes the current game.
-     */
+    public void returnToMainMenu() {
+        gameLogic.savePlayerCoins();
+        gameLogic.stopGame();
+
+        game.getContentPane().removeAll();
+
+        MainMenuPanel mainMenuPanel = new MainMenuPanel();
+
+        game.setContentPane(mainMenuPanel.getContentPane());
+        game.revalidate();
+        game.repaint();
+
+        mainMenuPanel.setVisible(false);
+    }
+
     public void closeGame(){
         gameLogic.stopGame();
         game.dispose();
     }
 
-    /**
-     * Starts next wave after ability selection.
-     */
     public void startNextWaveAfterAbility() {
         abilityPanel.hidePanel();
         menuButton.setVisible(true);
         gameLogic.nextWave();
     }
 
-    /**
-     * Handles game over.
-     */
     public void onGameOver() {
         if (gameOverPanel == null) {
             gameOverPanel = new GameOverPanel(game, this);
@@ -251,35 +241,23 @@ public class GamePanel extends JPanel implements ActionListener {
         menuButton.setVisible(false);
     }
 
-    /**
-     * Handles wave completion.
-     */
     public void onWaveComplete() {
         menuButton.setVisible(false);
         abilityPanel.showPanel();
     }
 
-    /**
-     * Shows level map.
-     */
     public void showLevelMap() {
         menuButton.setVisible(false);
         gameLogic.pauseGame();
         levelMapPanel.showMap();
     }
 
-    /**
-     * Starts selected level.
-     */
     public void startLevel(int levelNumber) {
         levelMapPanel.hideMap();
         menuButton.setVisible(true);
         gameLogic.startLevel(levelNumber);
     }
 
-    /**
-     * Called when player completes a level (10 waves).
-     */
     public void onLevelComplete() {
         menuButton.setVisible(false);
 
@@ -293,9 +271,6 @@ public class GamePanel extends JPanel implements ActionListener {
         showLevelMap();
     }
 
-    /**
-     * Main game loop.
-     */
     @Override
     public void actionPerformed(ActionEvent e) {
         if (abilityPanel.isVisible()) {
@@ -315,9 +290,6 @@ public class GamePanel extends JPanel implements ActionListener {
         repaint();
     }
 
-    /**
-     * Renders all game components.
-     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -325,30 +297,17 @@ public class GamePanel extends JPanel implements ActionListener {
         renderer.render(g, gameLogic.getPlayer(), gameLogic.getEnemies(),
                 gameLogic.getPlayerProjectiles(), gameLogic.isGameOver(),
                 gameLogic.isPaused(), abilityPanelVisible, upgradePanelVisible,
-                gameLogic.getKillCount(), damageManager);
+                gameLogic.getKillCount(), damageManager, gameLogic.getCrystalExplosion(),
+                menuVisible);
 
         if (gameLogic.isGameOver() && !upgradePanelVisible) {
             onGameOver();
         }
     }
 
-    public int getCameraX() {
-        return gameLogic.getCameraX();
-    }
-
-    public int getCameraY() {
-        return gameLogic.getCameraY();
-    }
-
-    public Player getPlayer() {
-        return gameLogic.getPlayer();
-    }
-
-    public static int getWaveNumber() {
-        return GameLogic.getWaveNumber();
-    }
-
-    public GameLogic getGameLogic() {
-        return gameLogic;
-    }
+    public int getCameraX() { return gameLogic.getCameraX(); }
+    public int getCameraY() { return gameLogic.getCameraY(); }
+    public Player getPlayer() { return gameLogic.getPlayer(); }
+    public static int getWaveNumber() { return GameLogic.getWaveNumber(); }
+    public GameLogic getGameLogic() { return gameLogic; }
 }

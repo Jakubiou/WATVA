@@ -15,10 +15,6 @@ import Player.PlayerProjectile;
 import java.util.concurrent.CopyOnWriteArrayList;
 import javax.swing.Timer;
 
-/**
- * The core game logic controller that manages game state, wave progression,
- * collisions, and player/enemy interactions.
- */
 public class GameLogic {
     public static int[][] map;
     public static int mapWidth, mapHeight;
@@ -39,6 +35,8 @@ public class GameLogic {
     private GamePanel gamePanel;
     private MapManager mapManager;
     private LevelManager levelManager;
+    private CrystalExplosion crystalExplosion;
+    private boolean waveCompletionInProgress = false;
 
     public GameLogic(GamePanel gamePanel, Player player, DamageNumberManager damageManager) {
         this.gamePanel = gamePanel;
@@ -80,6 +78,8 @@ public class GameLogic {
         waveNumber = 0;
         killCount = 0;
         gameOver = false;
+        waveCompletionInProgress = false;
+        crystalExplosion = null;
 
         player.setX(mapWidth * GamePanel.BLOCK_SIZE / 2);
         player.setY(mapHeight * GamePanel.BLOCK_SIZE / 2);
@@ -97,13 +97,65 @@ public class GameLogic {
             updateAttackSpeed();
             player.move();
 
-            collisions.checkCollisions();
-            gameOver = collisions.isGameOver();
+            if (crystalExplosion != null) {
+                crystalExplosion.update();
+
+                updateProjectiles();
+
+                if (crystalExplosion.isWaveActive()) {
+                    destroyEnemiesInWave();
+                }
+
+                if (crystalExplosion.isComplete()) {
+                    crystalExplosion = null;
+                    waveCompletionInProgress = false;
+
+                    if (waveNumber >= 10) {
+                        onLevelComplete();
+                    } else {
+                        pauseGame();
+                        gamePanel.onWaveComplete();
+                    }
+                }
+
+                return;
+            }
+
+            if (!waveCompletionInProgress) {
+                collisions.checkCollisions();
+                gameOver = collisions.isGameOver();
+            }
 
             updateEnemies(damageManager);
-            checkWaveCompletion();
+            spawningEnemies.removeDistantEnemies(player.getX(), player.getY());
+
+            if (!waveCompletionInProgress) {
+                checkWaveCompletion();
+            }
             checkGameOver();
         }
+    }
+
+    /**
+     * OPTIMIZED: Destroy enemies in wave without checking every frame
+     */
+    private void destroyEnemiesInWave() {
+        if (crystalExplosion == null || crystalExplosion.getPlayer() == null) return;
+
+        Player p = crystalExplosion.getPlayer();
+        int playerCenterX = p.getX() + Player.WIDTH / 2;
+        int playerCenterY = p.getY() + Player.HEIGHT / 2;
+        int radius = crystalExplosion.getWaveRadius();
+
+        enemies.removeIf(enemy -> {
+            int dx = enemy.getX() - playerCenterX;
+            int dy = enemy.getY() - playerCenterY;
+            return (dx * dx + dy * dy) <= (radius * radius);
+        });
+    }
+
+    private void updateProjectiles() {
+        playerProjectiles.removeIf(projectile -> projectile.move());
     }
 
     private void updateEnemies(DamageNumberManager damageManager) {
@@ -111,12 +163,10 @@ public class GameLogic {
             enemy.update(damageManager);
             if (enemy instanceof DarkMageBoss) {
                 DarkMageBoss darkMageBoss = (DarkMageBoss) enemy;
-
                 if (darkMageBoss.isDead()) {
                     enemies.remove(enemy);
                     break;
-                }
-                else if (!darkMageBoss.isDying()) {
+                } else if (!darkMageBoss.isDying()) {
                     darkMageBoss.updateBossBehavior(player, enemies);
                 }
             } else if (enemy instanceof BunnyBoss) {
@@ -143,7 +193,7 @@ public class GameLogic {
             }
         }
 
-        boolean waveComplete = false;
+        boolean waveComplete;
 
         if (bossExists) {
             waveComplete = true;
@@ -154,17 +204,19 @@ public class GameLogic {
                 }
             }
         } else {
-            waveComplete = killCount >= 50 * waveNumber;
+            waveComplete = killCount >= 5;
         }
 
-        if (waveComplete && !gameOver) {
-            if (waveNumber >= 1) {
-                onLevelComplete();
-            } else {
-                pauseGame();
-                gamePanel.onWaveComplete();
-            }
+        if (waveComplete && !gameOver && !waveCompletionInProgress) {
+            startWaveCompletionEffect();
         }
+    }
+
+    private void startWaveCompletionEffect() {
+        waveCompletionInProgress = true;
+        spawningEnemies.stopCurrentSpawn();
+        crystalExplosion = new CrystalExplosion();
+        crystalExplosion.setPlayer(player);
     }
 
     private void onLevelComplete() {
@@ -232,6 +284,8 @@ public class GameLogic {
         waveNumber++;
         playerProjectiles.clear();
         killCount = 0;
+        waveCompletionInProgress = false;
+        crystalExplosion = null;
 
         LevelData currentLevelData = levelManager.getLevel(levelManager.getCurrentLevel());
 
@@ -239,11 +293,6 @@ public class GameLogic {
             LevelData.WaveData waveData = currentLevelData.getWave(waveNumber - 1);
 
             if (waveData != null) {
-                System.out.println("Boss type: " + waveData.bossType);
-                System.out.println("Enemies: N:" + waveData.normalPerSecond + " G:" + waveData.giantPerSecond +
-                        " S:" + waveData.smallPerSecond + " Sh:" + waveData.shootingPerSecond +
-                        " Sl:" + waveData.slimePerSecond);
-
                 if (waveData.bossType == LevelData.BossType.DARK_MAGE_BOSS) {
                     spawningEnemies.spawnDarkMageBoss();
                 } else if (waveData.bossType == LevelData.BossType.BUNNY_BOSS) {
@@ -257,13 +306,7 @@ public class GameLogic {
                             waveData.slimePerSecond
                     );
                 }
-
-                System.out.println("Total enemies after spawn: " + enemies.size());
-            } else {
-                System.err.println("ERROR: Wave data is NULL for wave " + waveNumber);
             }
-        } else {
-            System.err.println("ERROR: Invalid wave number or level data is NULL");
         }
 
         resumeGame();
@@ -326,4 +369,5 @@ public class GameLogic {
     public int getCameraY() { return cameraY; }
     public MapManager getMapManager() { return mapManager; }
     public LevelManager getLevelManager() { return levelManager; }
+    public CrystalExplosion getCrystalExplosion() { return crystalExplosion; }
 }

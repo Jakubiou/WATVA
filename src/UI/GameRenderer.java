@@ -2,6 +2,7 @@ package UI;
 
 import Core.Game;
 import Enemies.Enemy;
+import Logic.CrystalExplosion;
 import Logic.DamageNumber.DamageNumberManager;
 import Logic.GameLogic;
 import Logic.MapManager;
@@ -53,7 +54,7 @@ public class GameRenderer {
                     }
                 }
             } catch (Exception e) {
-                System.err.println("Nelze načíst Block" + i + ".png – používám prázdný blok.");
+                System.err.println("Cannot load Block" + i + ".png - using empty block.");
             }
 
             if (blockImages[i] == null) {
@@ -67,21 +68,12 @@ public class GameRenderer {
 
     /**
      * Main rendering method that draws all game elements.
-     *
-     * @param g The Graphics context to render to
-     * @param player The player character
-     * @param enemies List of active enemies
-     * @param playerProjectiles List of active player projectiles
-     * @param gameOver True if game is in game over state
-     * @param isPaused True if game is paused
-     * @param abilityPanelVisible True if ability panel is visible
-     * @param upgradePanelVisible True if upgrade panel is visible
-     * @param killCount Current kill count for wave progress
      */
     public void render(Graphics g, Player player, CopyOnWriteArrayList<Enemy> enemies,
                        CopyOnWriteArrayList<PlayerProjectile> playerProjectiles,
                        boolean gameOver, boolean isPaused, boolean abilityPanelVisible,
-                       boolean upgradePanelVisible, int killCount, DamageNumberManager damageManager) {
+                       boolean upgradePanelVisible, int killCount, DamageNumberManager damageManager,
+                       CrystalExplosion crystalExplosion, boolean menuVisible) {
 
         updateCamera(player);
         Graphics2D g2d = (Graphics2D) g;
@@ -95,7 +87,13 @@ public class GameRenderer {
         drawUI(g2d, player);
         drawBossEnemies(g2d, enemies);
         drawPlayer(g2d, player);
-        drawWaveProgressBar(g2d, gameOver, isPaused, enemies, killCount);
+
+        if (crystalExplosion != null) {
+            crystalExplosion.draw(g2d, GameLogic.cameraX, GameLogic.cameraY);
+        }
+
+        drawWaveProgressBar(g2d, gameOver, isPaused, enemies, killCount,
+                crystalExplosion != null, menuVisible);
 
         g2d.translate(GameLogic.cameraX, GameLogic.cameraY);
 
@@ -113,8 +111,6 @@ public class GameRenderer {
 
     /**
      * Updates camera position to follow player while staying within map bounds.
-     *
-     * @param player The player character to follow
      */
     private void updateCamera(Player player) {
         int targetCameraX = player.getX() - GamePanel.CAMERA_WIDTH * 2;
@@ -126,9 +122,6 @@ public class GameRenderer {
 
     /**
      * Draws boss enemies with special handling.
-     *
-     * @param g The Graphics context
-     * @param enemies List of enemies including bosses
      */
     private void drawBossEnemies(Graphics g, CopyOnWriteArrayList<Enemy> enemies) {
         for (int i = 0; i < enemies.size(); i++) {
@@ -141,8 +134,6 @@ public class GameRenderer {
 
     /**
      * Draws the game background using tile images.
-     *
-     * @param g The Graphics context
      */
     private void drawBackground(Graphics g, Player player) {
         MapManager mm = gamePanel.getGameLogic().getMapManager();
@@ -153,9 +144,6 @@ public class GameRenderer {
 
     /**
      * Draws the player character.
-     *
-     * @param g The Graphics context
-     * @param player The player character to draw
      */
     private void drawPlayer(Graphics g, Player player) {
         player.getGraphics().draw(g);
@@ -163,9 +151,6 @@ public class GameRenderer {
 
     /**
      * Draws all regular enemies.
-     *
-     * @param g The Graphics context
-     * @param enemies List of enemies to draw
      */
     private void drawEnemies(Graphics g, CopyOnWriteArrayList<Enemy> enemies) {
         for (int i = 0; i < enemies.size(); i++) {
@@ -176,9 +161,6 @@ public class GameRenderer {
 
     /**
      * Draws all player projectiles (arrows).
-     *
-     * @param g The Graphics context
-     * @param playerProjectiles List of projectiles to draw
      */
     private void drawArrows(Graphics g, CopyOnWriteArrayList<PlayerProjectile> playerProjectiles) {
         for (PlayerProjectile playerProjectile : playerProjectiles) {
@@ -188,9 +170,6 @@ public class GameRenderer {
 
     /**
      * Draws the game UI including wave number and coin count.
-     *
-     * @param g The Graphics context
-     * @param player The player for coin count
      */
     private void drawUI(Graphics g, Player player) {
         Graphics2D g2d = (Graphics2D) g;
@@ -207,11 +186,6 @@ public class GameRenderer {
 
     /**
      * Draws text with an outline effect for better visibility.
-     *
-     * @param g2d The Graphics2D context
-     * @param text The text to draw
-     * @param x The x-coordinate
-     * @param y The y-coordinate
      */
     private void drawOutlinedText(Graphics2D g2d, String text, int x, int y) {
         int outlineSize = Game.scale(3);
@@ -228,16 +202,13 @@ public class GameRenderer {
 
     /**
      * Draws the wave progress bar showing kill progress toward next wave.
-     *
-     * @param g2d The Graphics2D context
-     * @param gameOver True if game is over (hides bar)
-     * @param isPaused True if game is paused (hides bar)
-     * @param enemies List of enemies (for empty check)
-     * @param killCount Current kills toward next wave
+     * Hidden when menu is visible, during explosion, or when paused.
      */
     private void drawWaveProgressBar(Graphics2D g2d, boolean gameOver, boolean isPaused,
-                                     CopyOnWriteArrayList<Enemy> enemies, int killCount) {
-        if (gameOver || isPaused || enemies.isEmpty() || gamePanel.getWaveNumber() % 10 == 0) return;
+                                     CopyOnWriteArrayList<Enemy> enemies, int killCount,
+                                     boolean waveCompletionActive, boolean menuVisible) {
+        if (gameOver || isPaused || enemies.isEmpty() || gamePanel.getWaveNumber() % 10 == 0
+                || waveCompletionActive || menuVisible) return;
 
         int barWidth = Game.scale(390);
         int barHeight = Game.scale(30);
