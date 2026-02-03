@@ -1,7 +1,6 @@
 package UI;
 
 import Logic.GameLogic;
-import MainMenu.MainMenuPanel;
 import Core.Game;
 
 import javax.swing.*;
@@ -9,12 +8,10 @@ import java.awt.*;
 
 /**
  * The in-game menu panel that provides game control options during gameplay.
- * This panel appears when the game is paused and offers options to resume, restart,
- * return to main menu, adjust settings, or quit the game entirely.
  */
 public class MenuPanel extends JPanel {
     private JButton resumeButton;
-    private JButton levelMapButton;  // NOVÉ
+    private JButton levelMapButton;
     private JButton restartButton;
     private JButton mainMenuButton;
     private JButton quitButton;
@@ -23,14 +20,6 @@ public class MenuPanel extends JPanel {
     private SettingsPanel settingsPanel;
     private GamePanel gamePanel;
 
-    /**
-     * Constructs a new MenuPanel with all necessary game control options.
-     * Initializes the panel layout, loads custom font, and creates all interactive buttons.
-     *
-     * @param game The main Game instance that manages the application window
-     * @param gamePanel The GamePanel instance that handles game rendering and input
-     * @param gameLogic The GameLogic instance that manages game state and rules
-     */
     public MenuPanel(Game game, GamePanel gamePanel, GameLogic gameLogic) {
         this.gamePanel = gamePanel;
 
@@ -69,15 +58,17 @@ public class MenuPanel extends JPanel {
 
         restartButton = createMenuButton("RESTART", 300, 50);
         restartButton.setBounds((menuPanelWidth - 300) / 2, 250, 300, 50);
-        restartButton.addActionListener(e -> gamePanel.restartGame());
+        restartButton.addActionListener(e -> {
+            setVisible(false);
+            gamePanel.restartGame();
+        });
         add(restartButton);
 
         mainMenuButton = createMenuButton("MAIN MENU", 300, 50);
         mainMenuButton.setBounds((menuPanelWidth - 300) / 2, 350, 300, 50);
         mainMenuButton.addActionListener(e -> {
-            gamePanel.closeGame();
-            new MainMenuPanel();
             gameLogic.savePlayerCoins();
+            gamePanel.returnToMainMenu();
         });
         add(mainMenuButton);
 
@@ -95,21 +86,15 @@ public class MenuPanel extends JPanel {
 
         quitButton = createMenuButton("QUIT GAME", 300, 50);
         quitButton.setBounds((menuPanelWidth - 300) / 2, 550, 300, 50);
-        quitButton.addActionListener(e -> System.exit(0));
+        quitButton.addActionListener(e -> {
+            gameLogic.savePlayerCoins();
+            System.exit(0);
+        });
         add(quitButton);
 
         setVisible(false);
     }
 
-    /**
-     * Creates a styled menu button with consistent appearance and hover effects.
-     * All buttons in the menu use this standardized styling.
-     *
-     * @param text The display text for the button
-     * @param width The width of the button in pixels
-     * @param height The height of the button in pixels
-     * @return A configured JButton with the specified styling
-     */
     private JButton createMenuButton(String text, int width, int height) {
         JButton button = new JButton(text);
         button.setFont(pixelPurlFont);
@@ -137,12 +122,6 @@ public class MenuPanel extends JPanel {
         return button;
     }
 
-    /**
-     * Renders the menu panel with a semi-transparent rounded rectangle background.
-     * This provides visual separation from the game while maintaining visibility.
-     *
-     * @param g The Graphics object used for rendering
-     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
