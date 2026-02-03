@@ -19,8 +19,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class SpawningEnemies {
 
-    private static final int SPAWN_DISTANCE_FROM_CAMERA = Game.scale(200);
-    private static final int MAX_ENEMY_DISTANCE = Game.scale(3000);
+    private static final int SPAWN_DISTANCE_FROM_CAMERA = Game.scale(500);
+    private static final int MAX_ENEMY_DISTANCE = Game.scale(1800);
 
     private GamePanel gamePanel;
     private CopyOnWriteArrayList<Enemy> enemies;
