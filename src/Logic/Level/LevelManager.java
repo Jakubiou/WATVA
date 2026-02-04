@@ -17,7 +17,7 @@ public class LevelManager {
         levels = new LevelData[10];
 
         levels[0] = new LevelData(1, "Map1.txt", 5, 150, 5);
-        levels[0].setWave(0, 1, 0, 0, 0, 0);
+        levels[0].setWave(0, 1, 0, 0, 0, 0, LevelData.BossType.BUNNY_BOSS);
         levels[0].setWave(1, 2, 0, 1, 0, 0);
         levels[0].setWave(2, 3, 1, 1, 0, 0);
         levels[0].setWave(3, 4, 1, 2, 1, 0);

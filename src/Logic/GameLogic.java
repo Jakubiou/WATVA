@@ -184,27 +184,28 @@ public class GameLogic {
     }
 
     private void checkWaveCompletion() {
-        boolean bossExists = false;
+        LevelData currentLevelData = levelManager.getLevel(levelManager.getCurrentLevel());
+        LevelData.WaveData waveData = null;
 
-        for (Enemy enemy : enemies) {
-            if (enemy instanceof DarkMageBoss || enemy instanceof BunnyBoss) {
-                bossExists = true;
-                break;
-            }
+        if (currentLevelData != null && waveNumber > 0 && waveNumber <= 10) {
+            waveData = currentLevelData.getWave(waveNumber - 1);
         }
 
-        boolean waveComplete;
+        boolean waveComplete = false;
+        boolean isBossWave = (waveData != null && waveData.hasBoss());
 
-        if (bossExists) {
-            waveComplete = true;
+        if (isBossWave) {
+            boolean bossAlive = false;
             for (Enemy enemy : enemies) {
                 if (enemy instanceof DarkMageBoss || enemy instanceof BunnyBoss) {
-                    waveComplete = false;
+                    bossAlive = true;
                     break;
                 }
             }
+            waveComplete = !bossAlive;
         } else {
-            waveComplete = killCount >= 5;
+            int requiredKills = 50 * waveNumber;
+            waveComplete = killCount >= requiredKills;
         }
 
         if (waveComplete && !gameOver && !waveCompletionInProgress) {

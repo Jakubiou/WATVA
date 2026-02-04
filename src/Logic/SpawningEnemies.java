@@ -204,7 +204,6 @@ public class SpawningEnemies {
 
         if (!spawnPoints.isEmpty()) {
             Point selectedPoint = spawnPoints.get((int) (Math.random() * spawnPoints.size()));
-            System.out.println("Selected spawn point from " + spawnPoints.size() + " available points");
             return selectedPoint;
         }
 
