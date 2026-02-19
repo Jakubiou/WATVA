@@ -3,6 +3,8 @@ package Enemies;
 import Logic.DamageNumber.DamageNumber;
 import Logic.DamageNumber.DamageNumberManager;
 import Core.Game;
+import Logic.PathFinding;
+import Logic.WallManager;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -10,18 +12,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Base class for all enemy types in the game with movement, attacks and status effects.
- */
 public class Enemy {
-    private static final int SHOOT_RANGE = Game.scale(300);
-    private static final long SHOOT_INTERVAL_MS = 5000;
+    private static final int SHOOT_RANGE = Game.scale(450);
+    private static final long SHOOT_INTERVAL_MS = 2000;
     private static final long ATTACK_COOLDOWN_MS = 1000;
     private static final long FRAME_DURATION_MS = 100;
+    private static final long UNSTUCK_CHECK_INTERVAL = 500; // Check every 500ms
 
-    /**
-     * Types of enemies in the game.
-     */
     public enum Type {
         NORMAL, GIANT, SMALL, SHOOTING, SLIME, DARK_MAGE_BOSS, BUNNY_BOSS, ZOMBIE
     }
@@ -32,14 +29,15 @@ public class Enemy {
     public static final int SHOOTING_SIZE = Game.scale(60);
     public static final int ZOMBIE_SIZE = Game.scale(50);
 
-    private final List<EnemyProjectile> projectiles;
+    private static final List<EnemyProjectile> globalProjectiles = new ArrayList<>();
+
     private final List<DamageNumber> damageNumbers;
     private final Type type;
     protected int x;
     protected int y;
     protected double hp;
     protected double baseSpeed;
-    private double currentSpeed;
+    protected double currentSpeed;
     private boolean isAlive = true;
 
     private Image[] rightTextures;
@@ -57,34 +55,27 @@ public class Enemy {
 
     private long lastShootTime = 0;
     private long lastAttackTime = 0;
+    private long lastUnstuckCheck = 0;
 
-    /**
-     * Creates a new enemy at specified position with given health and type.
-     * @param x The x-coordinate
-     * @param y The y-coordinate
-     * @param hp The health points
-     * @param type The enemy type
-     */
+    private Point nextPathStep = null;
+    private long lastPathCalcTime = 0;
+    private static final long PATH_RECALC_INTERVAL = 300;
+
     public Enemy(int x, int y, double hp, Type type) {
         this.x = x;
         this.y = y;
         this.hp = hp;
         this.type = type;
-        this.projectiles = new ArrayList<>();
         this.damageNumbers = new ArrayList<>();
 
         initializeSpeed();
         loadTextures();
     }
 
-    /**
-     * Initializes movement speed based on enemy type.
-     * Different enemy types have different base movement speeds.
-     */
     private void initializeSpeed() {
         switch (type) {
             case GIANT -> baseSpeed = Game.scale(1.8);
-            case ZOMBIE -> baseSpeed = Game.scale(5.0);
+            case ZOMBIE -> baseSpeed = Game.scale(3.5);
             case SMALL -> baseSpeed = Game.scale(3.0);
             case SHOOTING -> baseSpeed = Game.scale(2.0);
             default -> baseSpeed = Game.scale(2.2);
@@ -92,10 +83,6 @@ public class Enemy {
         currentSpeed = baseSpeed;
     }
 
-    /**
-     * Loads appropriate textures for the enemy based on its type.
-     * Handles both animated and static enemy textures.
-     */
     private void loadTextures() {
         try {
             switch (type) {
@@ -110,108 +97,169 @@ public class Enemy {
         }
     }
 
-    /**
-     * Loads animation textures for enemies with multiple frames.
-     *
-     * @param enemyName The base name of the enemy for file paths
-     * @param frameCount Number of animation frames
-     * @param rightStartIndex Starting index for right-facing textures
-     * @param leftStartIndex Starting index for left-facing textures
-     * @throws IOException If texture files cannot be loaded
-     */
-    private void loadAnimationTextures(String enemyName, int frameCount, int rightStartIndex, int leftStartIndex)
-            throws IOException {
+    private void loadAnimationTextures(String enemyName, int frameCount, int rightStartIndex, int leftStartIndex) throws IOException {
         rightTextures = new Image[frameCount];
         leftTextures = new Image[frameCount];
-
         String basePath = "/WATVA/Enemy/" + enemyName + "/" + enemyName;
-
         for (int i = 0; i < frameCount; i++) {
             rightTextures[i] = loadTexture(basePath + (rightStartIndex + i) + ".png");
             leftTextures[i] = loadTexture(basePath + (leftStartIndex + i) + ".png");
         }
     }
 
-    /**
-     * Loads a single texture from resources.
-     *
-     * @param path The resource path to the texture
-     * @return The loaded Image
-     * @throws IOException If the texture cannot be loaded
-     */
     private Image loadTexture(String path) throws IOException {
         return ImageIO.read(getClass().getResourceAsStream(path));
     }
 
-    /**
-     * Moves enemy towards a target position.
-     * Handles both movement and attacking behavior for shooting enemies.
-     *
-     * @param targetX The x-coordinate to move towards
-     * @param targetY The y-coordinate to move towards
-     */
-    public void moveTowards(int targetX, int targetY) {
-        if (shouldStopAndShoot(targetX, targetY)) {
-            stopAndShoot(targetX, targetY);
+
+    public void moveTowards(int targetPlayerX, int targetPlayerY, WallManager wallManager) {
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastUnstuckCheck >= UNSTUCK_CHECK_INTERVAL) {
+            checkAndUnstuck(wallManager);
+            lastUnstuckCheck = currentTime;
+        }
+
+        if (type == Type.SLIME || type == Type.BUNNY_BOSS || type == Type.DARK_MAGE_BOSS) {
+            moveTowards(targetPlayerX, targetPlayerY);
             return;
         }
 
-        double dx = targetX - x;
-        double dy = targetY - y;
-        double distance = Math.hypot(dx, dy);
+        int centerX = x + getWidth() / 2;
+        int centerY = y + getHeight() / 2;
+        int targetCenterX = targetPlayerX + 25;
+        int targetCenterY = targetPlayerY + 25;
 
-        if (distance > 0) {
-            move(dx / distance, dy / distance);
-            updateDirection(dx > 0);
+        if (type == Type.SHOOTING) {
+            boolean inRange = isInRange(targetPlayerX, targetPlayerY);
+            boolean hasLineOfSight = wallManager.hasLineOfSight(centerX, centerY, targetCenterX, targetCenterY);
+
+            if (inRange && hasLineOfSight) {
+                movingRight = targetPlayerX > x;
+
+                if (currentTime - lastShootTime >= SHOOT_INTERVAL_MS) {
+                    shootAtPlayer(targetPlayerX, targetPlayerY);
+                    lastShootTime = currentTime;
+                }
+                return;
+            }
+        }
+
+        boolean hasLineOfSight = PathFinding.hasClearPath(centerX, centerY, targetCenterX, targetCenterY, wallManager);
+
+        int moveTargetX, moveTargetY;
+
+        if (hasLineOfSight) {
+            moveTargetX = targetPlayerX;
+            moveTargetY = targetPlayerY;
+        } else {
+            if (currentTime - lastPathCalcTime > PATH_RECALC_INTERVAL || nextPathStep == null) {
+                nextPathStep = PathFinding.findNextStep(centerX, centerY, targetCenterX, targetCenterY, wallManager);
+                lastPathCalcTime = currentTime;
+            }
+
+            if (nextPathStep != null) {
+                moveTargetX = nextPathStep.x + (x % 20 - 10);
+                moveTargetY = nextPathStep.y + (y % 20 - 10);
+            } else {
+                moveTargetX = targetPlayerX;
+                moveTargetY = targetPlayerY;
+            }
+        }
+
+        double deltaX = moveTargetX - x;
+        double deltaY = moveTargetY - y;
+        double distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+        if (distance > 1) {
+            movingRight = deltaX > 0;
+
+            double normalizedX = deltaX / distance;
+            double normalizedY = deltaY / distance;
+
+            int nextX = x + (int)(normalizedX * currentSpeed);
+            int nextY = y + (int)(normalizedY * currentSpeed);
+
+            if (!checkWallCollision(nextX, nextY, wallManager)) {
+                x = nextX;
+                y = nextY;
+            } else if (!checkWallCollision(nextX, y, wallManager)) {
+                x = nextX;
+            } else if (!checkWallCollision(x, nextY, wallManager)) {
+                y = nextY;
+            }
+
             updateAnimation();
         }
     }
 
-    /**
-     * Determines if shooting enemy should stop to attack.
-     *
-     * @param targetX Target x position
-     * @param targetY Target y position
-     * @return true if enemy should stop to shoot, false otherwise
-     */
-    private boolean shouldStopAndShoot(int targetX, int targetY) {
-        return type == Type.SHOOTING && isInRange(targetX, targetY);
+    private boolean checkWallCollision(int nextX, int nextY, WallManager wallManager) {
+        int w = getWidth();
+        int h = getHeight();
+
+        return wallManager.isWall(nextX + 2, nextY + 2) ||
+                wallManager.isWall(nextX + w - 2, nextY + 2) ||
+                wallManager.isWall(nextX + 2, nextY + h - 2) ||
+                wallManager.isWall(nextX + w - 2, nextY + h - 2) ||
+                wallManager.isWall(nextX + w/2, nextY + h/2);
     }
 
-    /**
-     * Checks if target is within shooting range.
-     *
-     * @param targetX Target x position
-     * @param targetY Target y position
-     * @return true if target is in range, false otherwise
-     */
+    private void checkAndUnstuck(WallManager wallManager) {
+        int centerX = x + getWidth() / 2;
+        int centerY = y + getHeight() / 2;
+
+        if (wallManager.isWall(centerX, centerY)) {
+            Point newPos = wallManager.unstuckFromWall(x, y, getWidth(), getHeight());
+            x = newPos.x;
+            y = newPos.y;
+        }
+    }
+
+    public void moveTowards(int targetPlayerX, int targetPlayerY) {
+        int deltaX = targetPlayerX - x;
+        int deltaY = targetPlayerY - y;
+        double distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+        if (distance > 1) {
+            movingRight = deltaX > 0;
+            double normalizedX = deltaX / distance;
+            double normalizedY = deltaY / distance;
+            x += (int)(normalizedX * currentSpeed);
+            y += (int)(normalizedY * currentSpeed);
+            updateAnimation();
+        }
+    }
+
     private boolean isInRange(int targetX, int targetY) {
         return Math.hypot(targetX - x, targetY - y) <= SHOOT_RANGE;
     }
 
-    /**
-     * Moves enemy in specified direction.
-     *
-     * @param moveX X direction component (normalized)
-     * @param moveY Y direction component (normalized)
-     */
-    private void move(double moveX, double moveY) {
-        x += Math.round(moveX * currentSpeed);
-        y += Math.round(moveY * currentSpeed);
+    public void shootAtPlayer(int playerX, int playerY) {
+        int centerX = x + getWidth() / 2;
+        int centerY = y + getHeight() / 2;
+        globalProjectiles.add(new EnemyProjectile(centerX, centerY, playerX + 25, playerY + 25));
     }
 
-    /**
-     * Updates enemy's facing direction.
-     *
-     * @param movingRight true if enemy should face right, false for left
-     */
-    private void updateDirection(boolean movingRight) {
-        this.movingRight = movingRight;
+    public static void updateAllProjectiles() {
+        globalProjectiles.removeIf(projectile -> {
+            projectile.move();
+            return !projectile.isActive();
+        });
     }
 
-    /**
-     * Updates animation frame based on elapsed time.
-     */
+    public static void drawAllProjectiles(Graphics g) {
+        for (EnemyProjectile projectile : globalProjectiles) {
+            projectile.draw(g);
+        }
+    }
+
+    public static List<EnemyProjectile> getAllProjectiles() {
+        return new ArrayList<>(globalProjectiles);
+    }
+
+    public static void clearAllProjectiles() {
+        globalProjectiles.clear();
+    }
+
     private void updateAnimation() {
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastFrameChangeTime >= FRAME_DURATION_MS) {
@@ -220,84 +268,10 @@ public class Enemy {
         }
     }
 
-    /**
-     * Gets number of animation frames for current enemy type.
-     *
-     * @return Number of animation frames
-     */
     private int getFrameCount() {
-        return type == Type.NORMAL ? 4 :
-                type == Type.ZOMBIE ? 4 :
-                        type == Type.GIANT ? 6 : 1;
+        return type == Type.NORMAL ? 4 : type == Type.ZOMBIE ? 4 : type == Type.GIANT ? 6 : 1;
     }
 
-    /**
-     * Handles shooting behavior for ranged enemies.
-     *
-     * @param playerX Player's x position
-     * @param playerY Player's y position
-     */
-    private void stopAndShoot(int playerX, int playerY) {
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastShootTime >= SHOOT_INTERVAL_MS) {
-            shootAtPlayer(playerX, playerY);
-            lastShootTime = currentTime;
-        }
-    }
-
-    /**
-     * Creates and fires a projectile towards the player.
-     *
-     * @param playerX Player's x position
-     * @param playerY Player's y position
-     */
-    public void shootAtPlayer(int playerX, int playerY) {
-        if (isInRange(playerX, playerY)) {
-            int centerX = x + SHOOTING_SIZE / 2;
-            int centerY = y + SHOOTING_SIZE / 2;
-            projectiles.add(new EnemyProjectile(centerX, centerY, playerX, playerY));
-        }
-    }
-
-    /**
-     * Updates all active projectiles and removes inactive ones.
-     */
-    public void updateProjectiles() {
-        for (int i = 0; i < projectiles.size(); i++) {
-            EnemyProjectile projectile = projectiles.get(i);
-            projectile.move();
-            if (!projectile.isActive()) {
-                projectiles.remove(i);
-                i--;
-            }
-        }
-    }
-
-    /**
-     * Gets list of active enemy projectiles.
-     *
-     * @return List of active projectiles
-     */
-    public List<EnemyProjectile> getProjectiles() {
-        return new ArrayList<>(projectiles);
-    }
-
-    /**
-     * Draws all active enemy projectiles.
-     *
-     * @param g Graphics context to draw with
-     */
-    public void drawProjectiles(Graphics g) {
-        for (EnemyProjectile projectile : projectiles) {
-            projectile.draw(g);
-        }
-    }
-
-    /**
-     * Checks if enemy can perform an attack (cooldown expired).
-     *
-     * @return true if attack is ready, false otherwise
-     */
     public boolean canAttack() {
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastAttackTime >= ATTACK_COOLDOWN_MS) {
@@ -307,110 +281,58 @@ public class Enemy {
         return false;
     }
 
-    /**
-     * Moves enemy away from specified position.
-     * Used for collision resolution.
-     *
-     * @param x X position to move away from
-     * @param y Y position to move away from
-     */
-    public void moveAwayFrom(int x, int y) {
-        int dx = this.x - x;
-        int dy = this.y - y;
+    public void moveAwayFrom(int otherX, int otherY) {
+        int dx = this.x - otherX;
+        int dy = this.y - otherY;
+        if (dx == 0 && dy == 0) dx = 1;
 
-        if (Math.abs(dx) > Math.abs(dy)) {
-            this.x += (dx > 0) ? 1 : -1;
-        } else {
-            this.y += (dy > 0) ? 1 : -1;
+        double dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist > 0) {
+            this.x += (int)(dx/dist * 2);
+            this.y += (int)(dy/dist * 2);
         }
     }
 
-    /**
-     * Updates enemy state including status effects and damage numbers.
-     */
     public void update(DamageNumberManager damageManager) {
         updateStatusEffects();
-
         long currentTime = System.currentTimeMillis();
-        if (isOnFire && currentTime % 1000 < 15) {
-            hp -= fireDamage;
-
-            int centerX = x + getWidth() / 2;
-            int centerY = y - Game.scale(10);
-            damageManager.addDamageNumber(centerX, centerY, fireDamage);
-
-            if (hp <= 0) {
-                isAlive = false;
-            }
+        if (isOnFire && currentTime % 1000 < 20) {
+            hit(fireDamage, damageManager);
         }
     }
 
-    /**
-     * Applies fire damage over time effect to enemy.
-     *
-     * @param damage Damage per tick
-     * @param durationMs Duration of effect in milliseconds
-     */
     public void setFire(int damage, int durationMs, DamageNumberManager damageManager) {
         isOnFire = true;
         fireEndTime = System.currentTimeMillis() + durationMs;
         fireDamage = damage;
-        int initialDamage = damage * 4;
-        hp -= initialDamage;
-
-        int centerX = x + getWidth() / 2;
-        int centerY = y - Game.scale(10);
-        damageManager.addDamageNumber(centerX, centerY, initialDamage);
-
-        if (hp <= 0) {
-            isAlive = false;
-        }
+        hit(damage * 2, damageManager);
     }
 
-    /**
-     * Applies movement speed reduction to enemy.
-     *
-     * @param durationMs Duration of slow effect in milliseconds
-     */
     public void applySlow(int durationMs) {
+        if (!isSlowed) {
+            currentSpeed = baseSpeed * 0.5;
+        }
         isSlowed = true;
         slowEndTime = System.currentTimeMillis() + durationMs;
-        currentSpeed = baseSpeed * 0.5;
     }
 
-    /**
-     * Updates active status effects (fire, slow).
-     */
     private void updateStatusEffects() {
         long currentTime = System.currentTimeMillis();
-
         if (isSlowed && currentTime >= slowEndTime) {
             isSlowed = false;
             currentSpeed = baseSpeed;
         }
-
         if (isOnFire && currentTime >= fireEndTime) {
             isOnFire = false;
             fireDamage = 0;
         }
     }
 
-    /**
-     * Draws the enemy with current animation frame and status effects.
-     *
-     * @param g Graphics context to draw with
-     */
     public void draw(Graphics g) {
         drawEnemyTexture(g);
         drawStatusEffects(g);
     }
 
-    /**
-     * Draws the appropriate enemy texture based on enemy type.
-     * Delegates to either animated or static drawing methods.
-     *
-     * @param g The Graphics context to render to
-     */
     private void drawEnemyTexture(Graphics g) {
         switch (type) {
             case NORMAL, GIANT, ZOMBIE -> drawAnimatedEnemy(g);
@@ -418,106 +340,58 @@ public class Enemy {
         }
     }
 
-    /**
-     * Draws an animated enemy with multiple frames.
-     * Selects appropriate texture set based on facing direction and
-     * draws current animation frame.
-     *
-     * @param g The Graphics context to render to
-     */
     private void drawAnimatedEnemy(Graphics g) {
         Image[] textures = movingRight ? rightTextures : leftTextures;
-        int size;
-        switch (type){
-            case ZOMBIE-> size = ZOMBIE_SIZE;
-            case GIANT -> size = GIANT_SIZE;
-            default -> size = NORMAL_SIZE;
+        int size = (type == Type.GIANT) ? GIANT_SIZE : (type == Type.ZOMBIE ? ZOMBIE_SIZE : NORMAL_SIZE);
+        if (textures != null && currentFrame < textures.length && textures[currentFrame] != null) {
+            g.drawImage(textures[currentFrame], x, y, size, size, null);
         }
-        g.drawImage(textures[currentFrame], x, y, size, size, null);
     }
 
-    /**
-     * Draws a static (non-animated) enemy.
-     * Uses single texture and adjusts size based on enemy type.
-     *
-     * @param g The Graphics context to render to
-     */
     private void drawStaticEnemy(Graphics g) {
         int width = type == Type.SMALL ? SMALL_SIZE : SHOOTING_SIZE - Game.scale(20);
         int height = type == Type.SMALL ? SMALL_SIZE : SHOOTING_SIZE;
-        g.drawImage(staticTexture, x, y, width, height, null);
+        if (staticTexture != null) {
+            g.drawImage(staticTexture, x, y, width, height, null);
+        }
     }
 
-    /**
-     * Draws visual indicators for active status effects.
-     * Shows different overlays for slow and fire effects.
-     *
-     * @param g The Graphics context to render to
-     */
     private void drawStatusEffects(Graphics g) {
-        if (isSlowed) {
-            drawEffectOverlay(g, new Color(0, 0, 255, 100));
-        }
-        if (isOnFire) {
-            drawEffectOverlay(g, new Color(255, 0, 0, 100));
-        }
+        if (isSlowed) drawEffectOverlay(g, new Color(0, 0, 255, 60));
+        if (isOnFire) drawEffectOverlay(g, new Color(255, 0, 0, 60));
     }
 
-    /**
-     * Draws a colored overlay effect centered on the enemy.
-     * Used to visualize status effects like slow or burn.
-     *
-     * @param g The Graphics context to render to
-     * @param color The color of the effect overlay (with alpha transparency)
-     */
     private void drawEffectOverlay(Graphics g, Color color) {
         g.setColor(color);
-        g.fillOval(x + getWidth() / 2, y + getHeight() / 2, getWidth(), getHeight());
+        g.fillOval(x, y, getWidth(), getHeight());
     }
 
-    /**
-     * Gets enemy's collision bounds.
-     *
-     * @return Rectangle representing collision area
-     */
     public Rectangle getCollider() {
-        return new Rectangle(x + getWidth() / 2, y + getHeight() / 2, getWidth(), getHeight());
+        return new Rectangle(x, y, getWidth(), getHeight());
     }
 
-    /**
-     * Applies damage to the enemy and shows damage number.
-     *
-     * @param damage Amount of damage to apply
-     */
     public void hit(int damage, DamageNumberManager damageManager) {
         hp -= damage;
-
-        int centerX = x + getWidth() / 2;
-        int centerY = y - Game.scale(10);
-        damageManager.addDamageNumber(centerX, centerY, damage);
-
-        if (hp <= 0) {
-            isAlive = false;
-        }
+        damageManager.addDamageNumber(x + getWidth() / 2, y, damage);
+        if (hp <= 0) isAlive = false;
     }
 
-    public double getHp() {
-        return hp;
-    }
-
+    public double getHp() { return hp; }
     public int getWidth() {
         return switch (type) {
-            case GIANT -> GIANT_SIZE / 2;
-            case SMALL -> SMALL_SIZE / 2;
-            case SHOOTING -> SHOOTING_SIZE / 2;
-            default -> NORMAL_SIZE / 2;
+            case GIANT -> GIANT_SIZE;
+            case SMALL -> SMALL_SIZE;
+            case SHOOTING -> SHOOTING_SIZE - Game.scale(20);
+            case ZOMBIE -> ZOMBIE_SIZE;
+            default -> NORMAL_SIZE;
         };
     }
-
     public int getHeight() {
-        return getWidth();
+        return switch (type) {
+            case SHOOTING -> SHOOTING_SIZE;
+            default -> getWidth();
+        };
     }
-
     public int getDamage() {
         return switch (type) {
             case SHOOTING -> 20;
@@ -526,28 +400,17 @@ public class Enemy {
             default -> 10;
         };
     }
+    public int getX() { return x; }
+    public int getY() { return y; }
+    public boolean isAlive() { return isAlive; }
+    public Type getType() { return type; }
+    public void setX(int x) { this.x = x; }
+    public void setY(int y) { this.y = y; }
 
-    public int getX() {
-        return x;
-    }
-
-    public int getY() {
-        return y;
-    }
-
-    public boolean isAlive() {
-        return isAlive;
-    }
-
-    public Type getType() {
-        return type;
-    }
-
-    public void setX(int x) {
-        this.x = x;
-    }
-
-    public void setY(int y) {
-        this.y = y;
-    }
+    @Deprecated
+    public List<EnemyProjectile> getProjectiles() { return getAllProjectiles(); }
+    @Deprecated
+    public void updateProjectiles() { updateAllProjectiles(); }
+    @Deprecated
+    public void drawProjectiles(Graphics g) { drawAllProjectiles(g); }
 }
