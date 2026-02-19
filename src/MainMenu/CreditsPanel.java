@@ -24,6 +24,8 @@ public class CreditsPanel extends JFrame {
         setUndecorated(true);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
+        setCustomCursor();
+
         try {
             ImageIcon backgroundIcon = new ImageIcon(getClass().getClassLoader().getResource("WATVA/Background/Background1.png"));
             backgroundImage = backgroundIcon.getImage().getScaledInstance(screenWidth, screenHeight, Image.SCALE_SMOOTH);
@@ -82,6 +84,50 @@ public class CreditsPanel extends JFrame {
         mainPanel.requestFocusInWindow();
 
         setVisible(true);
+    }
+
+    private void setCustomCursor() {
+        try {
+            java.io.InputStream is = getClass().getResourceAsStream("/WATVA/Other/Cursor.png");
+            if (is != null) {
+                Image cursorImage = javax.imageio.ImageIO.read(is);
+
+                int targetSize = 32;
+
+                Image scaledCursor = cursorImage.getScaledInstance(targetSize, targetSize, Image.SCALE_SMOOTH);
+                ImageIcon tempIcon = new ImageIcon(scaledCursor);
+
+                int actualWidth = tempIcon.getIconWidth();
+                int actualHeight = tempIcon.getIconHeight();
+
+                if (actualWidth <= 0 || actualHeight <= 0) {
+                    setCursor(new Cursor(Cursor.CROSSHAIR_CURSOR));
+                    return;
+                }
+
+                int hotspotX = actualWidth / 2;
+                int hotspotY = actualHeight / 2;
+
+                if (hotspotX >= actualWidth) hotspotX = actualWidth - 1;
+                if (hotspotY >= actualHeight) hotspotY = actualHeight - 1;
+
+                if (hotspotX < 0) hotspotX = 0;
+                if (hotspotY < 0) hotspotY = 0;
+
+                Point hotspot = new Point(hotspotX, hotspotY);
+
+                Cursor customCursor = Toolkit.getDefaultToolkit().createCustomCursor(
+                        tempIcon.getImage(), hotspot, "CreditsCursor"
+                );
+
+                setCursor(customCursor);
+            } else {
+                setCursor(new Cursor(Cursor.CROSSHAIR_CURSOR));
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading cursor: " + e.getMessage());
+            setCursor(new Cursor(Cursor.CROSSHAIR_CURSOR));
+        }
     }
 
     private void loadFonts() {
