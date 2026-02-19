@@ -1,5 +1,7 @@
 package Player;
 
+import Logic.WallManager;
+
 import java.awt.event.KeyEvent;
 import java.util.Iterator;
 
@@ -38,7 +40,7 @@ public class PlayerMovement {
      * - Animation frame updates
      * - Explosion updates
      */
-    public void move() {
+    public void move(WallManager wallManager) {
         boolean moving = false;
         long currentTime = System.currentTimeMillis();
 
@@ -54,7 +56,6 @@ public class PlayerMovement {
         }
 
         if (dashing) {
-
             dashProgress += player.getDashSpeed();
 
             if (dashProgress >= player.getDashDistance()) {
@@ -67,26 +68,34 @@ public class PlayerMovement {
 
         if (up) {
             int newY = player.getY() - player.getSpeed();
+            if (!wallManager.isWall(player.getX() + Player.WIDTH / 2, newY + Player.HEIGHT / 2)) {
                 player.setY(newY);
                 moving = true;
+            }
         }
 
         if (down) {
             int newY = player.getY() + player.getSpeed();
+            if (!wallManager.isWall(player.getX() + Player.WIDTH / 2, newY + Player.HEIGHT / 2)) {
                 player.setY(newY);
                 moving = true;
+            }
         }
 
         if (left) {
             int newX = player.getX() - player.getSpeed();
+            if (!wallManager.isWall(newX + Player.WIDTH / 2, player.getY() + Player.HEIGHT / 2)) {
                 player.setX(newX);
                 moving = true;
+            }
         }
 
         if (right) {
             int newX = player.getX() + player.getSpeed();
+            if (!wallManager.isWall(newX + Player.WIDTH / 2, player.getY() + Player.HEIGHT / 2)) {
                 player.setX(newX);
                 moving = true;
+            }
         }
 
         if (moving) {
