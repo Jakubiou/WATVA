@@ -1,6 +1,7 @@
 package Player;
 
 import Core.Game;
+import Logic.WallManager;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -112,8 +113,8 @@ public class Player implements Serializable {
         this.movement = new PlayerMovement(this);
     }
 
-    public void move() {
-        movement.move();
+    public void move(WallManager wallManager) {
+        movement.move(wallManager);
     }
 
     public void keyPressed(KeyEvent e) {
