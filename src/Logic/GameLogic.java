@@ -4,6 +4,7 @@ import Bosses.BunnyBoss;
 import Bosses.DarkMageBoss;
 import Core.Game;
 import Enemies.Enemy;
+import Enemies.EnemyProjectile;
 import Logic.DamageNumber.DamageNumberManager;
 import Logic.Level.LevelData;
 import Logic.Level.LevelManager;
@@ -37,11 +38,19 @@ public class GameLogic {
     private LevelManager levelManager;
     private CrystalExplosion crystalExplosion;
     private boolean waveCompletionInProgress = false;
+    private WallManager wallManager;
+    private boolean isTutorialMode;
 
-    public GameLogic(GamePanel gamePanel, Player player, DamageNumberManager damageManager) {
+    public GameLogic(GamePanel gamePanel, Player player, DamageNumberManager damageManager, boolean tutorialMode) {
         this.gamePanel = gamePanel;
         this.player = player;
-        this.levelManager = new LevelManager();
+        this.isTutorialMode = tutorialMode;
+
+        if (!tutorialMode) {
+            this.levelManager = new LevelManager();
+        }
+
+        this.wallManager = new WallManager();
 
         backgroundMusic = new Soundtrack("/WATVA/Music/MainSong.wav");
         backgroundMusic.playLoop();
@@ -57,7 +66,9 @@ public class GameLogic {
         if (player == null) {
             player = new Player(mapWidth * GamePanel.BLOCK_SIZE / 2, mapHeight * GamePanel.BLOCK_SIZE / 2, 100);
         } else {
-            loadPlayerStatus();
+            if (!isTutorialMode) {
+                loadPlayerStatus();
+            }
             player.setX(mapWidth * GamePanel.BLOCK_SIZE / 2);
             player.setY(mapHeight * GamePanel.BLOCK_SIZE / 2);
         }
@@ -66,20 +77,46 @@ public class GameLogic {
 
         enemies = new CopyOnWriteArrayList<>();
         playerProjectiles = new CopyOnWriteArrayList<>();
-        collisions = new Collisions(player, enemies, playerProjectiles, damageManager);
+        collisions = new Collisions(player, enemies, playerProjectiles, damageManager, wallManager, gamePanel);
+        EnemyProjectile.setWallManager(wallManager);
+        DarkMageBoss.setWallManager(wallManager);
         spawningEnemies = new SpawningEnemies(gamePanel, enemies);
+        spawningEnemies.setPlayerReference(player);
 
         timer = new Timer(15, gamePanel);
         waveNumber = 0;
     }
 
+    public void startTutorial() {
+        waveNumber = 1;
+        killCount = 0;
+        gameOver = false;
+        waveCompletionInProgress = false;
+        crystalExplosion = null;
+        wallManager.clearWalls();
+
+        player.setX(mapWidth * GamePanel.BLOCK_SIZE / 2);
+        player.setY(mapHeight * GamePanel.BLOCK_SIZE / 2);
+
+        enemies.clear();
+        playerProjectiles.clear();
+
+        spawningEnemies.spawnTutorialEnemies(10);
+
+        timer.start();
+        resumeGame();
+    }
+
     public void startLevel(int levelNumber) {
+        if (isTutorialMode) return;
+
         levelManager.setCurrentLevel(levelNumber);
         waveNumber = 0;
         killCount = 0;
         gameOver = false;
         waveCompletionInProgress = false;
         crystalExplosion = null;
+        wallManager.clearWalls();
 
         player.setX(mapWidth * GamePanel.BLOCK_SIZE / 2);
         player.setY(mapHeight * GamePanel.BLOCK_SIZE / 2);
@@ -95,11 +132,23 @@ public class GameLogic {
         if (!gameOver && !isPaused) {
             damageManager.update();
             updateAttackSpeed();
-            player.move();
+
+            boolean isBossWave = false;
+            for (Enemy enemy : enemies) {
+                if (enemy instanceof DarkMageBoss || enemy instanceof BunnyBoss) {
+                    isBossWave = true;
+                    break;
+                }
+            }
+
+            wallManager.update(player, isBossWave);
+
+            player.move(wallManager);
+
+            Enemy.updateAllProjectiles();
 
             if (crystalExplosion != null) {
                 crystalExplosion.update();
-
                 updateProjectiles();
 
                 if (crystalExplosion.isWaveActive()) {
@@ -110,7 +159,10 @@ public class GameLogic {
                     crystalExplosion = null;
                     waveCompletionInProgress = false;
 
-                    if (waveNumber >= 10) {
+                    if (isTutorialMode) {
+                        pauseGame();
+                        gamePanel.onWaveComplete();
+                    } else if (waveNumber >= 10) {
                         onLevelComplete();
                     } else {
                         pauseGame();
@@ -136,22 +188,69 @@ public class GameLogic {
         }
     }
 
-    /**
-     * OPTIMIZED: Destroy enemies in wave without checking every frame
-     */
-    private void destroyEnemiesInWave() {
-        if (crystalExplosion == null || crystalExplosion.getPlayer() == null) return;
+    public void nextWave() {
+        spawningEnemies.stopCurrentSpawn();
+        enemies.clear();
+        waveNumber++;
+        playerProjectiles.clear();
+        Enemy.clearAllProjectiles();
+        killCount = 0;
+        waveCompletionInProgress = false;
+        crystalExplosion = null;
 
-        Player p = crystalExplosion.getPlayer();
-        int playerCenterX = p.getX() + Player.WIDTH / 2;
-        int playerCenterY = p.getY() + Player.HEIGHT / 2;
-        int radius = crystalExplosion.getWaveRadius();
+        if (isTutorialMode) {
+            if (waveNumber <= 3) {
+                spawningEnemies.spawnEnemies(waveNumber, 0, 0, 0, 0);
+            } else if (waveNumber <= 6) {
+                spawningEnemies.spawnEnemies(2, 1, 1, 0, 0);
+            } else {
+                spawningEnemies.spawnEnemies(3, 1, 2, 1, 1);
+            }
+        } else {
+            LevelData currentLevelData = levelManager.getLevel(levelManager.getCurrentLevel());
+
+            if (waveNumber <= 10 && currentLevelData != null) {
+                LevelData.WaveData waveData = currentLevelData.getWave(waveNumber - 1);
+
+                if (waveData != null) {
+                    if (waveData.hasBoss()) {
+                        wallManager.clearWalls();
+                        wallManager.createBossArena(player);
+                    } else {
+                        wallManager.clearBossArena();
+                    }
+
+                    if (waveData.bossType == LevelData.BossType.DARK_MAGE_BOSS) {
+                        spawningEnemies.spawnDarkMageBoss();
+                    } else if (waveData.bossType == LevelData.BossType.BUNNY_BOSS) {
+                        spawningEnemies.spawnBunnyBoss();
+                    } else {
+                        spawningEnemies.spawnEnemies(
+                                waveData.normalPerSecond,
+                                waveData.giantPerSecond,
+                                waveData.smallPerSecond,
+                                waveData.shootingPerSecond,
+                                waveData.slimePerSecond
+                        );
+                    }
+                }
+            }
+        }
+
+        resumeGame();
+    }
+
+    private void destroyEnemiesInWave() {
+        if (crystalExplosion == null) return;
 
         enemies.removeIf(enemy -> {
-            int dx = enemy.getX() - playerCenterX;
-            int dy = enemy.getY() - playerCenterY;
-            return (dx * dx + dy * dy) <= (radius * radius);
+            if (enemy instanceof DarkMageBoss || enemy instanceof Bosses.BunnyBoss) {
+                return false;
+            }
+            return true;
         });
+
+        Enemy.clearAllProjectiles();
     }
 
     private void updateProjectiles() {
@@ -184,28 +283,33 @@ public class GameLogic {
     }
 
     private void checkWaveCompletion() {
-        LevelData currentLevelData = levelManager.getLevel(levelManager.getCurrentLevel());
-        LevelData.WaveData waveData = null;
-
-        if (currentLevelData != null && waveNumber > 0 && waveNumber <= 10) {
-            waveData = currentLevelData.getWave(waveNumber - 1);
-        }
-
         boolean waveComplete = false;
-        boolean isBossWave = (waveData != null && waveData.hasBoss());
 
-        if (isBossWave) {
-            boolean bossAlive = false;
-            for (Enemy enemy : enemies) {
-                if (enemy instanceof DarkMageBoss || enemy instanceof BunnyBoss) {
-                    bossAlive = true;
-                    break;
-                }
-            }
-            waveComplete = !bossAlive;
+        if (isTutorialMode) {
+            return;
         } else {
-            int requiredKills = 50 * waveNumber;
-            waveComplete = killCount >= requiredKills;
+            LevelData currentLevelData = levelManager.getLevel(levelManager.getCurrentLevel());
+            LevelData.WaveData waveData = null;
+
+            if (currentLevelData != null && waveNumber > 0 && waveNumber <= 10) {
+                waveData = currentLevelData.getWave(waveNumber - 1);
+            }
+
+            boolean isBossWave = (waveData != null && waveData.hasBoss());
+
+            if (isBossWave) {
+                boolean bossAlive = false;
+                for (Enemy enemy : enemies) {
+                    if (enemy instanceof DarkMageBoss || enemy instanceof BunnyBoss) {
+                        bossAlive = true;
+                        break;
+                    }
+                }
+                waveComplete = !bossAlive;
+            } else {
+                int requiredKills = 50 * waveNumber;
+                waveComplete = killCount >= requiredKills;
+            }
         }
 
         if (waveComplete && !gameOver && !waveCompletionInProgress) {
@@ -216,6 +320,7 @@ public class GameLogic {
     private void startWaveCompletionEffect() {
         waveCompletionInProgress = true;
         spawningEnemies.stopCurrentSpawn();
+        wallManager.despawnTemporaryWalls();
         crystalExplosion = new CrystalExplosion();
         crystalExplosion.setPlayer(player);
     }
@@ -230,9 +335,11 @@ public class GameLogic {
         if (player.getHp() <= 0) {
             gameOver = true;
             spawningEnemies.stopCurrentSpawn();
-            savePlayerCoins();
-            player.saveLocation("player_save.dat");
-            loadPlayerStatus();
+            if (!isTutorialMode) {
+                savePlayerCoins();
+                player.saveLocation("player_save.dat");
+                loadPlayerStatus();
+            }
         }
     }
 
@@ -263,54 +370,32 @@ public class GameLogic {
 
             int doubleOffset = Game.scale(20);
 
+            int projectilesCreated = 0;
+
             if (player.isDoubleShotActive() && player.isForwardBackwardShotActive()) {
                 playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX + doubleOffset, mouseY + doubleOffset, piercingLevel, fireLevel, hasSlow));
                 playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX - doubleOffset, mouseY - doubleOffset, piercingLevel, fireLevel, hasSlow));
                 playerProjectiles.add(new PlayerProjectile(centerX, centerY, centerX - (mouseX - centerX), centerY - (mouseY - centerY), piercingLevel, fireLevel, hasSlow));
+                projectilesCreated = 3;
             } else if (player.isDoubleShotActive()) {
                 playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX + doubleOffset, mouseY + doubleOffset, piercingLevel, fireLevel, hasSlow));
                 playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX - doubleOffset, mouseY - doubleOffset, piercingLevel, fireLevel, hasSlow));
+                projectilesCreated = 2;
             } else if (player.isForwardBackwardShotActive()) {
                 playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX, mouseY, piercingLevel, fireLevel, hasSlow));
                 playerProjectiles.add(new PlayerProjectile(centerX, centerY, centerX - (mouseX - centerX), centerY - (mouseY - centerY), piercingLevel, fireLevel, hasSlow));
+                projectilesCreated = 2;
             } else {
                 playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX, mouseY, piercingLevel, fireLevel, hasSlow));
+                projectilesCreated = 1;
             }
-        }
-    }
 
-    public void nextWave() {
-        spawningEnemies.stopCurrentSpawn();
-        enemies.clear();
-        waveNumber++;
-        playerProjectiles.clear();
-        killCount = 0;
-        waveCompletionInProgress = false;
-        crystalExplosion = null;
-
-        LevelData currentLevelData = levelManager.getLevel(levelManager.getCurrentLevel());
-
-        if (waveNumber <= 10 && currentLevelData != null) {
-            LevelData.WaveData waveData = currentLevelData.getWave(waveNumber - 1);
-
-            if (waveData != null) {
-                if (waveData.bossType == LevelData.BossType.DARK_MAGE_BOSS) {
-                    spawningEnemies.spawnDarkMageBoss();
-                } else if (waveData.bossType == LevelData.BossType.BUNNY_BOSS) {
-                    spawningEnemies.spawnBunnyBoss();
-                } else {
-                    spawningEnemies.spawnEnemies(
-                            waveData.normalPerSecond,
-                            waveData.giantPerSecond,
-                            waveData.smallPerSecond,
-                            waveData.shootingPerSecond,
-                            waveData.slimePerSecond
-                    );
+            if (isTutorialMode && gamePanel != null) {
+                for (int i = 0; i < projectilesCreated; i++) {
+                    gamePanel.onTutorialProjectileFired();
                 }
             }
         }
-
-        resumeGame();
     }
 
     public void pauseGame() {
@@ -332,7 +417,9 @@ public class GameLogic {
         backgroundMusic.stop();
         enemies.clear();
         playerProjectiles.clear();
+        Enemy.clearAllProjectiles();
         spawningEnemies.stopCurrentSpawn();
+        wallManager.clearWalls();
         collisions = null;
         spawningEnemies = null;
     }
@@ -342,10 +429,14 @@ public class GameLogic {
     }
 
     public void savePlayerCoins(){
-        player.saveCoins("player_save.dat");
+        if (!isTutorialMode) {
+            player.saveCoins("player_save.dat");
+        }
     }
 
     public void loadPlayerStatus() {
+        if (isTutorialMode) return;
+
         try {
             player = Player.loadState("player_save.dat");
             if (player == null) {
@@ -371,4 +462,5 @@ public class GameLogic {
     public MapManager getMapManager() { return mapManager; }
     public LevelManager getLevelManager() { return levelManager; }
     public CrystalExplosion getCrystalExplosion() { return crystalExplosion; }
+    public WallManager getWallManager() { return wallManager; }
 }
