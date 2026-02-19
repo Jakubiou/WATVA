@@ -16,34 +16,31 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-/**
- * Handles all collision detection and resolution in the game.
- */
 public class Collisions {
     private Player player;
     private CopyOnWriteArrayList<Enemy> enemies;
     private CopyOnWriteArrayList<PlayerProjectile> playerProjectiles;
     private boolean gameOver;
     private DamageNumberManager damageManager;
+    private WallManager wallManager;
+    private GamePanel gamePanel;
+    private long lastPlayerUnstuckCheck = 0;
+    private static final long UNSTUCK_CHECK_INTERVAL = 500;
 
-    /**
-     * Creates a new Collisions handler for the specified game objects.
-     * @param player The player character
-     * @param enemies List of enemies in the game
-     * @param playerProjectiles List of player projectiles
-     */
-    public Collisions(Player player, CopyOnWriteArrayList<Enemy> enemies, CopyOnWriteArrayList<PlayerProjectile> playerProjectiles, DamageNumberManager damageManager) {
+    public Collisions(Player player, CopyOnWriteArrayList<Enemy> enemies,
+                      CopyOnWriteArrayList<PlayerProjectile> playerProjectiles,
+                      DamageNumberManager damageManager, WallManager wallManager, GamePanel gamePanel) {
         this.player = player;
         this.enemies = enemies;
         this.playerProjectiles = playerProjectiles;
         this.damageManager = damageManager;
+        this.wallManager = wallManager;
+        this.gamePanel = gamePanel;
         this.gameOver = false;
     }
 
-    /**
-     * Checks all possible collisions in the game.
-     */
     public void checkCollisions() {
+        checkPlayerUnstuck();
         checkBossProjectileCollisions();
         checkEnemyProjectileCollisions();
         checkDeadBosses();
@@ -53,9 +50,26 @@ public class Collisions {
         resolveEnemyCollisions();
     }
 
-    /**
-     * Checks collisions between boss projectiles and player.
-     */
+    private void checkPlayerUnstuck() {
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastPlayerUnstuckCheck >= UNSTUCK_CHECK_INTERVAL) {
+            int centerX = player.getX() + Player.WIDTH / 2;
+            int centerY = player.getY() + Player.HEIGHT / 2;
+
+            if (wallManager.isWall(centerX, centerY)) {
+                Point newPos = wallManager.unstuckFromWall(
+                        player.getX(),
+                        player.getY(),
+                        Player.WIDTH,
+                        Player.HEIGHT
+                );
+                player.setX(newPos.x);
+                player.setY(newPos.y);
+            }
+            lastPlayerUnstuckCheck = currentTime;
+        }
+    }
+
     private void checkBossProjectileCollisions() {
         for (Enemy enemy : enemies) {
             if (enemy instanceof DarkMageBoss) {
@@ -64,31 +78,25 @@ public class Collisions {
         }
     }
 
-    /**
-     * Checks collisions between enemy projectiles and player.
-     */
     private void checkEnemyProjectileCollisions() {
-        for (Enemy enemy : enemies) {
-            if (enemy.getType() == Enemy.Type.SHOOTING) {
-                Iterator<EnemyProjectile> projectileIterator = enemy.getProjectiles().iterator();
-                while (projectileIterator.hasNext()) {
-                    EnemyProjectile projectile = projectileIterator.next();
-                    if (projectile.isActive() && projectile.checkCollisionWithPlayer(player)) {
-                        player.hit(enemy.getDamage());
-                        projectileIterator.remove();
-                        if (player.getHp() <= 0) {
-                            gameOver = true;
-                        }
-                        break;
-                    }
+        List<EnemyProjectile> globalProjectiles = Enemy.getAllProjectiles();
+        Iterator<EnemyProjectile> projectileIterator = globalProjectiles.iterator();
+
+        while (projectileIterator.hasNext()) {
+            EnemyProjectile projectile = projectileIterator.next();
+
+            if (projectile.isActive() && projectile.checkCollisionWithPlayer(player)) {
+                player.hit(20);
+                projectileIterator.remove();
+
+                if (player.getHp() <= 0) {
+                    gameOver = true;
                 }
+                break;
             }
         }
     }
 
-    /**
-     * Removes dead bosses from the game.
-     */
     private void checkDeadBosses() {
         List<Enemy> enemiesToRemove = new ArrayList<>();
 
@@ -104,61 +112,72 @@ public class Collisions {
                 }
             }
         }
+
         enemies.removeAll(enemiesToRemove);
     }
 
-    /**
-     * Checks collisions between player and enemies.
-     */
     private void checkPlayerEnemyCollisions() {
         Rectangle playerCollider = player.getCollider();
 
         for (Enemy enemy : enemies) {
             if (!(enemy instanceof DarkMageBoss darkMageBoss) || !darkMageBoss.isDying) {
-                enemy.moveTowards(player.getX(), player.getY());
+                enemy.moveTowards(player.getX(), player.getY(), wallManager);
             }
 
             Rectangle enemyCollider = enemy.getCollider();
             if (playerCollider.intersects(enemyCollider)) {
-                int newPlayerX = player.getX();
-                int newPlayerY = player.getY();
-                int newEnemyX = enemy.getX();
-                int newEnemyY = enemy.getY();
+                int pushX = 0;
+                int pushY = 0;
 
                 if (player.getX() < enemy.getX()) {
-                    newPlayerX = player.getX() - 1;
-                    newEnemyX = enemy.getX() + 1;
+                    pushX = -2;
                 } else {
-                    newPlayerX = player.getX() + 1;
-                    newEnemyX = enemy.getX() - 1;
+                    pushX = 2;
                 }
 
                 if (player.getY() < enemy.getY()) {
-                    newPlayerY = player.getY() - 1;
-                    newEnemyY = enemy.getY() + 1;
+                    pushY = -2;
                 } else {
-                    newPlayerY = player.getY() + 1;
-                    newEnemyY = enemy.getY() - 1;
+                    pushY = 2;
                 }
 
-                player.setX(newPlayerX);
-                player.setY(newPlayerY);
-                enemy.setX(newEnemyX);
-                enemy.setY(newEnemyY);
+                int newPlayerX = player.getX() + pushX;
+                int newPlayerY = player.getY() + pushY;
+
+                boolean hitsWallX = wallManager.isWall(
+                        newPlayerX + Player.WIDTH/2,
+                        player.getY() + Player.HEIGHT/2
+                );
+                boolean hitsWallY = wallManager.isWall(
+                        player.getX() + Player.WIDTH/2,
+                        newPlayerY + Player.HEIGHT/2
+                );
+
+                if (!hitsWallX) {
+                    player.setX(newPlayerX);
+                }
+                if (!hitsWallY) {
+                    player.setY(newPlayerY);
+                }
+
+                if (enemy.getType() != Enemy.Type.GIANT &&
+                        enemy.getType() != Enemy.Type.DARK_MAGE_BOSS) {
+                    enemy.setX(enemy.getX() - pushX);
+                    enemy.setY(enemy.getY() - pushY);
+                }
 
                 if (enemy.canAttack()) {
-                    player.hit(enemy.getDamage());
-                    if (player.getHp() <= 0) {
-                        gameOver = true;
+                    if (!gamePanel.isTutorialMode()) {
+                        player.hit(enemy.getDamage());
+                        if (player.getHp() <= 0) {
+                            gameOver = true;
+                        }
                     }
                 }
             }
         }
     }
 
-    /**
-     * Checks collisions between explosions and enemies.
-     */
     private void checkExplosionCollisions() {
         List<Enemy> enemiesToRemove = new ArrayList<>();
         List<Explosion> explosionsToRemove = new ArrayList<>();
@@ -177,6 +196,10 @@ public class Collisions {
                         enemiesToRemove.add(enemy);
                         GameLogic.killCountPlus();
                         player.earnCoins(10);
+
+                        if (gamePanel.isTutorialMode()) {
+                            gamePanel.onTutorialEnemyKilled();
+                        }
                     }
                 }
             }
@@ -194,34 +217,56 @@ public class Collisions {
         player.getExplosions().removeAll(explosionsToRemove);
     }
 
-    /**
-     * Checks collisions between player projectiles and enemies.
-     */
     private void checkPlayerProjectileCollisions() {
         List<Enemy> enemiesToRemove = new ArrayList<>();
         List<PlayerProjectile> arrowsToRemove = new ArrayList<>();
 
         for (PlayerProjectile playerProjectile : playerProjectiles) {
-            Rectangle arrowCollider = new Rectangle(playerProjectile.getX(), playerProjectile.getY(),
-                    PlayerProjectile.SIZE, PlayerProjectile.SIZE);
+            int projCenterX = playerProjectile.getX() + PlayerProjectile.SIZE / 2;
+            int projCenterY = playerProjectile.getY() + PlayerProjectile.SIZE / 2;
+
+            if (wallManager.isWall(projCenterX, projCenterY)) {
+                arrowsToRemove.add(playerProjectile);
+                continue;
+            }
+
+            Rectangle arrowCollider = new Rectangle(
+                    playerProjectile.getX(),
+                    playerProjectile.getY(),
+                    PlayerProjectile.SIZE,
+                    PlayerProjectile.SIZE
+            );
 
             for (Enemy enemy : enemies) {
                 Rectangle enemyCollider = enemy.getCollider();
+
                 if (arrowCollider.intersects(enemyCollider)) {
                     enemy.hit(player.getDamage(), damageManager);
 
                     if (playerProjectile.getFireDamageLevel() > 0) {
-                        enemy.setFire(playerProjectile.getFireDamageLevel() * 5, 3000, damageManager);
+                        enemy.setFire(
+                                playerProjectile.getFireDamageLevel() * 5,
+                                3000,
+                                damageManager
+                        );
                     }
 
                     if (playerProjectile.hasSlowEffect()) {
                         enemy.applySlow(1000 + (player.getSlowLevel() * 1000));
                     }
 
-                    if (enemy.getHp() <= 0 && !(enemy instanceof DarkMageBoss)) {
-                        enemiesToRemove.add(enemy);
-                        GameLogic.killCountPlus();
-                        player.earnCoins(10);
+                    if (enemy.getHp() <= 0 &&
+                            !(enemy instanceof DarkMageBoss) &&
+                            !(enemy instanceof BunnyBoss)) {
+                        if (!enemiesToRemove.contains(enemy)) {
+                            enemiesToRemove.add(enemy);
+                            GameLogic.killCountPlus();
+                            player.earnCoins(10);
+
+                            if (gamePanel.isTutorialMode()) {
+                                gamePanel.onTutorialEnemyKilled();
+                            }
+                        }
                     }
 
                     playerProjectile.setPierceCount(playerProjectile.getPierceCount() - 1);
@@ -242,32 +287,22 @@ public class Collisions {
         enemies.removeAll(enemiesToRemove);
     }
 
-    /**
-     * Resolves collisions between enemies.
-     */
     private void resolveEnemyCollisions() {
         for (int i = 0; i < enemies.size(); i++) {
             for (int j = i + 1; j < enemies.size(); j++) {
-                Rectangle collider1 = enemies.get(i).getCollider();
-                Rectangle collider2 = enemies.get(j).getCollider();
-                if (collider1.intersects(collider2)) {
-                    Enemy enemy1 = enemies.get(i);
-                    Enemy enemy2 = enemies.get(j);
+                Enemy e1 = enemies.get(i);
+                Enemy e2 = enemies.get(j);
 
-                    double dx = enemy1.getX() - enemy2.getX();
-                    double dy = enemy1.getY() - enemy2.getY();
-                    double distance = Math.sqrt(dx * dx + dy * dy);
+                if (e1.getType() == Enemy.Type.SHOOTING || e2.getType() == Enemy.Type.SHOOTING) {
+                    continue;
+                }
 
-                    if (enemy1.getType() != Enemy.Type.SHOOTING && enemy2.getType() != Enemy.Type.SHOOTING) {
-                        if (distance < enemy1.getWidth()) {
-                            double moveDistance = (enemy1.getWidth() - distance) / 2;
-                            dx = (dx / distance) * moveDistance;
-                            dy = (dy / distance) * moveDistance;
+                Rectangle r1 = e1.getCollider();
+                Rectangle r2 = e2.getCollider();
 
-                            enemy1.moveAwayFrom(enemy2.getX() - (int) dx, enemy2.getY() - (int) dy);
-                            enemy2.moveAwayFrom(enemy1.getX() + (int) dx, enemy1.getY() + (int) dy);
-                        }
-                    }
+                if (r1.intersects(r2)) {
+                    e1.moveAwayFrom(e2.getX(), e2.getY());
+                    e2.moveAwayFrom(e1.getX(), e1.getY());
                 }
             }
         }
