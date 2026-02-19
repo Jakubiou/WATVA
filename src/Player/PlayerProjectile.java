@@ -10,7 +10,7 @@ import java.io.IOException;
  * Handles projectile movement, animation, and special effects.
  */
 public class PlayerProjectile {
-    public static final int SIZE = Game.scale(64);
+    public static final int SIZE = Game.scale(20);
     private int x, y;
     private double velocityX, velocityY;
     private int speed = Game.scale(10);
@@ -54,13 +54,12 @@ public class PlayerProjectile {
             this.velocityY = 0;
         }
 
-        bulletTextures = new Image[5];
+        bulletTextures = new Image[4];
         try {
-            bulletTextures[0] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Weapons/Knife/Knife1.png"));
-            bulletTextures[1] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Weapons/Knife/Knife2.png"));
-            bulletTextures[2] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Weapons/Knife/Knife3.png"));
-            bulletTextures[3] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Weapons/Knife/Knife4.png"));
-            bulletTextures[4] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Weapons/Knife/Knife5.png"));
+            bulletTextures[0] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Projectiles/Basic_player_projectile1.png"));
+            bulletTextures[1] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Projectiles/Basic_player_projectile2.png"));
+            bulletTextures[2] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Projectiles/Basic_player_projectile3.png"));
+            bulletTextures[3] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Projectiles/Basic_player_projectile4.png"));
         } catch (IOException e) {
             e.printStackTrace();
         }
