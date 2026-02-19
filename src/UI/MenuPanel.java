@@ -6,9 +6,6 @@ import Core.Game;
 import javax.swing.*;
 import java.awt.*;
 
-/**
- * The in-game menu panel that provides game control options during gameplay.
- */
 public class MenuPanel extends JPanel {
     private JButton resumeButton;
     private JButton levelMapButton;
@@ -19,9 +16,11 @@ public class MenuPanel extends JPanel {
     private Font pixelPurlFont;
     private SettingsPanel settingsPanel;
     private GamePanel gamePanel;
+    private boolean isTutorialMode;
 
-    public MenuPanel(Game game, GamePanel gamePanel, GameLogic gameLogic) {
+    public MenuPanel(Game game, GamePanel gamePanel, GameLogic gameLogic, boolean tutorialMode) {
         this.gamePanel = gamePanel;
+        this.isTutorialMode = tutorialMode;
 
         try {
             pixelPurlFont = Font.createFont(Font.TRUETYPE_FONT,
@@ -48,16 +47,18 @@ public class MenuPanel extends JPanel {
         });
         add(resumeButton);
 
-        levelMapButton = createMenuButton("LEVEL MAP", 300, 50);
-        levelMapButton.setBounds((menuPanelWidth - 300) / 2, 150, 300, 50);
-        levelMapButton.addActionListener(e -> {
-            setVisible(false);
-            gamePanel.showLevelMap();
-        });
-        add(levelMapButton);
+        if (!isTutorialMode) {
+            levelMapButton = createMenuButton("LEVEL MAP", 300, 50);
+            levelMapButton.setBounds((menuPanelWidth - 300) / 2, 150, 300, 50);
+            levelMapButton.addActionListener(e -> {
+                setVisible(false);
+                gamePanel.showLevelMap();
+            });
+            add(levelMapButton);
+        }
 
-        restartButton = createMenuButton("RESTART", 300, 50);
-        restartButton.setBounds((menuPanelWidth - 300) / 2, 250, 300, 50);
+        restartButton = createMenuButton(isTutorialMode ? "RESTART TUTORIAL" : "RESTART", 300, 50);
+        restartButton.setBounds((menuPanelWidth - 300) / 2, isTutorialMode ? 150 : 250, 300, 50);
         restartButton.addActionListener(e -> {
             setVisible(false);
             gamePanel.restartGame();
@@ -65,15 +66,17 @@ public class MenuPanel extends JPanel {
         add(restartButton);
 
         mainMenuButton = createMenuButton("MAIN MENU", 300, 50);
-        mainMenuButton.setBounds((menuPanelWidth - 300) / 2, 350, 300, 50);
+        mainMenuButton.setBounds((menuPanelWidth - 300) / 2, isTutorialMode ? 250 : 350, 300, 50);
         mainMenuButton.addActionListener(e -> {
-            gameLogic.savePlayerCoins();
+            if (!isTutorialMode) {
+                gameLogic.savePlayerCoins();
+            }
             gamePanel.returnToMainMenu();
         });
         add(mainMenuButton);
 
         settingsButton = createMenuButton("SETTINGS", 300, 50);
-        settingsButton.setBounds((menuPanelWidth - 300) / 2, 450, 300, 50);
+        settingsButton.setBounds((menuPanelWidth - 300) / 2, isTutorialMode ? 350 : 450, 300, 50);
         settingsButton.addActionListener(e -> {
             setVisible(false);
             if (settingsPanel == null) {
@@ -85,9 +88,11 @@ public class MenuPanel extends JPanel {
         add(settingsButton);
 
         quitButton = createMenuButton("QUIT GAME", 300, 50);
-        quitButton.setBounds((menuPanelWidth - 300) / 2, 550, 300, 50);
+        quitButton.setBounds((menuPanelWidth - 300) / 2, isTutorialMode ? 450 : 550, 300, 50);
         quitButton.addActionListener(e -> {
-            gameLogic.savePlayerCoins();
+            if (!isTutorialMode) {
+                gameLogic.savePlayerCoins();
+            }
             System.exit(0);
         });
         add(quitButton);
