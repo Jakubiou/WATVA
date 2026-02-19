@@ -4,6 +4,7 @@ import Core.Game;
 import Logic.Level.LevelManager;
 import MainMenu.MainMenuPanel;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -43,9 +44,9 @@ public class LevelMapPanel extends JPanel {
         }
 
         try {
-            backgroundImage = new ImageIcon(getClass().getResource("/watva/other/WorldMap.png")).getImage();
+            backgroundImage = ImageIO.read(getClass().getResourceAsStream("/WATVA/Other/WorldMap.png"));
         } catch (Exception e) {
-            System.err.println("Could not load WorldMap.png from /other/");
+            System.err.println("Could not load WorldMap.png from /Other/");
         }
     }
 
