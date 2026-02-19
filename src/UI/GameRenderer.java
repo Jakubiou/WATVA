@@ -6,6 +6,7 @@ import Logic.CrystalExplosion;
 import Logic.DamageNumber.DamageNumberManager;
 import Logic.GameLogic;
 import Logic.MapManager;
+import Logic.WallManager;
 import Player.Player;
 import Player.PlayerProjectile;
 
@@ -81,11 +82,13 @@ public class GameRenderer {
         g2d.translate(-GameLogic.cameraX, -GameLogic.cameraY);
 
         drawBackground(g2d, player);
+        drawWalls(g2d);
         drawEnemies(g2d, enemies);
         damageManager.draw(g);
         drawArrows(g2d, playerProjectiles);
-        drawUI(g2d, player);
         drawBossEnemies(g2d, enemies);
+        drawUI(g2d, player);
+
         drawPlayer(g2d, player);
 
         if (crystalExplosion != null) {
@@ -97,17 +100,14 @@ public class GameRenderer {
 
         g2d.translate(GameLogic.cameraX, GameLogic.cameraY);
 
-        for (Enemy enemy : enemies) {
-            if (enemy.getType() == Enemy.Type.SHOOTING) {
-                enemy.drawProjectiles(g);
-            }
-        }
+        Enemy.drawAllProjectiles(g);
 
         if (abilityPanelVisible) {
             g.setColor(new Color(0, 0, 0, 150));
             g.fillRect(0, 0, gamePanel.getWidth(), gamePanel.getHeight());
         }
     }
+
 
     /**
      * Updates camera position to follow player while staying within map bounds.
@@ -129,6 +129,16 @@ public class GameRenderer {
             if (enemy.getType() == Enemy.Type.BUNNY_BOSS || enemy.getType() == Enemy.Type.DARK_MAGE_BOSS) {
                 enemy.draw(g);
             }
+        }
+    }
+
+    /**
+     * Draws all dynamic walls
+     */
+    private void drawWalls(Graphics2D g2d) {
+        WallManager wallManager = gamePanel.getGameLogic().getWallManager();
+        if (wallManager != null) {
+            wallManager.draw(g2d, GameLogic.cameraX, GameLogic.cameraY);
         }
     }
 
