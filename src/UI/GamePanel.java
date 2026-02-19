@@ -2,10 +2,13 @@ package UI;
 
 import Core.Game;
 import Logic.DamageNumber.DamageNumberManager;
+import Logic.FPSCounter;
 import Logic.GameLogic;
 import MainMenu.MainMenuPanel;
 import Player.Player;
+import Tutorial.TutorialManager;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
@@ -36,25 +39,89 @@ public class GamePanel extends JPanel implements ActionListener {
     private DamageNumberManager damageManager = new DamageNumberManager();
     private LevelMapPanel levelMapPanel;
     private boolean menuVisible = false;
+    private FPSCounter fpsCounter = new FPSCounter();
 
-    public GamePanel(Game game, Player player) {
+    private TutorialManager tutorialManager;
+    private boolean isTutorialMode;
+
+    public GamePanel(Game game, Player player, boolean tutorialMode) {
         this.game = game;
+        this.isTutorialMode = tutorialMode;
 
         setPreferredSize(new Dimension(PANEL_WIDTH, PANEL_HEIGHT));
         setFocusable(true);
         setLayout(null);
 
-        gameLogic = new GameLogic(this, player, damageManager);
+        setCustomCursor();
+
+        gameLogic = new GameLogic(this, player, damageManager, tutorialMode);
+
+        if (tutorialMode) {
+            tutorialManager = new TutorialManager(player);
+            tutorialManager.startTutorial();
+        }
 
         initializeMenu();
         initializeAbilityPanel();
         initializeFont();
         initializeInput();
-        initializeLevelMap();
+
+        if (!tutorialMode) {
+            initializeLevelMap();
+        }
 
         renderer = new GameRenderer(this, pixelPurlFont);
 
-        showLevelMap();
+        if (!tutorialMode) {
+            showLevelMap();
+        } else {
+            menuButton.setVisible(true);
+            gameLogic.startTutorial();
+        }
+    }
+
+    private void setCustomCursor() {
+        try {
+            InputStream cursorStream = getClass().getResourceAsStream("/WATVA/Other/Cursor.png");
+            if (cursorStream != null) {
+                Image cursorImage = ImageIO.read(cursorStream);
+
+                int targetSize = 32;
+
+                Image scaledCursor = cursorImage.getScaledInstance(targetSize, targetSize, Image.SCALE_SMOOTH);
+
+                ImageIcon tempIcon = new ImageIcon(scaledCursor);
+                int actualWidth = tempIcon.getIconWidth();
+                int actualHeight = tempIcon.getIconHeight();
+
+                if (actualWidth <= 0 || actualHeight <= 0) {
+                    setCursor(new Cursor(Cursor.CROSSHAIR_CURSOR));
+                    return;
+                }
+
+                int hotspotX = actualWidth / 2;
+                int hotspotY = actualHeight / 2;
+
+                if (hotspotX >= actualWidth) hotspotX = actualWidth - 1;
+                if (hotspotY >= actualHeight) hotspotY = actualHeight - 1;
+
+                if (hotspotX < 0) hotspotX = 0;
+                if (hotspotY < 0) hotspotY = 0;
+
+                Point hotspot = new Point(hotspotX, hotspotY);
+
+                Cursor customCursor = Toolkit.getDefaultToolkit().createCustomCursor(
+                        scaledCursor, hotspot, "GameCursor"
+                );
+                setCursor(customCursor);
+            } else {
+                setCursor(new Cursor(Cursor.CROSSHAIR_CURSOR));
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading cursor: " + e.getMessage());
+            e.printStackTrace();
+            setCursor(new Cursor(Cursor.CROSSHAIR_CURSOR));
+        }
     }
 
     private void initializeFont() {
@@ -95,7 +162,7 @@ public class GamePanel extends JPanel implements ActionListener {
         menuButton.addActionListener(e -> toggleMenu());
         add(menuButton);
 
-        menuPanel = new MenuPanel(game, this, gameLogic);
+        menuPanel = new MenuPanel(game, this, gameLogic, isTutorialMode);
         add(menuPanel);
     }
 
@@ -126,19 +193,39 @@ public class GamePanel extends JPanel implements ActionListener {
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                gameLogic.getPlayer().keyPressed(e);
+                if (isTutorialMode && tutorialManager != null) {
+                    if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+                        tutorialManager.handleSpacePress();
+                        return;
+                    }
+                    if (e.getKeyCode() == KeyEvent.VK_Q) {
+                        tutorialManager.onPlayerExplosion();
+                    }
+                    if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
+                        tutorialManager.onPlayerDash();
+                    }
+                    tutorialManager.onPlayerMove(e.getKeyCode());
+                }
+                if (!isTutorialMode || !tutorialManager.isGameFrozen()) {
+                    gameLogic.getPlayer().keyPressed(e);
+                }
             }
 
             @Override
             public void keyReleased(KeyEvent e) {
-                gameLogic.getPlayer().keyReleased(e);
+                if (!isTutorialMode || !tutorialManager.isGameFrozen()) {
+                    gameLogic.getPlayer().keyReleased(e);
+                }
             }
         });
 
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                if (!gameLogic.isPaused()) {
+                if (isTutorialMode && tutorialManager != null) {
+                    tutorialManager.handleReminderBoxClick(e.getX(), e.getY());
+                }
+                if ((!isTutorialMode || !tutorialManager.isGameFrozen()) && !gameLogic.isPaused()) {
                     mousePressed = true;
                     currentMouseX = e.getX() + getCameraX();
                     currentMouseY = e.getY() + getCameraY();
@@ -190,34 +277,51 @@ public class GamePanel extends JPanel implements ActionListener {
     public void restartGame() {
         gameLogic.stopGame();
         removeAll();
+        gameOverPanel = null;
+        upgradePanel = null;
 
         Player newPlayer = new Player(0, 0, 100);
-        gameLogic = new GameLogic(this, newPlayer, damageManager);
+        gameLogic = new GameLogic(this, newPlayer, damageManager, isTutorialMode);
+
+        if (isTutorialMode) {
+            tutorialManager = new TutorialManager(newPlayer);
+            tutorialManager.startTutorial();
+        }
 
         initializeMenu();
         initializeAbilityPanel();
-        initializeLevelMap();
+
+        if (!isTutorialMode) {
+            initializeLevelMap();
+        }
 
         renderer = new GameRenderer(this, pixelPurlFont);
 
         menuVisible = false;
-        showLevelMap();
+        upgradePanelVisible = false;
+        abilityPanelVisible = false;
+
+        if (!isTutorialMode) {
+            showLevelMap();
+        } else {
+            menuButton.setVisible(true);
+            gameLogic.startTutorial();
+        }
         revalidate();
         repaint();
     }
 
     public void returnToMainMenu() {
-        gameLogic.savePlayerCoins();
+        if (!isTutorialMode) {
+            gameLogic.savePlayerCoins();
+        }
         gameLogic.stopGame();
 
         game.getContentPane().removeAll();
-
         MainMenuPanel mainMenuPanel = new MainMenuPanel();
-
         game.setContentPane(mainMenuPanel.getContentPane());
         game.revalidate();
         game.repaint();
-
         mainMenuPanel.setVisible(false);
     }
 
@@ -247,37 +351,63 @@ public class GamePanel extends JPanel implements ActionListener {
     }
 
     public void showLevelMap() {
+        if (isTutorialMode) return;
         menuButton.setVisible(false);
         gameLogic.pauseGame();
         levelMapPanel.showMap();
     }
 
     public void startLevel(int levelNumber) {
-        levelMapPanel.hideMap();
+        if (!isTutorialMode && levelMapPanel != null) {
+            levelMapPanel.hideMap();
+        }
         menuButton.setVisible(true);
         gameLogic.startLevel(levelNumber);
     }
 
     public void onLevelComplete() {
+        if (isTutorialMode) return;
         menuButton.setVisible(false);
-
         JOptionPane.showMessageDialog(
                 this,
                 "LEVEL COMPLETE!\n\nNext level unlocked!",
                 "Victory!",
                 JOptionPane.INFORMATION_MESSAGE
         );
-
         showLevelMap();
+    }
+
+    public void onTutorialEnemyKilled() {
+        if (tutorialManager != null) {
+            tutorialManager.onEnemyKilled();
+        }
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
+        fpsCounter.update();
+
+        if (isTutorialMode && tutorialManager != null) {
+            tutorialManager.update();
+            if (tutorialManager.isTutorialComplete()) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Tutorial Complete!\nReturning to main menu...",
+                        "Well Done!",
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+                returnToMainMenu();
+                return;
+            }
+        }
+
         if (abilityPanel.isVisible()) {
             abilityPanel.updateAbilityPanel();
         }
 
-        if (mousePressed && !gameLogic.isPaused()) {
+        boolean shouldUpdate = !isTutorialMode || !tutorialManager.isGameFrozen();
+
+        if (shouldUpdate && mousePressed && !gameLogic.isPaused()) {
             Point mousePoint = getMousePosition();
             if (mousePoint != null) {
                 currentMouseX = mousePoint.x + getCameraX();
@@ -286,8 +416,17 @@ public class GamePanel extends JPanel implements ActionListener {
             gameLogic.tryToShoot(currentMouseX, currentMouseY);
         }
 
-        gameLogic.update(damageManager);
+        if (shouldUpdate) {
+            gameLogic.update(damageManager);
+        }
+
         repaint();
+    }
+
+    public void onTutorialProjectileFired() {
+        if (tutorialManager != null) {
+            tutorialManager.onProjectileFired();
+        }
     }
 
     @Override
@@ -300,6 +439,10 @@ public class GamePanel extends JPanel implements ActionListener {
                 gameLogic.getKillCount(), damageManager, gameLogic.getCrystalExplosion(),
                 menuVisible);
 
+        if (isTutorialMode && tutorialManager != null && tutorialManager.isTutorialActive()) {
+            tutorialManager.draw(g, 0, 0);
+        }
+
         if (gameLogic.isGameOver() && !upgradePanelVisible) {
             onGameOver();
         }
@@ -310,4 +453,5 @@ public class GamePanel extends JPanel implements ActionListener {
     public Player getPlayer() { return gameLogic.getPlayer(); }
     public static int getWaveNumber() { return GameLogic.getWaveNumber(); }
     public GameLogic getGameLogic() { return gameLogic; }
+    public boolean isTutorialMode() { return isTutorialMode; }
 }
