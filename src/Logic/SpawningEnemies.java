@@ -5,6 +5,7 @@ import Bosses.DarkMageBoss;
 import Core.Game;
 import Enemies.Enemy;
 import Enemies.Slime;
+import Player.Player;
 import UI.GamePanel;
 
 import java.awt.*;
@@ -14,19 +15,18 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Handles enemy spawning logic in the game.
- */
 public class SpawningEnemies {
 
     private static final int SPAWN_DISTANCE_FROM_CAMERA = Game.scale(500);
     private static final int MAX_ENEMY_DISTANCE = Game.scale(1800);
+    private static final int MIN_DISTANCE_FROM_PLAYER = Game.scale(200);
 
     private GamePanel gamePanel;
     private CopyOnWriteArrayList<Enemy> enemies;
     private ExecutorService spawnExecutor;
     private volatile boolean stopSpawning = false;
     private volatile boolean pauseSpawning = false;
+    private Player playerReference;
 
     public SpawningEnemies(GamePanel gamePanel, CopyOnWriteArrayList<Enemy> enemies) {
         this.gamePanel = gamePanel;
@@ -34,17 +34,14 @@ public class SpawningEnemies {
         this.spawnExecutor = Executors.newCachedThreadPool();
     }
 
-    /**
-     * Starts spawning enemies of different types with specified rates.
-     */
+    public void setPlayerReference(Player player) {
+        this.playerReference = player;
+    }
+
     public void spawnEnemies(int normalPerSecond, int giantPerSecond, int smallPerSecond,
                              int shootingPerSecond, int slimePerSecond) {
         stopSpawning = false;
         pauseSpawning = false;
-
-        System.out.println("Spawning enemies - Normal: " + normalPerSecond + ", Giant: " + giantPerSecond +
-                ", Small: " + smallPerSecond + ", Shooting: " + shootingPerSecond +
-                ", Slime: " + slimePerSecond);
 
         if (normalPerSecond > 0) {
             spawnEnemyType(normalPerSecond, Enemy.Type.NORMAL, 5 * gamePanel.getWaveNumber());
@@ -63,9 +60,6 @@ public class SpawningEnemies {
         }
     }
 
-    /**
-     * Spawns a specific enemy type at given rate.
-     */
     private void spawnEnemyType(int rate, Enemy.Type type, int hp) {
         if (rate <= 0) return;
 
@@ -74,7 +68,7 @@ public class SpawningEnemies {
         spawnExecutor.execute(() -> {
             while (!stopSpawning) {
                 if (!pauseSpawning) {
-                    Point spawnPoint = getSpawnPointOutsideCamera();
+                    Point spawnPoint = getSpawnPointAwayFromPlayer();
                     if (spawnPoint != null) {
                         if (type == Enemy.Type.SLIME) {
                             enemies.add(new Slime(spawnPoint.x, spawnPoint.y, hp));
@@ -115,17 +109,11 @@ public class SpawningEnemies {
         spawnExecutor = Executors.newCachedThreadPool();
     }
 
-    /**
-     * Spawns a Dark Mage boss enemy outside camera view.
-     */
     public void spawnDarkMageBoss() {
-        Point spawnPoint = getSpawnPointOutsideCamera();
-        System.out.println("Dark Mage Boss spawn point: " + spawnPoint);
+        Point spawnPoint = getSpawnPointAwayFromPlayer();
 
         if (spawnPoint != null) {
             int bossHp = 1000 * GameLogic.getWaveNumber();
-            System.out.println("Creating Dark Mage Boss with HP: " + bossHp + " at position: (" +
-                    spawnPoint.x + ", " + spawnPoint.y + ")");
 
             DarkMageBoss darkMageBoss = new DarkMageBoss(spawnPoint.x, spawnPoint.y, bossHp);
             enemies.add(darkMageBoss);
@@ -136,11 +124,8 @@ public class SpawningEnemies {
         }
     }
 
-    /**
-     * Spawns a Bunny boss enemy outside camera view.
-     */
     public void spawnBunnyBoss() {
-        Point spawnPoint = getSpawnPointOutsideCamera();
+        Point spawnPoint = getSpawnPointAwayFromPlayer();
         System.out.println("Bunny Boss spawn point: " + spawnPoint);
 
         if (spawnPoint != null) {
@@ -157,9 +142,32 @@ public class SpawningEnemies {
         }
     }
 
-    /**
-     * Gets a random spawn point OUTSIDE the camera view.
-     */
+    private Point getSpawnPointAwayFromPlayer() {
+        if (playerReference == null) {
+            playerReference = gamePanel.getPlayer();
+        }
+
+        if (playerReference == null) {
+            return getSpawnPointOutsideCamera();
+        }
+
+        int maxAttempts = 20;
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+            Point candidate = getSpawnPointOutsideCamera();
+            if (candidate == null) continue;
+
+            int dx = candidate.x - playerReference.getX();
+            int dy = candidate.y - playerReference.getY();
+            double distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance >= MIN_DISTANCE_FROM_PLAYER) {
+                return candidate;
+            }
+        }
+
+        return getSpawnPointOutsideCamera();
+    }
+
     private Point getSpawnPointOutsideCamera() {
         ArrayList<Point> spawnPoints = new ArrayList<>();
 
@@ -223,6 +231,40 @@ public class SpawningEnemies {
             double distance = Math.sqrt(dx * dx + dy * dy);
 
             return distance > MAX_ENEMY_DISTANCE;
+        });
+    }
+
+    /**
+     * Special spawning for tutorial - spawns limited number of enemies total
+     * @param totalEnemies Maximum number of enemies to spawn (e.g., 10)
+     */
+    public void spawnTutorialEnemies(int totalEnemies) {
+        stopSpawning = false;
+        pauseSpawning = false;
+
+        System.out.println("Tutorial spawning: Will spawn " + totalEnemies + " enemies total");
+
+        spawnExecutor.execute(() -> {
+            int enemiesSpawned = 0;
+
+            while (!stopSpawning && enemiesSpawned < totalEnemies) {
+                if (!pauseSpawning) {
+                    Point spawnPoint = getSpawnPointAwayFromPlayer();
+                    if (spawnPoint != null) {
+                        enemies.add(new Enemy(spawnPoint.x, spawnPoint.y, 15, Enemy.Type.NORMAL));
+                        enemiesSpawned++;
+                        System.out.println("Tutorial: Spawned enemy " + enemiesSpawned + "/" + totalEnemies);
+                    }
+                }
+
+                try {
+                    TimeUnit.MILLISECONDS.sleep(3000);
+                } catch (InterruptedException e) {
+                    return;
+                }
+            }
+
+            System.out.println("Tutorial spawning complete: " + enemiesSpawned + " enemies spawned");
         });
     }
 }
