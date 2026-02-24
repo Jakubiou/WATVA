@@ -2,6 +2,7 @@ package UI;
 
 import Logic.GameLogic;
 import Core.Game;
+import UI.Game.GamePanel;
 
 import javax.swing.*;
 import java.awt.*;

@@ -1,4 +1,4 @@
-package UI;
+package UI.Game;
 
 import Core.Game;
 import Logic.DamageNumber.DamageNumberManager;
@@ -7,6 +7,10 @@ import Logic.GameLogic;
 import MainMenu.MainMenuPanel;
 import Player.Player;
 import Tutorial.TutorialManager;
+import UI.MenuPanel;
+import UI.Panels.AbilityPanel;
+import UI.Panels.LevelMapPanel;
+import UI.Panels.UpgradePanel;
 
 import javax.imageio.ImageIO;
 import java.awt.*;

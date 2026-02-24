@@ -1,7 +1,7 @@
 package Player;
 
 import Core.Game;
-import Logic.WallManager;
+import Logic.World.WallManager;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;

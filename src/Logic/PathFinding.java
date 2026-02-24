@@ -1,6 +1,7 @@
 package Logic;
 
-import UI.GamePanel;
+import Logic.World.WallManager;
+import UI.Game.GamePanel;
 import java.awt.*;
 import java.util.*;
 import java.util.List;

@@ -1,8 +1,8 @@
-package Logic;
+package Logic.World;
 
 import Core.Game;
 import Player.Player;
-import UI.GamePanel;
+import UI.Game.GamePanel;
 
 import javax.imageio.ImageIO;
 import java.awt.*;

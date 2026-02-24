@@ -2,7 +2,7 @@ package Enemies;
 
 import Core.Game;
 import Logic.GameLogic;
-import Logic.WallManager;
+import Logic.World.WallManager;
 import Player.Player;
 
 import java.awt.*;

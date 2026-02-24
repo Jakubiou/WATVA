@@ -6,7 +6,7 @@ import Core.Game;
 import Enemies.Enemy;
 import Enemies.Slime;
 import Player.Player;
-import UI.GamePanel;
+import UI.Game.GamePanel;
 
 import java.awt.*;
 import java.util.ArrayList;

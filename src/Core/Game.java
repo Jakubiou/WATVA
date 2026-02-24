@@ -1,7 +1,7 @@
 package Core;
 
 import Player.Player;
-import UI.GamePanel;
+import UI.Game.GamePanel;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;

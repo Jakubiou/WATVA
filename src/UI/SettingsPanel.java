@@ -1,6 +1,7 @@
 package UI;
 
 import Soundtrack.Soundtrack;
+import UI.Game.GamePanel;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;

@@ -1,3 +1,5 @@
+package Core;
+
 import MainMenu.MainMenuPanel;
 import javax.swing.*;
 

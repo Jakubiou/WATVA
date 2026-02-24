@@ -1,7 +1,7 @@
-package Logic;
+package Logic.World;
 
 import Player.Player;
-import UI.GamePanel;
+import UI.Game.GamePanel;
 
 import java.io.*;
 import java.util.ArrayList;

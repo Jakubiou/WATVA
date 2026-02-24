@@ -1,7 +1,8 @@
-package UI;
+package UI.Panels;
 
 import Logic.Ability.Ability;
 import Player.Player;
+import UI.Game.GamePanel;
 
 import javax.swing.*;
 import java.awt.*;

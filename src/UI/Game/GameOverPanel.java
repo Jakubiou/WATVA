@@ -1,4 +1,4 @@
-package UI;
+package UI.Game;
 
 import Core.Game;
 import MainMenu.MainMenuPanel;
@@ -66,7 +66,7 @@ public class GameOverPanel extends JPanel {
             gamePanel.initializeUpgradePanel();
         });
 
-        JButton mainMenuButton = createButton("Main Menu");
+        JButton mainMenuButton = createButton("Core.Main Menu");
         mainMenuButton.addActionListener(e -> {
             new MainMenuPanel();
             gamePanel.closeGame();

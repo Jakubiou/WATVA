@@ -8,9 +8,11 @@ import Enemies.EnemyProjectile;
 import Logic.DamageNumber.DamageNumberManager;
 import Logic.Level.LevelData;
 import Logic.Level.LevelManager;
+import Logic.World.MapManager;
+import Logic.World.WallManager;
 import Player.Player;
 import Soundtrack.Soundtrack;
-import UI.GamePanel;
+import UI.Game.GamePanel;
 import Player.PlayerProjectile;
 
 import java.util.concurrent.CopyOnWriteArrayList;

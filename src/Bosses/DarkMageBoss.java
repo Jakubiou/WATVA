@@ -4,9 +4,9 @@ import Core.Game;
 import Enemies.Enemy;
 import Logic.GameLogic;
 import Logic.PathFinding;
-import Logic.WallManager;
+import Logic.World.WallManager;
 import Player.Player;
-import UI.GamePanel;
+import UI.Game.GamePanel;
 
 import javax.imageio.ImageIO;
 import java.awt.*;

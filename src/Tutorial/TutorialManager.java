@@ -2,7 +2,7 @@ package Tutorial;
 
 import Core.Game;
 import Player.Player;
-import UI.GamePanel;
+import UI.Game.GamePanel;
 
 import java.awt.*;
 import java.util.ArrayList;

@@ -1,8 +1,9 @@
-package UI;
+package UI.Panels;
 
 import Core.Game;
 import Logic.Level.LevelManager;
 import MainMenu.MainMenuPanel;
+import UI.Game.GamePanel;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;

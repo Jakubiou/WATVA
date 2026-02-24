@@ -1,7 +1,7 @@
 package Player;
 
 import Logic.GameLogic;
-import UI.GamePanel;
+import UI.Game.GamePanel;
 import Core.Game;
 
 import javax.imageio.ImageIO;
@@ -65,7 +65,7 @@ public class PlayerGraphics {
     }
 
     /**
-     * Main rendering method that draws the player and associated UI elements.
+     * Core.Main rendering method that draws the player and associated UI elements.
      *
      * @param g The Graphics context to render to
      */

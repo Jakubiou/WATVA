@@ -1,5 +1,7 @@
 package MainMenu;
 
+import Core.Game;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -134,15 +136,15 @@ public class CreditsPanel extends JFrame {
         try {
             Font pixelFont = Font.createFont(Font.TRUETYPE_FONT,
                     getClass().getResourceAsStream("/fonts/PixelPurl.ttf"));
-            titleFont = pixelFont.deriveFont(Font.BOLD, 140f);
-            headerFont = pixelFont.deriveFont(Font.BOLD, 65f);
-            roleFont = pixelFont.deriveFont(Font.PLAIN, 50f);
+            titleFont = pixelFont.deriveFont(Font.BOLD, Game.scale(240));
+            headerFont = pixelFont.deriveFont(Font.BOLD, Game.scale(130));
+            roleFont = pixelFont.deriveFont(Font.PLAIN, Game.scale(100));
         } catch (Exception e) {
-            titleFont = new Font("Arial", Font.BOLD, 140);
-            headerFont = new Font("Arial", Font.BOLD, 65);
-            roleFont = new Font("Arial", Font.PLAIN, 50);
+            titleFont = new Font("Arial", Font.BOLD, Game.scale(240));
+            headerFont = new Font("Arial", Font.BOLD, Game.scale(130));
+            roleFont = new Font("Arial", Font.PLAIN, Game.scale(100));
         }
-        nameFont = new Font("SansSerif", Font.BOLD, 32);
+        nameFont = new Font("SansSerif", Font.BOLD, Game.scale(64));
     }
 
     private void createBackButton(int screenWidth, int screenHeight) {

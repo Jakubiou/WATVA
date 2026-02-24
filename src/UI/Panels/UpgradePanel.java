@@ -1,7 +1,8 @@
-package UI;
+package UI.Panels;
 
 import Logic.Level.LevelManager;
 import Player.Player;
+import UI.Game.GamePanel;
 
 import java.awt.*;
 import javax.swing.*;

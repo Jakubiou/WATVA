@@ -1,12 +1,12 @@
-package UI;
+package UI.Game;
 
 import Core.Game;
 import Enemies.Enemy;
 import Logic.CrystalExplosion;
 import Logic.DamageNumber.DamageNumberManager;
 import Logic.GameLogic;
-import Logic.MapManager;
-import Logic.WallManager;
+import Logic.World.MapManager;
+import Logic.World.WallManager;
 import Player.Player;
 import Player.PlayerProjectile;
 
@@ -68,7 +68,7 @@ public class GameRenderer {
     }
 
     /**
-     * Main rendering method that draws all game elements.
+     * Core.Main rendering method that draws all game elements.
      */
     public void render(Graphics g, Player player, CopyOnWriteArrayList<Enemy> enemies,
                        CopyOnWriteArrayList<PlayerProjectile> playerProjectiles,

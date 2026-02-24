@@ -4,7 +4,7 @@ import Logic.DamageNumber.DamageNumber;
 import Logic.DamageNumber.DamageNumberManager;
 import Core.Game;
 import Logic.PathFinding;
-import Logic.WallManager;
+import Logic.World.WallManager;
 
 import javax.imageio.ImageIO;
 import java.awt.*;

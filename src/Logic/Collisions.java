@@ -5,10 +5,11 @@ import Bosses.DarkMageBoss;
 import Enemies.Enemy;
 import Enemies.EnemyProjectile;
 import Logic.DamageNumber.DamageNumberManager;
+import Logic.World.WallManager;
 import Player.Player;
 import Player.PlayerProjectile;
 import Player.Explosion;
-import UI.GamePanel;
+import UI.Game.GamePanel;
 
 import java.awt.*;
 import java.util.ArrayList;

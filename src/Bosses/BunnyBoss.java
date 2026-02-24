@@ -4,7 +4,7 @@ import Core.Game;
 import Enemies.Enemy;
 import Logic.GameLogic;
 import Player.Player;
-import UI.GamePanel;
+import UI.Game.GamePanel;
 
 import javax.imageio.ImageIO;
 import java.awt.*;

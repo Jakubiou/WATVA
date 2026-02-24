@@ -1,6 +1,6 @@
 package Player;
 
-import Logic.WallManager;
+import Logic.World.WallManager;
 
 import java.awt.event.KeyEvent;
 import java.util.Iterator;
@@ -30,7 +30,7 @@ public class PlayerMovement {
     }
 
     /**
-     * Main movement update method called every game tick.
+     * Core.Main movement update method called every game tick.
      * Handles:
      * - Shield regeneration
      * - Health regeneration
