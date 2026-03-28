@@ -10,6 +10,8 @@ import Logic.Level.LevelData;
 import Logic.Level.LevelManager;
 import Logic.World.MapManager;
 import Logic.World.WallManager;
+import Pets.PetInventory;
+import Pets.PetManager;
 import Player.Player;
 import Soundtrack.Soundtrack;
 import UI.Game.GamePanel;
@@ -42,6 +44,8 @@ public class GameLogic {
     private boolean waveCompletionInProgress = false;
     private WallManager wallManager;
     private boolean isTutorialMode;
+    private PetInventory petInventory;
+    private PetManager petManager;
 
     public GameLogic(GamePanel gamePanel, Player player, DamageNumberManager damageManager, boolean tutorialMode) {
         this.gamePanel = gamePanel;
@@ -85,7 +89,11 @@ public class GameLogic {
         spawningEnemies = new SpawningEnemies(gamePanel, enemies);
         spawningEnemies.setPlayerReference(player);
 
-        timer = new Timer(15, gamePanel);
+        // Pet system
+        petInventory = PetInventory.load();
+        petManager = new PetManager(petInventory, player);
+
+        timer = new Timer(16, gamePanel);
         waveNumber = 0;
     }
 
@@ -181,6 +189,7 @@ public class GameLogic {
             }
 
             updateEnemies(damageManager);
+            if (petManager != null) petManager.update(enemies, damageManager, wallManager);
             spawningEnemies.removeDistantEnemies(player.getX(), player.getY());
 
             if (!waveCompletionInProgress) {
@@ -465,4 +474,6 @@ public class GameLogic {
     public LevelManager getLevelManager() { return levelManager; }
     public CrystalExplosion getCrystalExplosion() { return crystalExplosion; }
     public WallManager getWallManager() { return wallManager; }
+    public PetManager getPetManager() { return petManager; }
+    public PetInventory getPetInventory() { return petInventory; }
 }

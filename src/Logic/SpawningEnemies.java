@@ -44,19 +44,19 @@ public class SpawningEnemies {
         pauseSpawning = false;
 
         if (normalPerSecond > 0) {
-            spawnEnemyType(normalPerSecond, Enemy.Type.NORMAL, 5 * gamePanel.getWaveNumber());
+            spawnEnemyType(normalPerSecond, Enemy.Type.NORMAL, 2 * gamePanel.getWaveNumber());
         }
         if (giantPerSecond > 0) {
-            spawnEnemyType(giantPerSecond, Enemy.Type.GIANT, 15 * gamePanel.getWaveNumber());
+            spawnEnemyType(giantPerSecond, Enemy.Type.GIANT, 5 * gamePanel.getWaveNumber());
         }
         if (smallPerSecond > 0) {
-            spawnEnemyType(smallPerSecond, Enemy.Type.SMALL, 3 * gamePanel.getWaveNumber());
+            spawnEnemyType(smallPerSecond, Enemy.Type.SMALL, gamePanel.getWaveNumber());
         }
         if (shootingPerSecond > 0) {
-            spawnEnemyType(shootingPerSecond, Enemy.Type.SHOOTING, 4 * gamePanel.getWaveNumber());
+            spawnEnemyType(shootingPerSecond, Enemy.Type.SHOOTING, gamePanel.getWaveNumber());
         }
         if (slimePerSecond > 0) {
-            spawnEnemyType(slimePerSecond, Enemy.Type.SLIME, 4 * gamePanel.getWaveNumber());
+            spawnEnemyType(slimePerSecond, Enemy.Type.SLIME, 2 * gamePanel.getWaveNumber());
         }
     }
 
@@ -110,18 +110,64 @@ public class SpawningEnemies {
     }
 
     public void spawnDarkMageBoss() {
-        Point spawnPoint = getSpawnPointAwayFromPlayer();
+        Point spawnPoint = getSpawnPointForBoss();
 
         if (spawnPoint != null) {
             int bossHp = 1000 * GameLogic.getWaveNumber();
-
             DarkMageBoss darkMageBoss = new DarkMageBoss(spawnPoint.x, spawnPoint.y, bossHp);
-            enemies.add(darkMageBoss);
 
-            System.out.println("Dark Mage Boss added! Total enemies: " + enemies.size());
+            // Předej bossovi střed arény pro omezení meteorů
+            Logic.World.WallManager wm = gamePanel.getGameLogic().getWallManager();
+            if (wm != null && wm.getArenaCenter() != null) {
+                darkMageBoss.setArenaCenter(
+                        wm.getArenaCenter().x,
+                        wm.getArenaCenter().y,
+                        wm.getArenaRadius()
+                );
+            }
+
+            enemies.add(darkMageBoss);
+            System.out.println("Dark Mage Boss added at " + spawnPoint + "! Total enemies: " + enemies.size());
         } else {
             System.err.println("ERROR: Could not find spawn point for Dark Mage Boss!");
         }
+    }
+
+    // Spawn pro bosse – uvnitř arény poblíž hráče, ale ne přímo na něm
+    private Point getSpawnPointForBoss() {
+        if (playerReference == null) playerReference = gamePanel.getPlayer();
+        if (playerReference == null) return getSpawnPointAwayFromPlayer();
+
+        int playerX = playerReference.getX();
+        int playerY = playerReference.getY();
+
+        Logic.World.WallManager wm = gamePanel.getGameLogic().getWallManager();
+
+        // Spawn 250-450px od hráče – zkontroluj že není na zdi/pilíři
+        for (int attempt = 0; attempt < 30; attempt++) {
+            double angle = Math.random() * Math.PI * 2;
+            int dist = Game.scale(250) + (int)(Math.random() * Game.scale(200));
+            int tx = playerX + (int)(Math.cos(angle) * dist);
+            int ty = playerY + (int)(Math.sin(angle) * dist);
+
+            // Ověř že místo není uvnitř zdi (pilíř arény, zeď arény)
+            if (wm != null) {
+                boolean blocked = false;
+                int bossSize = Game.scale(128);
+                int pad = Game.scale(16);
+                // Zkontroluj 4 rohy + střed budoucí pozice bosse
+                if (wm.isWall(tx + pad, ty + pad) ||
+                        wm.isWall(tx + bossSize - pad, ty + pad) ||
+                        wm.isWall(tx + pad, ty + bossSize - pad) ||
+                        wm.isWall(tx + bossSize - pad, ty + bossSize - pad) ||
+                        wm.isWall(tx + bossSize/2, ty + bossSize/2)) {
+                    blocked = true;
+                }
+                if (blocked) continue;
+            }
+            return new Point(tx, ty);
+        }
+        return new Point(playerX + Game.scale(300), playerY);
     }
 
     public void spawnBunnyBoss() {

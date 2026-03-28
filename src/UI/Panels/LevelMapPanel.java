@@ -3,6 +3,9 @@ package UI.Panels;
 import Core.Game;
 import Logic.Level.LevelManager;
 import MainMenu.MainMenuPanel;
+import Pets.PetInventory;
+import UI.Panels.PetShopPanel;
+import Player.Player;
 import UI.Game.GamePanel;
 
 import javax.imageio.ImageIO;
@@ -13,6 +16,10 @@ import java.awt.event.MouseEvent;
 
 public class LevelMapPanel extends JPanel {
     private LevelManager levelManager;
+    private Player player;
+    private PetInventory petInventory;
+    private PetShopPanel petShopPanel;
+    private boolean petShopVisible = false;
     private Game game;
     private GamePanel gamePanel;
     private Font pixelFont;
@@ -33,6 +40,12 @@ public class LevelMapPanel extends JPanel {
         initializeLevelPositions();
         setupMouseListener();
         setVisible(false);
+    }
+
+    /** Call after GameLogic is created so we can pass player + inventory */
+    public void initPetShop(Player player, PetInventory petInventory) {
+        this.player = player;
+        this.petInventory = petInventory;
     }
 
     private void loadResources() {
@@ -91,6 +104,10 @@ public class LevelMapPanel extends JPanel {
                     returnToMainMenu();
                     return;
                 }
+                if (isPointInPetShop(e.getPoint())) {
+                    openPetShop();
+                    return;
+                }
 
                 for (int i = 0; i < 10; i++) {
                     if (isPointInLevel(e.getPoint(), i)) {
@@ -121,6 +138,31 @@ public class LevelMapPanel extends JPanel {
         int w = Game.scale(150);
         int h = Game.scale(50);
         return p.x >= x && p.x <= x + w && p.y >= y && p.y <= y + h;
+    }
+
+    private boolean isPointInPetShop(Point p) {
+        int x = Game.scale(185);
+        int y = Game.scale(20);
+        int w = Game.scale(160);
+        int h = Game.scale(50);
+        return p.x >= x && p.x <= x + w && p.y >= y && p.y <= y + h;
+    }
+
+    private void openPetShop() {
+        if (player == null || petInventory == null) return;
+        if (petShopPanel == null) {
+            petShopPanel = new PetShopPanel(player, petInventory, this::closePetShop);
+            add(petShopPanel);
+        }
+        petShopPanel.setVisible(true);
+        petShopVisible = true;
+        repaint();
+    }
+
+    private void closePetShop() {
+        if (petShopPanel != null) petShopPanel.setVisible(false);
+        petShopVisible = false;
+        repaint();
     }
 
     private void returnToMainMenu() {
@@ -173,6 +215,7 @@ public class LevelMapPanel extends JPanel {
         }
 
         drawBackButton(g2d);
+        drawPetShopButton(g2d);
     }
 
     private void drawPaths(Graphics2D g2d) {
@@ -284,6 +327,37 @@ public class LevelMapPanel extends JPanel {
         int textX = buttonX + (buttonWidth - fm.stringWidth(text)) / 2;
         int textY = buttonY + (buttonHeight + fm.getHeight()) / 2 - Game.scale(3);
         g2d.drawString(text, textX, textY);
+    }
+
+    private void drawPetShopButton(Graphics2D g2d) {
+        int buttonWidth  = Game.scale(160);
+        int buttonHeight = Game.scale(50);
+        int buttonX = Game.scale(185);
+        int buttonY = Game.scale(20);
+
+        // Purple/violet color for pet shop
+        g2d.setColor(new Color(80, 40, 130));
+        g2d.fillRoundRect(buttonX, buttonY, buttonWidth, buttonHeight, Game.scale(15), Game.scale(15));
+        g2d.setColor(new Color(180, 100, 255));
+        g2d.setStroke(new BasicStroke(Game.scale(2)));
+        g2d.drawRoundRect(buttonX, buttonY, buttonWidth, buttonHeight, Game.scale(15), Game.scale(15));
+
+        g2d.setFont(pixelFont.deriveFont((float)Game.scale(18)));
+        g2d.setColor(Color.WHITE);
+        String text = "🐾  PETS";
+        FontMetrics fm = g2d.getFontMetrics();
+        int textX = buttonX + (buttonWidth - fm.stringWidth(text)) / 2;
+        int textY = buttonY + (buttonHeight + fm.getHeight()) / 2 - Game.scale(3);
+        g2d.drawString(text, textX, textY);
+
+        // Show selected pet name below button if any
+        if (petInventory != null && petInventory.getSelectedPetType() != null) {
+            g2d.setFont(pixelFont.deriveFont((float)Game.scale(11)));
+            g2d.setColor(new Color(160, 255, 160));
+            String selText = "⚔ " + petInventory.getSelectedPetType().displayName;
+            int sw = g2d.getFontMetrics().stringWidth(selText);
+            g2d.drawString(selText, buttonX + (buttonWidth - sw) / 2, buttonY + buttonHeight + Game.scale(16));
+        }
     }
 
     public void setGamePanel(GamePanel gamePanel) {

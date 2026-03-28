@@ -2,6 +2,7 @@ package Logic;
 
 import Bosses.BunnyBoss;
 import Bosses.DarkMageBoss;
+import Core.Game;
 import Enemies.Enemy;
 import Enemies.EnemyProjectile;
 import Logic.DamageNumber.DamageNumberManager;
@@ -289,23 +290,58 @@ public class Collisions {
     }
 
     private void resolveEnemyCollisions() {
-        for (int i = 0; i < enemies.size(); i++) {
-            for (int j = i + 1; j < enemies.size(); j++) {
-                Enemy e1 = enemies.get(i);
-                Enemy e2 = enemies.get(j);
+        // Spatial grid separace – O(N) místo O(N²)
+        // Vampire Survivors styl: push overlap resolution bez rušení pathfindingu
+        int gridCell = Game.scale(80); // zhruba velikost nepřítele
+        java.util.HashMap<Long, java.util.List<Enemy>> grid = new java.util.HashMap<>();
 
-                if (e1.getType() == Enemy.Type.SHOOTING || e2.getType() == Enemy.Type.SHOOTING) {
-                    continue;
-                }
+        // Vloži každého do grid buněk
+        for (Enemy e : enemies) {
+            if (e.getType() == Enemy.Type.SHOOTING ||
+                    e.getType() == Enemy.Type.DARK_MAGE_BOSS ||
+                    e.getType() == Enemy.Type.BUNNY_BOSS) continue;
 
-                Rectangle r1 = e1.getCollider();
-                Rectangle r2 = e2.getCollider();
-
-                if (r1.intersects(r2)) {
-                    e1.moveAwayFrom(e2.getX(), e2.getY());
-                    e2.moveAwayFrom(e1.getX(), e1.getY());
+            int gx = e.getX() / gridCell;
+            int gy = e.getY() / gridCell;
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    long key = ((long)(gx + dx + 5000)) << 20 | (gy + dy + 5000);
+                    grid.computeIfAbsent(key, k -> new java.util.ArrayList<>()).add(e);
                 }
             }
+        }
+
+        // Zkontroluj a resolvi kolize jen v blízkých buňkách
+        java.util.Set<Enemy> processed = new java.util.HashSet<>();
+        for (Enemy e1 : enemies) {
+            if (e1.getType() == Enemy.Type.SHOOTING ||
+                    e1.getType() == Enemy.Type.DARK_MAGE_BOSS ||
+                    e1.getType() == Enemy.Type.BUNNY_BOSS) continue;
+
+            int gx = e1.getX() / gridCell;
+            int gy = e1.getY() / gridCell;
+            long key = ((long)(gx + 5000)) << 20 | (gy + 5000);
+            java.util.List<Enemy> neighbors = grid.get(key);
+            if (neighbors == null) continue;
+
+            for (Enemy e2 : neighbors) {
+                if (e1 == e2 || processed.contains(e2)) continue;
+
+                int dx = e1.getX() - e2.getX();
+                int dy = e1.getY() - e2.getY();
+                int minDist = (e1.getWidth() + e2.getWidth()) / 2;
+                float dist = (float) Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < minDist && dist > 0.1f) {
+                    // Tiny push – jen minimální aby se nepřekrývali, neruší pathfinding
+                    float push = (minDist - dist) * 0.3f;
+                    int px = (int)(dx / dist * push);
+                    int py = (int)(dy / dist * push);
+                    e1.nudge(px, py);
+                    e2.nudge(-px, -py);
+                }
+            }
+            processed.add(e1);
         }
     }
 

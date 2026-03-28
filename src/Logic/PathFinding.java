@@ -50,7 +50,37 @@ public class PathFinding {
         return new Point(goalX, goalY);
     }
 
+    /**
+     * Pathfinding pro velké entity (boss 128px+).
+     * Kontroluje okolí buňky s ohledem na velikost entity.
+     */
+    public static Point findNextStepLarge(int startX, int startY, int goalX, int goalY,
+                                          WallManager wallManager, int entitySize) {
+        int gridStartX = startX / GRID_SIZE;
+        int gridStartY = startY / GRID_SIZE;
+        int gridGoalX = goalX / GRID_SIZE;
+        int gridGoalY = goalY / GRID_SIZE;
+
+        List<Node> path = findPathLarge(gridStartX, gridStartY, gridGoalX, gridGoalY, wallManager, entitySize);
+
+        if (path != null && path.size() > 1) {
+            Node nextNode = path.get(1);
+            return new Point(nextNode.x * GRID_SIZE + GRID_SIZE/2, nextNode.y * GRID_SIZE + GRID_SIZE/2);
+        }
+
+        // Fallback na standard
+        return findNextStep(startX, startY, goalX, goalY, wallManager);
+    }
+
     private static List<Node> findPath(int startX, int startY, int goalX, int goalY, WallManager wallManager) {
+        return findPathLarge(startX, startY, goalX, goalY, wallManager, 0);
+    }
+
+    /**
+     * A* pathfinding. entitySize > 0 = kontroluj okolní buňky aby velká entita neprojde těsně u zdi.
+     */
+    private static List<Node> findPathLarge(int startX, int startY, int goalX, int goalY,
+                                            WallManager wallManager, int entitySize) {
         PriorityQueue<Node> openSet = new PriorityQueue<>();
         Set<String> closedSet = new HashSet<>();
         Map<String, Node> allNodes = new HashMap<>();
@@ -84,7 +114,19 @@ public class PathFinding {
                 int worldX = newX * GRID_SIZE + GRID_SIZE / 2;
                 int worldY = newY * GRID_SIZE + GRID_SIZE / 2;
 
+                // Základní kontrola středu buňky
                 if (wallManager.isWall(worldX, worldY)) continue;
+
+                // Pro velké entity zkontroluj že buňka má dostatek místa
+                if (entitySize > GRID_SIZE / 2) {
+                    int pad = entitySize / 2;
+                    int bx = newX * GRID_SIZE;
+                    int by = newY * GRID_SIZE;
+                    if (wallManager.isWall(bx + pad, by + pad) ||
+                            wallManager.isWall(bx + GRID_SIZE - pad, by + pad) ||
+                            wallManager.isWall(bx + pad, by + GRID_SIZE - pad) ||
+                            wallManager.isWall(bx + GRID_SIZE - pad, by + GRID_SIZE - pad)) continue;
+                }
 
                 double moveCost = (Math.abs(dir[0]) + Math.abs(dir[1]) == 2) ? 1.414 : 1.0;
                 double newG = current.g + moveCost;

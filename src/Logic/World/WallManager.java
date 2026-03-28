@@ -22,6 +22,12 @@ public class WallManager {
     private static final int MIN_DISTANCE_FROM_PLAYER = Game.scale(250);
     private static final int WALL_BLOCK_SIZE = GamePanel.BLOCK_SIZE;
 
+    // O(1) spatial hash pro isWall() – klíč = "tileX,tileY"
+    private final java.util.HashSet<Long> wallTileSet = new java.util.HashSet<>();
+    private final java.util.HashSet<Long> tempWallTileSet = new java.util.HashSet<>();
+    private long lastTempWallRebuild = 0;
+    private static final long TEMP_REBUILD_INTERVAL = 200;
+
     private boolean bossArenaActive = false;
     private List<Rectangle> arenaWalls = new ArrayList<>();
     private List<Rectangle> arenaPillars = new ArrayList<>();
@@ -46,6 +52,19 @@ public class WallManager {
             {{1}},
             {{1, 1}}
     };
+
+    /** Zakóduje tile souřadnice do jednoho long pro O(1) HashSet lookup */
+    private static long tileKey(int worldX, int worldY) {
+        int tx = Math.floorDiv(worldX, WALL_BLOCK_SIZE);
+        int ty = Math.floorDiv(worldY, WALL_BLOCK_SIZE);
+        return ((long)(tx + 100000)) << 20 | (ty + 100000);
+    }
+
+    private void addToWallSet(java.util.HashSet<Long> set, Rectangle rect) {
+        int tx = rect.x / WALL_BLOCK_SIZE;
+        int ty = rect.y / WALL_BLOCK_SIZE;
+        set.add(((long)(tx + 100000)) << 20 | (ty + 100000));
+    }
 
     public WallManager() {
         this.temporaryWalls = new ArrayList<>();
@@ -108,6 +127,44 @@ public class WallManager {
             }
         }
         permanentChunkWalls.put(chunkKey, chunkWalls);
+
+        // Přidej do O(1) lookup setu
+        for (Rectangle rect : chunkWalls) {
+            addToWallSet(wallTileSet, rect);
+        }
+    }
+
+    /** Přebuduje wallTileSet – buď z boss arény nebo z chunk walls */
+    private void rebuildArenaTileSet() {
+        wallTileSet.clear();
+        if (bossArenaActive) {
+            for (Rectangle wall : arenaWalls) addToWallSet(wallTileSet, wall);
+            for (Rectangle pillar : arenaPillars) addToWallSet(wallTileSet, pillar);
+        } else {
+            // Obnov chunk walls do tile setu
+            for (List<Rectangle> chunkWalls : permanentChunkWalls.values()) {
+                for (Rectangle rect : chunkWalls) addToWallSet(wallTileSet, rect);
+            }
+        }
+    }
+
+    /** Přebuduje tempWallTileSet ze solidních temporary walls */
+    private void rebuildTempWallTileSet() {
+        tempWallTileSet.clear();
+        for (WallPattern wp : temporaryWalls) {
+            if (!wp.isSolid()) continue;
+            for (int row = 0; row < wp.pattern.length; row++) {
+                for (int col = 0; col < wp.pattern[row].length; col++) {
+                    if (wp.pattern[row][col] == 1) {
+                        int bx = wp.x + col * WALL_BLOCK_SIZE;
+                        int by = wp.y + row * WALL_BLOCK_SIZE;
+                        int tx = bx / WALL_BLOCK_SIZE;
+                        int ty = by / WALL_BLOCK_SIZE;
+                        tempWallTileSet.add(((long)(tx + 100000)) << 20 | (ty + 100000));
+                    }
+                }
+            }
+        }
     }
 
     private void updateChunkWalls(Player player) {
@@ -132,11 +189,18 @@ public class WallManager {
         if (isBossWave) return;
 
         long currentTime = System.currentTimeMillis();
-        temporaryWalls.removeIf(wall -> currentTime - wall.spawnTime >= wall.lifetime);
+        boolean changed = temporaryWalls.removeIf(wall -> currentTime - wall.spawnTime >= wall.lifetime);
 
         if (currentTime - lastSpawnTime >= SPAWN_INTERVAL && temporaryWalls.size() < 15) {
             spawnNewTemporaryWall(player);
             lastSpawnTime = currentTime;
+            changed = true;
+        }
+
+        // Přebuduj temp tile set jen pokud se něco změnilo nebo každých 200ms
+        if (changed || currentTime - lastTempWallRebuild > TEMP_REBUILD_INTERVAL) {
+            rebuildTempWallTileSet();
+            lastTempWallRebuild = currentTime;
         }
     }
 
@@ -242,6 +306,7 @@ public class WallManager {
                 }
             }
         }
+        rebuildArenaTileSet(); // Přebuduj O(1) lookup set
     }
 
     public Point getArenaCenter() { return arenaCenter; }
@@ -252,40 +317,28 @@ public class WallManager {
         arenaWalls.clear();
         arenaPillars.clear();
         arenaCenter = null;
+        // Přebuduj tile set z permanentních chunk walls (ne z arény)
+        rebuildArenaTileSet();
+        tempWallTileSet.clear();
     }
 
     public void despawnTemporaryWalls() {
         temporaryWalls.clear();
+        tempWallTileSet.clear();
     }
 
+    /**
+     * O(1) wall check – používá HashSet místo iterace přes všechny Rectangle.
+     */
     public boolean isWall(int worldX, int worldY) {
-        if (bossArenaActive) {
-            for (Rectangle wall : arenaWalls) {
-                if (wall.contains(worldX, worldY)) return true;
-            }
-            for (Rectangle pillar : arenaPillars) {
-                if (pillar.contains(worldX, worldY)) return true;
-            }
-            return false;
-        }
-
-        if (isPermanentWall(worldX, worldY)) return true;
-
-        for (WallPattern wall : temporaryWalls) {
-            if (wall.isSolid() && wall.containsPoint(worldX, worldY)) {
-                return true;
-            }
-        }
+        long key = tileKey(worldX, worldY);
+        if (wallTileSet.contains(key)) return true;
+        if (!bossArenaActive && tempWallTileSet.contains(key)) return true;
         return false;
     }
 
     private boolean isPermanentWall(int worldX, int worldY) {
-        for (List<Rectangle> chunkWalls : permanentChunkWalls.values()) {
-            for (Rectangle wall : chunkWalls) {
-                if (wall.contains(worldX, worldY)) return true;
-            }
-        }
-        return false;
+        return wallTileSet.contains(tileKey(worldX, worldY));
     }
 
     public boolean hasLineOfSight(int x1, int y1, int x2, int y2) {
@@ -369,6 +422,8 @@ public class WallManager {
     public void clearWalls() {
         temporaryWalls.clear();
         permanentChunkWalls.clear();
+        wallTileSet.clear();
+        tempWallTileSet.clear();
         clearBossArena();
     }
 

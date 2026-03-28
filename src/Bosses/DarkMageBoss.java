@@ -64,11 +64,13 @@ public class DarkMageBoss extends Enemy {
     private long teleportStartTime = 0;
     private static final long TELEPORT_DURATION = 800;
     private long lastTeleportTime = 0;
-    private static final long TELEPORT_COOLDOWN = 5000;
+    private static final long TELEPORT_COOLDOWN = 2000;
     private int teleportTargetX, teleportTargetY;
     private float teleportAlpha = 1.0f;
     private int stuckCounter = 0; // Track how long stuck
     private Point lastPosition = null;
+
+    private double moveAccX = 0, moveAccY = 0;
 
     private Point arenaCenter;
     private int arenaRadius;
@@ -85,7 +87,7 @@ public class DarkMageBoss extends Enemy {
     public DarkMageBoss(int x, int y, int hp) {
         super(x, y, hp, Type.DARK_MAGE_BOSS);
         this.maxHp = hp;
-        this.baseSpeed = Game.scale(1.0);
+        this.baseSpeed = 3.0;
         this.lastPosition = new Point(x, y);
         loadTextures();
     }
@@ -100,7 +102,7 @@ public class DarkMageBoss extends Enemy {
             for (int i = 0; i < 5; i++) {
                 bossTexturesLeft[i] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Boss/DarkMage/DarkMage" + (i + 1) + ".png"));
                 bossTexturesRight[i] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Boss/DarkMage/DarkMage" + (i + 6) + ".png"));
-                bossMeteorAttackTextures[i] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Boss/DarkMage/DarkMage" + (i + 21) + ".png"));
+                bossMeteorAttackTextures[i] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Boss/DarkMage/DarkMage" + (i + 6) + ".png"));
             }
 
             for (int i = 0; i < 10; i++) {
@@ -223,15 +225,15 @@ public class DarkMageBoss extends Enemy {
             updateMeteorAttack(player);
         } else if (isShootingProjectiles) {
             updateProjectileAttack(player);
-            updateExistingProjectiles();
         } else if (currentTime - lastSpecialAttackTime >= SPECIAL_ATTACK_INTERVAL) {
             chooseRandomAttack(enemies);
             lastSpecialAttackTime = currentTime;
         }
 
-        if (!isChannelingMeteors && !isShootingProjectiles) {
-            moveTowardsPlayer(player);
-        }
+        updateExistingProjectiles();
+
+        // Boss se pohybuje vždy – i během útoků
+        moveTowardsPlayer(player);
 
         if (currentTime - lastFrameChange >= frameDuration) {
             currentFrame = (currentFrame + 1) % 5;
@@ -244,34 +246,24 @@ public class DarkMageBoss extends Enemy {
             return false;
         }
 
+        if (isChannelingMeteors || isShootingProjectiles) {
+            lastPosition = new Point(x, y);
+            stuckCounter = 0;
+            return false;
+        }
+
         if (lastPosition != null) {
             int distMoved = (int) Math.hypot(x - lastPosition.x, y - lastPosition.y);
-
-            if (distMoved < Game.scale(5)) {
+            if (distMoved < Game.scale(2)) {
                 stuckCounter++;
             } else {
                 stuckCounter = 0;
             }
         }
-
         lastPosition = new Point(x, y);
 
-        if (stuckCounter < 10) {
-            return false;
-        }
-
-        int playerCenterX = player.getX() + Player.WIDTH / 2;
-        int playerCenterY = player.getY() + Player.HEIGHT / 2;
-        int bossCenterX = x + BOSS_SIZE / 2;
-        int bossCenterY = y + BOSS_SIZE / 2;
-
-        boolean hasLineOfSight = PathFinding.hasClearPath(
-                bossCenterX, bossCenterY,
-                playerCenterX, playerCenterY,
-                wallManager
-        );
-
-        if (!hasLineOfSight) {
+        // Teleportuj rychle – po 3 framech zaseknutí (ne 10)
+        if (stuckCounter >= 3) {
             startTeleport(player);
             stuckCounter = 0;
             return true;
@@ -286,29 +278,19 @@ public class DarkMageBoss extends Enemy {
         lastTeleportTime = teleportStartTime;
         teleportAlpha = 1.0f;
 
-        int attempts = 0;
-        int maxAttempts = 20;
-
-        while (attempts < maxAttempts) {
-            int range = Game.scale(200);
-            int offsetX = (int)((Math.random() - 0.5) * 2 * range);
-            int offsetY = (int)((Math.random() - 0.5) * 2 * range);
-
-            teleportTargetX = player.getX() + offsetX;
-            teleportTargetY = player.getY() + offsetY;
-
-            if (wallManager == null || !wallManager.isWall(
-                    teleportTargetX + BOSS_SIZE/2,
-                    teleportTargetY + BOSS_SIZE/2)) {
-                break;
+        for (int attempts = 0; attempts < 30; attempts++) {
+            double angle = Math.random() * Math.PI * 2;
+            int dist = Game.scale(150) + (int)(Math.random() * Game.scale(150));
+            int tx = player.getX() + (int)(Math.cos(angle) * dist);
+            int ty = player.getY() + (int)(Math.sin(angle) * dist);
+            if (!bossHitsWall(tx, ty)) {
+                teleportTargetX = tx;
+                teleportTargetY = ty;
+                return;
             }
-            attempts++;
         }
-
-        if (attempts >= maxAttempts) {
-            teleportTargetX = player.getX();
-            teleportTargetY = player.getY();
-        }
+        teleportTargetX = player.getX();
+        teleportTargetY = player.getY();
     }
 
     private void updateTeleport(long currentTime) {
@@ -332,31 +314,87 @@ public class DarkMageBoss extends Enemy {
         }
     }
 
+    private boolean bossHitsWall(int bx, int by) {
+        if (wallManager == null) return false;
+        int pad = Game.scale(6);
+        return wallManager.isWall(bx + pad,             by + pad)
+                || wallManager.isWall(bx + BOSS_SIZE / 2 - pad, by + pad)
+                || wallManager.isWall(bx + pad,             by + BOSS_SIZE / 2 - pad)
+                || wallManager.isWall(bx + BOSS_SIZE /2 - pad, by + BOSS_SIZE / 2 - pad)
+                || wallManager.isWall(bx + BOSS_SIZE / 4,   by + BOSS_SIZE / 4);
+    }
+
+    // Cache pro pathfinding – nepočítej každý frame
+    private Point cachedPathTarget = null;
+    private long lastPathCalcTime = 0;
+    private static final long PATH_RECALC_INTERVAL = 400;
+
     private void moveTowardsPlayer(Player player) {
-        int deltaX = (player.getX() + Player.WIDTH/2) - (x + BOSS_SIZE/2);
-        int deltaY = (player.getY() + Player.HEIGHT/2) - (y + BOSS_SIZE/2);
-        double distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        int targetX = player.getX() + Player.WIDTH / 2;
+        int targetY = player.getY() + Player.HEIGHT / 2;
+        int bossCenterX = x + BOSS_SIZE / 2;
+        int bossCenterY = y + BOSS_SIZE / 2;
 
-        if (distance > Game.scale(100)) {
-            movingRight = deltaX > 0;
+        double distToPlayer = Math.hypot(targetX - bossCenterX, targetY - bossCenterY);
+        if (distToPlayer <= Game.scale(100)) return;
 
-            double normalizedX = deltaX / distance;
-            double normalizedY = deltaY / distance;
+        // Rozhodni kam jít – přímá cesta nebo pathfinding
+        int moveTargetX, moveTargetY;
 
-            int nextX = x + (int)(normalizedX * baseSpeed);
-            int nextY = y + (int)(normalizedY * baseSpeed);
+        boolean hasLineOfSight = wallManager == null || PathFinding.hasClearPath(
+                bossCenterX, bossCenterY, targetX, targetY, wallManager);
 
-            boolean hitWall = false;
-            if (wallManager != null) {
-                int centerNextX = nextX + BOSS_SIZE/2;
-                int centerNextY = nextY + BOSS_SIZE/2;
-                hitWall = wallManager.isWall(centerNextX, centerNextY);
+        if (hasLineOfSight) {
+            moveTargetX = targetX;
+            moveTargetY = targetY;
+            cachedPathTarget = null;
+        } else {
+            // Pathfinding – přepočítej cestu jen každých 400ms, použij large-entity variantu
+            long now = System.currentTimeMillis();
+            if (cachedPathTarget == null || now - lastPathCalcTime > PATH_RECALC_INTERVAL) {
+                cachedPathTarget = PathFinding.findNextStepLarge(
+                        bossCenterX, bossCenterY, targetX, targetY, wallManager, BOSS_SIZE);
+                lastPathCalcTime = now;
             }
-
-            if (!hitWall) {
-                x = nextX;
-                y = nextY;
+            if (cachedPathTarget != null) {
+                moveTargetX = cachedPathTarget.x;
+                moveTargetY = cachedPathTarget.y;
+            } else {
+                moveTargetX = targetX;
+                moveTargetY = targetY;
             }
+        }
+
+        // Pohyb s accumulatorem (eliminuje int-truncation při šikmém pohybu)
+        double dx = moveTargetX - bossCenterX;
+        double dy = moveTargetY - bossCenterY;
+        double dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 1) return;
+
+        movingRight = dx > 0;
+        double speed = Game.scale(baseSpeed);
+        moveAccX += (dx / dist) * speed;
+        moveAccY += (dy / dist) * speed;
+
+        int stepX = (int) moveAccX;
+        int stepY = (int) moveAccY;
+        moveAccX -= stepX;
+        moveAccY -= stepY;
+
+        if (stepX == 0 && stepY == 0) return;
+
+        if (!bossHitsWall(x + stepX, y + stepY)) {
+            x += stepX;
+            y += stepY;
+        } else if (!bossHitsWall(x + stepX, y)) {
+            x += stepX;
+            moveAccY = 0;
+        } else if (!bossHitsWall(x, y + stepY)) {
+            y += stepY;
+            moveAccX = 0;
+        } else {
+            moveAccX = 0;
+            moveAccY = 0;
         }
     }
 
@@ -410,6 +448,7 @@ public class DarkMageBoss extends Enemy {
 
         if (meteorsToSpawn <= 0 && meteorZones.isEmpty()) {
             isChannelingMeteors = false;
+            lastSpecialAttackTime = System.currentTimeMillis();
         }
     }
 
@@ -436,9 +475,11 @@ public class DarkMageBoss extends Enemy {
 
         if (currentTime - projectileAttackStartTime >= PROJECTILE_ATTACK_DURATION) {
             isShootingProjectiles = false;
+            lastSpecialAttackTime = currentTime;
+            return;
         }
 
-        if (isShootingProjectiles && currentTime - lastProjectileTime >= PROJECTILE_INTERVAL) {
+        if (currentTime - lastProjectileTime >= PROJECTILE_INTERVAL) {
             shootProjectiles(player);
             lastProjectileTime = currentTime;
             projectilePhase = (projectilePhase + 1) % 4;

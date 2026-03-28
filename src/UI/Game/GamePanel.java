@@ -5,6 +5,8 @@ import Logic.DamageNumber.DamageNumberManager;
 import Logic.FPSCounter;
 import Logic.GameLogic;
 import MainMenu.MainMenuPanel;
+import Pets.PetInventory;
+import Pets.PetManager;
 import Player.Player;
 import Tutorial.TutorialManager;
 import UI.MenuPanel;
@@ -178,6 +180,7 @@ public class GamePanel extends JPanel implements ActionListener {
     private void initializeLevelMap() {
         levelMapPanel = new LevelMapPanel(game, gameLogic.getLevelManager());
         levelMapPanel.setGamePanel(this);
+        levelMapPanel.initPetShop(gameLogic.getPlayer(), gameLogic.getPetInventory());
         add(levelMapPanel);
     }
 

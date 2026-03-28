@@ -17,7 +17,7 @@ public class Enemy {
     private static final long SHOOT_INTERVAL_MS = 2000;
     private static final long ATTACK_COOLDOWN_MS = 1000;
     private static final long FRAME_DURATION_MS = 100;
-    private static final long UNSTUCK_CHECK_INTERVAL = 500; // Check every 500ms
+    private static final long UNSTUCK_CHECK_INTERVAL = 500;
 
     public enum Type {
         NORMAL, GIANT, SMALL, SHOOTING, SLIME, DARK_MAGE_BOSS, BUNNY_BOSS, ZOMBIE
@@ -112,6 +112,11 @@ public class Enemy {
     }
 
 
+    // Cachovaný LOS výsledek – nepočítej každý frame
+    private boolean cachedHasLOS = true;
+    private long lastLOSCheck = 0;
+    private static final long LOS_CHECK_INTERVAL = 250; // kontroluj LOS každých 250ms
+
     public void moveTowards(int targetPlayerX, int targetPlayerY, WallManager wallManager) {
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastUnstuckCheck >= UNSTUCK_CHECK_INTERVAL) {
@@ -119,8 +124,11 @@ public class Enemy {
             lastUnstuckCheck = currentTime;
         }
 
-        if (type == Type.SLIME || type == Type.BUNNY_BOSS || type == Type.DARK_MAGE_BOSS) {
+        if (type == Type.SLIME || type == Type.BUNNY_BOSS) {
             moveTowards(targetPlayerX, targetPlayerY);
+            return;
+        }
+        if (type == Type.DARK_MAGE_BOSS) {
             return;
         }
 
@@ -131,26 +139,31 @@ public class Enemy {
 
         if (type == Type.SHOOTING) {
             boolean inRange = isInRange(targetPlayerX, targetPlayerY);
-            boolean hasLineOfSight = wallManager.hasLineOfSight(centerX, centerY, targetCenterX, targetCenterY);
-
-            if (inRange && hasLineOfSight) {
-                movingRight = targetPlayerX > x;
-
-                if (currentTime - lastShootTime >= SHOOT_INTERVAL_MS) {
-                    shootAtPlayer(targetPlayerX, targetPlayerY);
-                    lastShootTime = currentTime;
+            if (inRange) {
+                boolean hasLineOfSight = wallManager.hasLineOfSight(centerX, centerY, targetCenterX, targetCenterY);
+                if (hasLineOfSight) {
+                    movingRight = targetPlayerX > x;
+                    if (currentTime - lastShootTime >= SHOOT_INTERVAL_MS) {
+                        shootAtPlayer(targetPlayerX, targetPlayerY);
+                        lastShootTime = currentTime;
+                    }
+                    return;
                 }
-                return;
             }
         }
 
-        boolean hasLineOfSight = PathFinding.hasClearPath(centerX, centerY, targetCenterX, targetCenterY, wallManager);
+        // Cache LOS – nekontroluj každý frame (drahé pro 100+ enemáků)
+        if (currentTime - lastLOSCheck > LOS_CHECK_INTERVAL) {
+            cachedHasLOS = PathFinding.hasClearPath(centerX, centerY, targetCenterX, targetCenterY, wallManager);
+            lastLOSCheck = currentTime;
+        }
 
         int moveTargetX, moveTargetY;
 
-        if (hasLineOfSight) {
+        if (cachedHasLOS) {
             moveTargetX = targetPlayerX;
             moveTargetY = targetPlayerY;
+            nextPathStep = null; // reset cached path při přímé viditelnosti
         } else {
             if (currentTime - lastPathCalcTime > PATH_RECALC_INTERVAL || nextPathStep == null) {
                 nextPathStep = PathFinding.findNextStep(centerX, centerY, targetCenterX, targetCenterY, wallManager);
@@ -158,8 +171,8 @@ public class Enemy {
             }
 
             if (nextPathStep != null) {
-                moveTargetX = nextPathStep.x + (x % 20 - 10);
-                moveTargetY = nextPathStep.y + (y % 20 - 10);
+                moveTargetX = nextPathStep.x;
+                moveTargetY = nextPathStep.y;
             } else {
                 moveTargetX = targetPlayerX;
                 moveTargetY = targetPlayerY;
@@ -176,16 +189,30 @@ public class Enemy {
             double normalizedX = deltaX / distance;
             double normalizedY = deltaY / distance;
 
-            int nextX = x + (int)(normalizedX * currentSpeed);
-            int nextY = y + (int)(normalizedY * currentSpeed);
+            int nextX = x + (int) Math.round(normalizedX * currentSpeed);
+            int nextY = y + (int) Math.round(normalizedY * currentSpeed);
 
-            if (!checkWallCollision(nextX, nextY, wallManager)) {
+            boolean blockedXY = checkWallCollision(nextX, nextY, wallManager);
+            boolean blockedX  = checkWallCollision(nextX, y,     wallManager);
+            boolean blockedY  = checkWallCollision(x,     nextY, wallManager);
+
+            if (!blockedXY) {
                 x = nextX;
                 y = nextY;
-            } else if (!checkWallCollision(nextX, y, wallManager)) {
+            } else if (!blockedX) {
                 x = nextX;
-            } else if (!checkWallCollision(x, nextY, wallManager)) {
+            } else if (!blockedY) {
                 y = nextY;
+            } else {
+                // Obě osy blokované – sliding helper podél zdi
+                int slide = (int) Math.round(currentSpeed);
+                if (!checkWallCollision(x + slide, y, wallManager))       x += slide;
+                else if (!checkWallCollision(x - slide, y, wallManager))  x -= slide;
+                else if (!checkWallCollision(x, y + slide, wallManager))  y += slide;
+                else if (!checkWallCollision(x, y - slide, wallManager))  y -= slide;
+                // Při zaseknutí resetuj LOS cache aby se přepočítala cesta
+                cachedHasLOS = false;
+                lastPathCalcTime = 0;
             }
 
             updateAnimation();
@@ -279,6 +306,15 @@ public class Enemy {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Jemný push pro separaci enemáků (Vampire Survivors styl).
+     * Neruší pathfinding – jen posune o pár pixelů.
+     */
+    public void nudge(int dx, int dy) {
+        x += dx;
+        y += dy;
     }
 
     public void moveAwayFrom(int otherX, int otherY) {

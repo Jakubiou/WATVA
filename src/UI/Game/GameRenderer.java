@@ -91,6 +91,10 @@ public class GameRenderer {
 
         drawPlayer(g2d, player);
 
+        // Vykresli aktivního peta a jeho projektily
+        Pets.PetManager pm = gamePanel.getGameLogic().getPetManager();
+        if (pm != null) pm.draw(g2d);
+
         if (crystalExplosion != null) {
             crystalExplosion.draw(g2d, GameLogic.cameraX, GameLogic.cameraY);
         }
@@ -160,11 +164,29 @@ public class GameRenderer {
     }
 
     /**
-     * Draws all regular enemies.
+     * Draws all regular enemies. Skips enemies outside the screen (frustum culling).
      */
     private void drawEnemies(Graphics g, CopyOnWriteArrayList<Enemy> enemies) {
+        int camX = GameLogic.cameraX;
+        int camY = GameLogic.cameraY;
+        int margin = Game.scale(128); // bezpečnostní okraj pro velké enemy
+        int screenRight  = camX + GamePanel.PANEL_WIDTH  + margin;
+        int screenBottom = camY + GamePanel.PANEL_HEIGHT + margin;
+
         for (int i = 0; i < enemies.size(); i++) {
             Enemy enemy = enemies.get(i);
+            // Boss enemáci se vykreslují zvlášť v drawBossEnemies
+            if (enemy.getType() == Enemy.Type.DARK_MAGE_BOSS || enemy.getType() == Enemy.Type.BUNNY_BOSS) continue;
+
+            int ex = enemy.getX();
+            int ey = enemy.getY();
+            int ew = enemy.getWidth();
+            int eh = enemy.getHeight();
+
+            // Přeskoč pokud je mimo obrazovku
+            if (ex + ew < camX - margin || ex > screenRight ||
+                    ey + eh < camY - margin || ey > screenBottom) continue;
+
             enemy.draw(g);
         }
     }
@@ -217,8 +239,17 @@ public class GameRenderer {
     private void drawWaveProgressBar(Graphics2D g2d, boolean gameOver, boolean isPaused,
                                      CopyOnWriteArrayList<Enemy> enemies, int killCount,
                                      boolean waveCompletionActive, boolean menuVisible) {
-        if (gameOver || isPaused || enemies.isEmpty() || gamePanel.getWaveNumber() % 10 == 0
-                || waveCompletionActive || menuVisible) return;
+        if (gameOver || isPaused || enemies.isEmpty() || waveCompletionActive || menuVisible) return;
+
+        // Skryj při boss wave
+        boolean isBossWave = false;
+        for (Enemy e : enemies) {
+            if (e.getType() == Enemy.Type.DARK_MAGE_BOSS || e.getType() == Enemy.Type.BUNNY_BOSS) {
+                isBossWave = true;
+                break;
+            }
+        }
+        if (isBossWave) return;
 
         int barWidth = Game.scale(390);
         int barHeight = Game.scale(30);

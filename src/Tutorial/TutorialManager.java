@@ -71,7 +71,7 @@ public class TutorialManager {
 
         steps.add(new TutorialStep(
                 "Combat - Shooting",
-                "LEFT CLICK (or hold) to shoot arrows.\nYour arrows automatically aim\nwhere you click.\n\nShoot 5 arrows to continue!",
+                "LEFT CLICK (or hold) to shoot arrows.\nYour arrows automatically aim\nwhere you click.\n\nShoot 25 arrows to continue!",
                 TutorialStep.StepType.SHOOT
         ));
 
@@ -174,7 +174,7 @@ public class TutorialManager {
                 }
                 break;
             case SHOOT:
-                if (projectilesFired >= 5) {
+                if (projectilesFired >= 25) {
                     scheduleNextStep();
                 }
                 break;
@@ -230,10 +230,10 @@ public class TutorialManager {
         int boxWidth = Game.scale(800);
         int boxHeight = Game.scale(300);
         int boxX = (GamePanel.PANEL_WIDTH - boxWidth) / 2;
-        int boxY = (GamePanel.PANEL_HEIGHT - boxHeight) / 2 - Game.scale(50);
+        int boxY = (GamePanel.PANEL_HEIGHT - boxHeight) / 2 - Game.scale(100);
 
         g2d.setColor(new Color(0, 0, 0, 180));
-        g2d.fillRect(0, 0, GamePanel.PANEL_WIDTH, GamePanel.PANEL_HEIGHT);
+        g2d.fillRect(0, 0, GamePanel.PANEL_WIDTH * 2, GamePanel.PANEL_HEIGHT * 2);
 
         g2d.setColor(new Color(0, 0, 0, 240));
         g2d.fillRoundRect(boxX, boxY, boxWidth, boxHeight, Game.scale(25), Game.scale(25));
@@ -330,7 +330,7 @@ public class TutorialManager {
         } else if (step.getType() == TutorialStep.StepType.SHOOT) {
             g2d.setFont(pixelFontTiny.deriveFont(Game.scale(16)));
             g2d.setColor(Color.CYAN);
-            String progress = "Arrows: " + projectilesFired + " / 5";
+            String progress = "Arrows: " + projectilesFired + " / 25";
             int progressWidth = g2d.getFontMetrics().stringWidth(progress);
             g2d.drawString(progress, boxX + (boxWidth - progressWidth) / 2, boxY + Game.scale(50));
         } else {
@@ -345,7 +345,7 @@ public class TutorialManager {
     private String getTaskSummary(TutorialStep step) {
         switch (step.getType()) {
             case MOVE: return "Move: WASD (all directions)";
-            case SHOOT: return "Shoot 5 arrows";
+            case SHOOT: return "Shoot 25 arrows";
             case DASH: return "Dash (SHIFT)";
             case EXPLOSION: return "Explosion (Q)";
             case KILL_ENEMIES: return "Kill 3 Enemies";
@@ -400,7 +400,7 @@ public class TutorialManager {
 
         g2d.setFont(pixelFontTiny.deriveFont(Game.scale(16)));
         g2d.setColor(Color.CYAN);
-        String count = projectilesFired + " / 5";
+        String count = projectilesFired + " / 25";
         int countWidth = g2d.getFontMetrics().stringWidth(count);
         g2d.drawString(count, x - countWidth / 2, y + Game.scale(60));
     }
