@@ -99,13 +99,6 @@ public class SpawningEnemies {
         stopSpawning = true;
         pauseSpawning = false;
         spawnExecutor.shutdownNow();
-        try {
-            if (!spawnExecutor.awaitTermination(800, TimeUnit.MILLISECONDS)) {
-                spawnExecutor.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            spawnExecutor.shutdownNow();
-        }
         spawnExecutor = Executors.newCachedThreadPool();
     }
 
@@ -116,7 +109,6 @@ public class SpawningEnemies {
             int bossHp = 1000 * GameLogic.getWaveNumber();
             DarkMageBoss darkMageBoss = new DarkMageBoss(spawnPoint.x, spawnPoint.y, bossHp);
 
-            // Předej bossovi střed arény pro omezení meteorů
             Logic.World.WallManager wm = gamePanel.getGameLogic().getWallManager();
             if (wm != null && wm.getArenaCenter() != null) {
                 darkMageBoss.setArenaCenter(
@@ -133,7 +125,6 @@ public class SpawningEnemies {
         }
     }
 
-    // Spawn pro bosse – uvnitř arény poblíž hráče, ale ne přímo na něm
     private Point getSpawnPointForBoss() {
         if (playerReference == null) playerReference = gamePanel.getPlayer();
         if (playerReference == null) return getSpawnPointAwayFromPlayer();
@@ -143,19 +134,16 @@ public class SpawningEnemies {
 
         Logic.World.WallManager wm = gamePanel.getGameLogic().getWallManager();
 
-        // Spawn 250-450px od hráče – zkontroluj že není na zdi/pilíři
         for (int attempt = 0; attempt < 30; attempt++) {
             double angle = Math.random() * Math.PI * 2;
             int dist = Game.scale(250) + (int)(Math.random() * Game.scale(200));
             int tx = playerX + (int)(Math.cos(angle) * dist);
             int ty = playerY + (int)(Math.sin(angle) * dist);
 
-            // Ověř že místo není uvnitř zdi (pilíř arény, zeď arény)
             if (wm != null) {
                 boolean blocked = false;
                 int bossSize = Game.scale(128);
                 int pad = Game.scale(16);
-                // Zkontroluj 4 rohy + střed budoucí pozice bosse
                 if (wm.isWall(tx + pad, ty + pad) ||
                         wm.isWall(tx + bossSize - pad, ty + pad) ||
                         wm.isWall(tx + pad, ty + bossSize - pad) ||

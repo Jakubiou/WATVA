@@ -69,8 +69,9 @@ public class GameLogic {
     }
 
     private void initializeGame(DamageNumberManager damageManager) {
-        if (player == null) {
+        if (player != null) {
             player = new Player(mapWidth * GamePanel.BLOCK_SIZE / 2, mapHeight * GamePanel.BLOCK_SIZE / 2, 100);
+            player.saveState("player_save.dat");
         } else {
             if (!isTutorialMode) {
                 loadPlayerStatus();
@@ -157,6 +158,11 @@ public class GameLogic {
 
             Enemy.updateAllProjectiles();
 
+            // Always update enemies and pet – even during wave completion animation
+            // so enemies keep moving (but can't deal damage – checkCollisions is skipped)
+            updateEnemies(damageManager);
+            if (petManager != null) petManager.update(enemies, damageManager, wallManager);
+
             if (crystalExplosion != null) {
                 crystalExplosion.update();
                 updateProjectiles();
@@ -188,8 +194,6 @@ public class GameLogic {
                 gameOver = collisions.isGameOver();
             }
 
-            updateEnemies(damageManager);
-            if (petManager != null) petManager.update(enemies, damageManager, wallManager);
             spawningEnemies.removeDistantEnemies(player.getX(), player.getY());
 
             if (!waveCompletionInProgress) {

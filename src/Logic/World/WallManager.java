@@ -22,7 +22,6 @@ public class WallManager {
     private static final int MIN_DISTANCE_FROM_PLAYER = Game.scale(250);
     private static final int WALL_BLOCK_SIZE = GamePanel.BLOCK_SIZE;
 
-    // O(1) spatial hash pro isWall() – klíč = "tileX,tileY"
     private final java.util.HashSet<Long> wallTileSet = new java.util.HashSet<>();
     private final java.util.HashSet<Long> tempWallTileSet = new java.util.HashSet<>();
     private long lastTempWallRebuild = 0;
@@ -53,7 +52,6 @@ public class WallManager {
             {{1, 1}}
     };
 
-    /** Zakóduje tile souřadnice do jednoho long pro O(1) HashSet lookup */
     private static long tileKey(int worldX, int worldY) {
         int tx = Math.floorDiv(worldX, WALL_BLOCK_SIZE);
         int ty = Math.floorDiv(worldY, WALL_BLOCK_SIZE);
@@ -77,26 +75,36 @@ public class WallManager {
     private void loadWallImages() {
         temporaryWallImages = new Image[6];
         permanentWallImages = new Image[6];
-        warningWallImages = new Image[6];
+        warningWallImages   = new Image[6];
 
         try {
             for (int i = 0; i < 6; i++) {
-                temporaryWallImages[i] = ImageIO.read(
-                        getClass().getResourceAsStream("/WATVA/Background/Wall" + (i + 1) + ".png")
-                ).getScaledInstance(WALL_BLOCK_SIZE, WALL_BLOCK_SIZE, Image.SCALE_SMOOTH);
+                temporaryWallImages[i] = toBufferedImage(
+                        ImageIO.read(getClass().getResourceAsStream("/WATVA/Background/Wall" + (i + 1) + ".png")));
 
-                permanentWallImages[i] = ImageIO.read(
-                        getClass().getResourceAsStream("/WATVA/Background/Wall6.png")
-                ).getScaledInstance(WALL_BLOCK_SIZE, WALL_BLOCK_SIZE, Image.SCALE_SMOOTH);
+                permanentWallImages[i] = toBufferedImage(
+                        ImageIO.read(getClass().getResourceAsStream("/WATVA/Background/Wall6.png")));
 
-                warningWallImages[i] = ImageIO.read(
-                        getClass().getResourceAsStream("/WATVA/Background/Wall" + (i + 7) + ".png")
-                ).getScaledInstance(WALL_BLOCK_SIZE, WALL_BLOCK_SIZE, Image.SCALE_SMOOTH);
+                warningWallImages[i] = toBufferedImage(
+                        ImageIO.read(getClass().getResourceAsStream("/WATVA/Background/Wall" + (i + 7) + ".png")));
             }
         } catch (IOException | NullPointerException e) {
             System.err.println("Error loading wall images!");
             e.printStackTrace();
         }
+    }
+
+    private java.awt.image.BufferedImage toBufferedImage(Image src) {
+        if (src == null) return null;
+        int bs = WALL_BLOCK_SIZE;
+        java.awt.image.BufferedImage buf = new java.awt.image.BufferedImage(
+                bs, bs, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        java.awt.Graphics2D sg = buf.createGraphics();
+        sg.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
+                java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        sg.drawImage(src, 0, 0, bs, bs, null);
+        sg.dispose();
+        return buf;
     }
 
     private void generateChunkWalls(int chunkX, int chunkY) {
@@ -134,21 +142,18 @@ public class WallManager {
         }
     }
 
-    /** Přebuduje wallTileSet – buď z boss arény nebo z chunk walls */
     private void rebuildArenaTileSet() {
         wallTileSet.clear();
         if (bossArenaActive) {
             for (Rectangle wall : arenaWalls) addToWallSet(wallTileSet, wall);
             for (Rectangle pillar : arenaPillars) addToWallSet(wallTileSet, pillar);
         } else {
-            // Obnov chunk walls do tile setu
             for (List<Rectangle> chunkWalls : permanentChunkWalls.values()) {
                 for (Rectangle rect : chunkWalls) addToWallSet(wallTileSet, rect);
             }
         }
     }
 
-    /** Přebuduje tempWallTileSet ze solidních temporary walls */
     private void rebuildTempWallTileSet() {
         tempWallTileSet.clear();
         for (WallPattern wp : temporaryWalls) {
@@ -197,7 +202,6 @@ public class WallManager {
             changed = true;
         }
 
-        // Přebuduj temp tile set jen pokud se něco změnilo nebo každých 200ms
         if (changed || currentTime - lastTempWallRebuild > TEMP_REBUILD_INTERVAL) {
             rebuildTempWallTileSet();
             lastTempWallRebuild = currentTime;
@@ -306,7 +310,7 @@ public class WallManager {
                 }
             }
         }
-        rebuildArenaTileSet(); // Přebuduj O(1) lookup set
+        rebuildArenaTileSet();
     }
 
     public Point getArenaCenter() { return arenaCenter; }
@@ -317,7 +321,6 @@ public class WallManager {
         arenaWalls.clear();
         arenaPillars.clear();
         arenaCenter = null;
-        // Přebuduj tile set z permanentních chunk walls (ne z arény)
         rebuildArenaTileSet();
         tempWallTileSet.clear();
     }
@@ -327,9 +330,6 @@ public class WallManager {
         tempWallTileSet.clear();
     }
 
-    /**
-     * O(1) wall check – používá HashSet místo iterace přes všechny Rectangle.
-     */
     public boolean isWall(int worldX, int worldY) {
         long key = tileKey(worldX, worldY);
         if (wallTileSet.contains(key)) return true;

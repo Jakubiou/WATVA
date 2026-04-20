@@ -35,11 +35,23 @@ public class CrystalExplosion {
             innerGlowImg = ImageIO.read(getClass().getResourceAsStream("/WATVA/Crystal/InnerGlow.png"));
             crystalParticleImg = ImageIO.read(getClass().getResourceAsStream("/WATVA/Crystal/Crystal1.png"));
 
+            int baseW = GamePanel.PANEL_WIDTH  + Game.scale(600);
+            int baseH = GamePanel.PANEL_HEIGHT + Game.scale(600);
             for (int i = 0; i < 6; i++) {
-                explosionFrames[i] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Crystal/Crys_ex" + (i + 1) + ".png"));
+                Image raw = ImageIO.read(getClass().getResourceAsStream("/WATVA/Crystal/Crys_ex" + (i + 1) + ".png"));
+                if (raw != null) {
+                    int expand = i * Game.scale(20);
+                    int w = baseW + expand;
+                    int h = baseH + expand;
+                    java.awt.image.BufferedImage scaled = new java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+                    java.awt.Graphics2D sg = scaled.createGraphics();
+                    sg.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                    sg.drawImage(raw, 0, 0, w, h, null);
+                    sg.dispose();
+                    explosionFrames[i] = scaled;
+                }
             }
-        } catch (IOException | NullPointerException e) {
-        }
+        } catch (IOException | NullPointerException e) {}
     }
 
     public void setPlayer(Player player) { this.player = player; }
@@ -103,12 +115,11 @@ public class CrystalExplosion {
             int frameIndex = (int)(explosionElapsed / ANIMATION_FRAME_TIME);
 
             if (frameIndex < explosionFrames.length && explosionFrames[frameIndex] != null) {
-                int expand = frameIndex * Game.scale(20);
-                int screenW = GamePanel.PANEL_WIDTH + Game.scale(600) + expand;
-                int screenH = GamePanel.PANEL_HEIGHT + Game.scale(600) + expand;
-
+                Image frame = explosionFrames[frameIndex];
+                int fw = frame.getWidth(null);
+                int fh = frame.getHeight(null);
                 g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.9f));
-                g2d.drawImage(explosionFrames[frameIndex], pCenterX - screenW / 2, pCenterY - screenH / 2, screenW, screenH, null);
+                g2d.drawImage(frame, pCenterX - fw / 2, pCenterY - fh / 2, null);
             }
         }
         g2d.setComposite(originalComposite);

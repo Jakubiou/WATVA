@@ -43,8 +43,8 @@ public class PetAttackProjectile {
 
     public void draw(Graphics g) {
         if (!active) return;
-        int sx = (int) x - GameLogic.cameraX;
-        int sy = (int) y - GameLogic.cameraY;
+        int sx = (int) x;
+        int sy = (int) y;
 
         Color inner, outer;
         switch (petType) {
@@ -55,7 +55,6 @@ public class PetAttackProjectile {
             default        -> { inner = Color.WHITE; outer = new Color(200, 200, 200, 80); }
         }
 
-        // Glow efekt
         g.setColor(outer);
         ((Graphics2D)g).fillOval(sx - SIZE, sy - SIZE, SIZE * 2, SIZE * 2);
         g.setColor(inner);

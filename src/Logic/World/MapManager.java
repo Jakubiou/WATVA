@@ -55,11 +55,16 @@ public class MapManager {
         try {
             for (int i = 0; i < blockImages.length; i++) {
                 Image original = ImageIO.read(getClass().getResourceAsStream("/WATVA/Background/Block" + i + ".png"));
-                blockImages[i] = original.getScaledInstance(
-                        GamePanel.BLOCK_SIZE,
-                        GamePanel.BLOCK_SIZE,
-                        Image.SCALE_SMOOTH
-                );
+                if (original == null) continue;
+                int bs = GamePanel.BLOCK_SIZE;
+                java.awt.image.BufferedImage buf = new java.awt.image.BufferedImage(
+                        bs, bs, java.awt.image.BufferedImage.TYPE_INT_RGB);
+                java.awt.Graphics2D sg = buf.createGraphics();
+                sg.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
+                        java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+                sg.drawImage(original, 0, 0, bs, bs, null);
+                sg.dispose();
+                blockImages[i] = buf;
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -73,24 +78,38 @@ public class MapManager {
         int px = player.getX();
         int py = player.getY();
 
-        int chunkPixelW = baseWidth * GamePanel.BLOCK_SIZE;
+        int chunkPixelW = baseWidth  * GamePanel.BLOCK_SIZE;
         int chunkPixelH = baseHeight * GamePanel.BLOCK_SIZE;
 
         int playerChunkX = (int) Math.floor(px / (double) chunkPixelW);
         int playerChunkY = (int) Math.floor(py / (double) chunkPixelH);
+
+        int camX   = Logic.GameLogic.cameraX;
+        int camY   = Logic.GameLogic.cameraY;
+        int camX2  = camX + GamePanel.PANEL_WIDTH  + GamePanel.BLOCK_SIZE;
+        int camY2  = camY + GamePanel.PANEL_HEIGHT + GamePanel.BLOCK_SIZE;
 
         for (int cy = playerChunkY - 1; cy <= playerChunkY + 1; cy++) {
             for (int cx = playerChunkX - 1; cx <= playerChunkX + 1; cx++) {
                 int chunkOffsetX = cx * chunkPixelW;
                 int chunkOffsetY = cy * chunkPixelH;
 
+                if (chunkOffsetX + chunkPixelW < camX || chunkOffsetX > camX2) continue;
+                if (chunkOffsetY + chunkPixelH < camY || chunkOffsetY > camY2) continue;
+
                 for (int ty = 0; ty < baseHeight; ty++) {
+                    int worldY = chunkOffsetY + ty * GamePanel.BLOCK_SIZE;
+                    if (worldY + GamePanel.BLOCK_SIZE < camY || worldY > camY2) continue;
+
                     for (int tx = 0; tx < baseWidth; tx++) {
+                        int worldX = chunkOffsetX + tx * GamePanel.BLOCK_SIZE;
+                        if (worldX + GamePanel.BLOCK_SIZE < camX || worldX > camX2) continue;
+
                         int blockType = baseMap[ty][tx];
                         Image blockImage = blockImages[blockType];
-                        int worldX = chunkOffsetX + tx * GamePanel.BLOCK_SIZE;
-                        int worldY = chunkOffsetY + ty * GamePanel.BLOCK_SIZE;
-                        g.drawImage(blockImage, worldX, worldY, GamePanel.BLOCK_SIZE, GamePanel.BLOCK_SIZE, null);
+                        if (blockImage != null) {
+                            g.drawImage(blockImage, worldX, worldY, null);
+                        }
                     }
                 }
             }

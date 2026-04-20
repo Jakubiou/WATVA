@@ -25,7 +25,6 @@ public class PetManager {
     private int    appliedHpBonus     = 0;
     private int    appliedDamageBonus = 0;
 
-    // Regen tick
     private long lastRegenTick = 0;
     private static final long REGEN_INTERVAL = 1000;
 
@@ -34,13 +33,11 @@ public class PetManager {
         this.player    = player;
     }
 
-    // ── Called every frame ────────────────────────────────────────────────────
     public void update(CopyOnWriteArrayList<Enemy> enemies,
                        DamageNumberManager damageManager,
                        WallManager wallManager) {
         Pet active = inventory.getSelectedPet();
 
-        // Handle pet swap
         if (active != lastActivePet) {
             removeBonuses();
             lastActivePet = active;
@@ -51,19 +48,17 @@ public class PetManager {
         active.loadTextures(this);
         active.update(player.getX(), player.getY(), wallManager, player);
 
-        // Regen tick
         long now = System.currentTimeMillis();
         if (now - lastRegenTick >= REGEN_INTERVAL) {
             lastRegenTick = now;
             tickRegen(active);
         }
 
-        // Attack
         if (active.getType().isAttacker && !enemies.isEmpty() && active.canAttack()) {
             spawnAttackAtNearest(active, enemies);
         }
 
-        // Update projectiles
+        java.util.List<Enemy> toRemove = new java.util.ArrayList<>();
         Iterator<PetAttackProjectile> it = projectiles.iterator();
         while (it.hasNext()) {
             PetAttackProjectile proj = it.next();
@@ -73,13 +68,21 @@ public class PetManager {
                 if (proj.getCollider().intersects(e.getCollider())) {
                     e.hit(proj.getDamage(), damageManager);
                     proj.setActive(false);
+                    if (e.getHp() <= 0
+                            && !(e instanceof Bosses.DarkMageBoss)
+                            && !(e instanceof Bosses.BunnyBoss)
+                            && !toRemove.contains(e)) {
+                        toRemove.add(e);
+                        Logic.GameLogic.killCountPlus();
+                        player.earnCoins(10);
+                    }
                     break;
                 }
             }
         }
+        if (!toRemove.isEmpty()) enemies.removeAll(toRemove);
     }
 
-    // ── Stat application ──────────────────────────────────────────────────────
     private void applyBonuses(Pet pet) {
         switch (pet.getType().statBonus) {
             case HP_BONUS -> {
@@ -96,7 +99,7 @@ public class PetManager {
                 player.setHp(Math.min(500, player.getHp() + appliedHpBonus));
                 for (int i = 0; i < appliedDamageBonus; i++) player.increaseDamage();
             }
-            default -> {} // REGEN, SPEED, DEFENSE handled reactively
+            default -> {}
         }
     }
 
@@ -105,8 +108,6 @@ public class PetManager {
             player.setHp(Math.max(1, player.getHp() - appliedHpBonus));
             appliedHpBonus = 0;
         }
-        // Note: damage bonus can't be fully reversed without a dedicated field in Player.
-        // Ideally Player would expose a petDamageBonus setter – left as future work.
         appliedDamageBonus = 0;
     }
 
@@ -120,7 +121,6 @@ public class PetManager {
         }
     }
 
-    // ── Attack ────────────────────────────────────────────────────────────────
     private void spawnAttackAtNearest(Pet pet, CopyOnWriteArrayList<Enemy> enemies) {
         Enemy nearest = null;
         double nearestDistSq = Game.scale(550.0) * Game.scale(550.0);
@@ -143,7 +143,6 @@ public class PetManager {
         ));
     }
 
-    // ── Reactive bonuses (called from Collisions / PlayerMovement) ────────────
     /** Extra speed to add to player speed this frame */
     public int getSpeedBonus() {
         Pet p = inventory.getSelectedPet();
@@ -166,7 +165,6 @@ public class PetManager {
         };
     }
 
-    // ── Draw ──────────────────────────────────────────────────────────────────
     public void draw(Graphics g) {
         Pet active = inventory.getSelectedPet();
         if (active != null) active.draw(g);

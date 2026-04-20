@@ -27,7 +27,7 @@ public class Player implements Serializable {
     private ArrayList<Explosion> explosions = new ArrayList<>();
     private int x, y, hp;
     private int maxHp;
-    private int speed = Game.scale(5);
+    private int speed = Game.scale(6);
     private int dashSpeed = Game.scale(20);
     private int dashDistance = Game.scale(100);
     private long dashCooldown = 5000;

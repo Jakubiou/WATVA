@@ -74,11 +74,11 @@ public class Enemy {
 
     private void initializeSpeed() {
         switch (type) {
-            case GIANT -> baseSpeed = Game.scale(1.8);
-            case ZOMBIE -> baseSpeed = Game.scale(3.5);
-            case SMALL -> baseSpeed = Game.scale(3.0);
-            case SHOOTING -> baseSpeed = Game.scale(2.0);
-            default -> baseSpeed = Game.scale(2.2);
+            case GIANT -> baseSpeed = Game.scale(2.0);
+            case ZOMBIE -> baseSpeed = Game.scale(4.5);
+            case SMALL -> baseSpeed = Game.scale(5.5);
+            case SHOOTING -> baseSpeed = Game.scale(3.0);
+            default -> baseSpeed = Game.scale(3.5);
         }
         currentSpeed = baseSpeed;
     }

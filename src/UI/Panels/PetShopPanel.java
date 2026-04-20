@@ -97,15 +97,15 @@ public class PetShopPanel extends JPanel {
     private void loadResources() {
         try {
             titleFont = Font.createFont(Font.TRUETYPE_FONT,
-                    getClass().getResourceAsStream("/fonts/PixelPurl.ttf")).deriveFont((float)Game.scale(20));
-            bodyFont  = titleFont.deriveFont((float)Game.scale(13));
-            smallFont = titleFont.deriveFont((float)Game.scale(11));
-            tinyFont  = titleFont.deriveFont((float)Game.scale(9));
+                    getClass().getResourceAsStream("/fonts/PixelPurl.ttf")).deriveFont((float)Game.scale(26));
+            bodyFont  = titleFont.deriveFont((float)Game.scale(18));
+            smallFont = titleFont.deriveFont((float)Game.scale(15));
+            tinyFont  = titleFont.deriveFont((float)Game.scale(13));
         } catch (Exception e) {
-            titleFont = new Font("Arial", Font.BOLD,  Game.scale(20));
-            bodyFont  = new Font("Arial", Font.PLAIN, Game.scale(13));
-            smallFont = new Font("Arial", Font.PLAIN, Game.scale(11));
-            tinyFont  = new Font("Arial", Font.PLAIN, Game.scale(9));
+            titleFont = new Font("Arial", Font.BOLD,  Game.scale(26));
+            bodyFont  = new Font("Arial", Font.PLAIN, Game.scale(18));
+            smallFont = new Font("Arial", Font.PLAIN, Game.scale(15));
+            tinyFont  = new Font("Arial", Font.PLAIN, Game.scale(13));
         }
         loadImg(s -> shopBackground = s, "/WATVA/Other/ShopBackground.png");
         for (int i = 0; i < 5; i++) {
