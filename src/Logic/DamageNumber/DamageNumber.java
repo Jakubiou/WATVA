@@ -94,11 +94,9 @@ public class DamageNumber {
         int drawX = (int)x - tw / 2;
         int drawY = (int)y;
 
-        // Shadow
         g2d.setColor(new Color(0, 0, 0, (int)(160 * alpha)));
         g2d.drawString(text, drawX + Game.scale(2), drawY + Game.scale(2));
 
-        // Outline
         Color outline = getOutlineColor();
         g2d.setColor(new Color(outline.getRed(), outline.getGreen(), outline.getBlue(), (int)(255 * alpha)));
         int out = Math.max(1, Game.scale(2));
@@ -107,7 +105,6 @@ public class DamageNumber {
         g2d.drawString(text, drawX, drawY - out);
         g2d.drawString(text, drawX, drawY + out);
 
-        // Main text
         if (isCrit) {
             float hue = (elapsed % 500) / 500f;
             Color shimmer = Color.getHSBColor(hue, 1f, 1f);

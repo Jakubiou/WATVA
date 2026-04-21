@@ -66,7 +66,7 @@ public class DarkMageBoss extends Enemy {
     private static final long TELEPORT_COOLDOWN = 2000;
     private int teleportTargetX, teleportTargetY;
     private float teleportAlpha = 1.0f;
-    private int stuckCounter = 0; // Track how long stuck
+    private int stuckCounter = 0;
     private Point lastPosition = null;
 
     private double moveAccX = 0, moveAccY = 0;
@@ -91,7 +91,7 @@ public class DarkMageBoss extends Enemy {
         loadTextures();
     }
 
-    // Pre-scale all boss textures once at load time to avoid per-frame scaling during draw
+
     private java.awt.image.BufferedImage prescale(String path, int w, int h) {
         try {
             java.awt.image.BufferedImage src = ImageIO.read(getClass().getResourceAsStream(path));
@@ -125,7 +125,7 @@ public class DarkMageBoss extends Enemy {
             deathTextures[i] = prescale("/WATVA/Boss/DarkMage/DarkMage" + (i + 11) + ".png", BOSS_SIZE, BOSS_SIZE);
         }
 
-        int meteorSize = Game.scale(160); // meteor zones are drawn at radius*2
+        int meteorSize = Game.scale(160);
         for (int i = 0; i < 6; i++) {
             meteorExplosionFrames[i] = prescale("/WATVA/Other/Boss_meteor" + (i + 1) + ".png", meteorSize, meteorSize);
         }
@@ -240,7 +240,7 @@ public class DarkMageBoss extends Enemy {
 
         updateExistingProjectiles();
 
-        // Boss se pohybuje vždy – i během útoků
+
         moveTowardsPlayer(player);
 
         if (currentTime - lastFrameChange >= frameDuration) {
@@ -263,8 +263,6 @@ public class DarkMageBoss extends Enemy {
             return false;
         }
 
-        // Měř pohyb pouze každých STUCK_SAMPLE_INTERVAL ms – ne každý frame.
-        // Jinak pomalý legitimní pohyb vypadá jako zaseknutí.
         if (currentTime - lastStuckSampleTime >= STUCK_SAMPLE_INTERVAL) {
             if (lastPosition != null) {
                 int distMoved = (int) Math.hypot(x - lastPosition.x, y - lastPosition.y);
@@ -278,7 +276,6 @@ public class DarkMageBoss extends Enemy {
             lastStuckSampleTime = currentTime;
         }
 
-        // Teleportuj po 4 po sobě jdoucích intervalech bez pohybu (= ~1.2s skutečného zaseknutí)
         if (stuckCounter >= 4) {
             startTeleport(player);
             stuckCounter = 0;
@@ -332,8 +329,7 @@ public class DarkMageBoss extends Enemy {
 
     private boolean bossHitsWall(int bx, int by) {
         if (wallManager == null) return false;
-        // Používáme stejné offsety jako getCollider() (padding = scale(30))
-        // a přidáme střední body hran pro spolehlivé zachycení 2×2 sloupů
+
         int pad = Game.scale(30);
         int inner = BOSS_SIZE - pad;
         int mid   = BOSS_SIZE / 2;
@@ -348,12 +344,10 @@ public class DarkMageBoss extends Enemy {
                 || wallManager.isWall(bx + mid,       by + mid);
     }
 
-    // Cache pro pathfinding – nepočítej každý frame
     private Point cachedPathTarget = null;
     private long lastPathCalcTime = 0;
-    private static final long PATH_RECALC_INTERVAL = 600;  // bylo 400ms
+    private static final long PATH_RECALC_INTERVAL = 600;
 
-    // Wall-steering stav (obcházení rohů sloupů)
     private int moveStuckCounter = 0;
     private int moveSteerDir = 0;
     private int lastMoveRecordedX = Integer.MIN_VALUE;
@@ -370,7 +364,6 @@ public class DarkMageBoss extends Enemy {
         double distToPlayer = Math.hypot(targetX - bossCenterX, targetY - bossCenterY);
         if (distToPlayer <= Game.scale(100)) return;
 
-        // Rozhodni kam jít – přímá cesta nebo pathfinding
         int moveTargetX, moveTargetY;
 
         boolean hasLineOfSight = wallManager == null || PathFinding.hasClearPath(
@@ -389,7 +382,7 @@ public class DarkMageBoss extends Enemy {
                     cachedPathTarget = newStep;
                     lastPathCalcTime = now;
                 }
-                // null = frame limit → cachedPathTarget zůstane starý cached krok
+
             }
             if (cachedPathTarget != null) {
                 moveTargetX = cachedPathTarget.x;
@@ -400,7 +393,6 @@ public class DarkMageBoss extends Enemy {
             }
         }
 
-        // Pohyb s accumulatorem (eliminuje int-truncation při šikmém pohybu)
         double dx = moveTargetX - bossCenterX;
         double dy = moveTargetY - bossCenterY;
         double dist = Math.sqrt(dx * dx + dy * dy);
@@ -412,7 +404,6 @@ public class DarkMageBoss extends Enemy {
         double normX = dx / dist;
         double normY = dy / dist;
 
-        // ── Wall-steering: detekce zaseknutí o roh sloupu ────────────────────
         long nowMs = System.currentTimeMillis();
         if (nowMs - lastMoveSampleTime >= MOVE_STUCK_SAMPLE) {
             if (lastMoveRecordedX != Integer.MIN_VALUE) {
@@ -420,7 +411,6 @@ public class DarkMageBoss extends Enemy {
                 if (moved < Game.scale(3)) {
                     moveStuckCounter++;
                     if (moveStuckCounter == 1) {
-                        // Zvolíme smysl obcházení: ten kolmý vektor, který míří blíže k cíli
                         double perpAX = -normY, perpAY = normX;
                         double dotA = perpAX * dx + perpAY * dy;
                         moveSteerDir = (dotA >= 0) ? 1 : -1;
@@ -437,7 +427,6 @@ public class DarkMageBoss extends Enemy {
             lastMoveSampleTime = nowMs;
         }
 
-        // Přimíchej kolmou složku při zaseknutí
         double moveX = normX;
         double moveY = normY;
         if (moveStuckCounter >= 1 && moveSteerDir != 0) {
@@ -460,7 +449,6 @@ public class DarkMageBoss extends Enemy {
 
         if (stepX == 0 && stepY == 0) return;
 
-        // Sub-step sliding pro bosse: pohybuj se 1px po 1px na každé ose zvlášť.
         int signX = stepX >= 0 ? 1 : -1;
         int signY = stepY >= 0 ? 1 : -1;
         int absX  = Math.abs(stepX);
@@ -478,7 +466,6 @@ public class DarkMageBoss extends Enemy {
             else { hitWallY = true; moveAccY = 0; break; }
         }
 
-        // Pokud narazíme do zdi na obou osách a steering nepomohl, přehoď smysl
         if (hitWallX && hitWallY && moveStuckCounter > 4) {
             moveSteerDir = -moveSteerDir;
             moveStuckCounter = 1;

@@ -159,7 +159,7 @@ public class SpawningEnemies {
     }
 
     public void spawnBunnyBoss() {
-        Point spawnPoint = getSpawnPointForBoss();   // stejná logika jako DarkMage – blízko hráče, mimo zdi
+        Point spawnPoint = getSpawnPointForBoss();
         System.out.println("Bunny Boss spawn point: " + spawnPoint);
 
         if (spawnPoint != null) {

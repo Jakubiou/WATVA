@@ -1,15 +1,6 @@
 package Logic;
 
-/**
- * Jednoduchý profiler – měří čas každé sekce game loop.
- * Každých 5 sekund vypíše do konzole průměrné časy.
- * Použití:
- *   PerformanceMonitor.begin("wallUpdate");
- *   // ... kód ...
- *   PerformanceMonitor.end("wallUpdate");
- *
- * V GameLogic.update() obal každou sekci begin/end.
- */
+
 public class PerformanceMonitor {
     private static final int REPORT_INTERVAL_MS = 5000;
     private static final int MAX_SECTIONS = 20;

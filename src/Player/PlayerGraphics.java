@@ -224,10 +224,8 @@ public class PlayerGraphics {
 
         int cx = player.getX() + Player.WIDTH / 2;
         int cy = player.getY() + Player.HEIGHT / 2;
-        // Same radius as collision arc
         int r = (int)(Player.WIDTH * 1.35);
 
-        // Direction toward mouse (screen Y inverted)
         double dx = player.getShieldMouseX() - cx;
         double dy = player.getShieldMouseY() - cy;
         double angleDeg = Math.toDegrees(Math.atan2(-dy, dx));
@@ -239,31 +237,26 @@ public class PlayerGraphics {
 
         Composite saved = g2d.getComposite();
 
-        // Soft outer glow
         g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.15f * pulse));
         g2d.setColor(new Color(40, 140, 255));
         int gr = r + Game.scale(8);
         g2d.fillArc(cx - gr, cy - gr, gr * 2, gr * 2, arcStart, arcExtent);
 
-        // Main fill — semi-transparent blue
         g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.38f * pulse));
         g2d.setColor(new Color(70, 170, 255));
         g2d.fillArc(cx - r, cy - r, r * 2, r * 2, arcStart, arcExtent);
 
-        // Bright edge arc
         g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.92f));
         g2d.setColor(new Color(160, 220, 255));
         g2d.setStroke(new java.awt.BasicStroke(Game.scale(3),
                 java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
         g2d.drawArc(cx - r, cy - r, r * 2, r * 2, arcStart, arcExtent);
 
-        // Two radius lines at the arc edges
         g2d.setStroke(new java.awt.BasicStroke(Game.scale(2),
                 java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
         g2d.setColor(new Color(200, 235, 255));
         double a1r = Math.toRadians(arcStart);
         double a2r = Math.toRadians(arcStart + arcExtent);
-        // Arc2D CCW from East; convert to screen coords (Y down)
         g2d.drawLine(cx, cy,
                 cx + (int)(Math.cos(a1r) * r),
                 cy - (int)(Math.sin(a1r) * r));
@@ -271,7 +264,6 @@ public class PlayerGraphics {
                 cx + (int)(Math.cos(a2r) * r),
                 cy - (int)(Math.sin(a2r) * r));
 
-        // Absorb dots along the arc edge
         int maxAbs = player.getShieldAbsorbLevel();
         int remAbs = player.getShieldBeamAbsorbsLeft();
         int dotR   = Game.scale(5);

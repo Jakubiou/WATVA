@@ -61,11 +61,9 @@ public class PlayerMovement {
             int step = player.getDashSpeed();
             dashProgress += step;
 
-            // Pohni hráčem v dash směru – step po stepu s kontrolou zdí
             int moveX = dashDirectionX * step;
             int moveY = dashDirectionY * step;
 
-            // Diagonální dash: normalizuj aby nebylo rychlejší
             if (dashDirectionX != 0 && dashDirectionY != 0) {
                 moveX = (int)(dashDirectionX * step * 0.707);
                 moveY = (int)(dashDirectionY * step * 0.707);
@@ -86,7 +84,6 @@ public class PlayerMovement {
             } else if (!hitY) {
                 player.setY(newY);
             }
-            // hit všech os = stojíme u zdi, dash se ukončí
 
             if (dashProgress >= player.getDashDistance()) {
                 dashing = false;

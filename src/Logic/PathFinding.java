@@ -9,36 +9,29 @@ import java.util.List;
 public class PathFinding {
     public static final int GRID_SIZE = GamePanel.BLOCK_SIZE;
 
-    // ── Globální limit A* za frame – max 3 výpočty per 16ms ──────────────────
     private static int  aStarThisFrame = 0;
     private static long lastFrameMs    = 0;
-    // Globální cooldown mezi A* dávkami – zabraňuje storm spikům při resetu
     private static long lastAStarMs    = 0;
-    private static final long A_STAR_GLOBAL_COOLDOWN = 2; // min 2ms mezi A* výpočty
+    private static final long A_STAR_GLOBAL_COOLDOWN = 2;
 
     private static boolean canRunAStar() {
         long now = System.currentTimeMillis();
-        // Nový frame = reset počítadla
         if (now - lastFrameMs > 16) {
             aStarThisFrame = 0;
             lastFrameMs = now;
         }
-        // Nepřekroč limit per frame
         if (aStarThisFrame >= 3) return false;
-        // Nezačínáme příliš rychle po sobě (rozmaž výpočty přes čas)
         if (now - lastAStarMs < A_STAR_GLOBAL_COOLDOWN && aStarThisFrame > 0) return false;
         aStarThisFrame++;
         lastAStarMs = now;
         return true;
     }
 
-    // Long key = žádné String alokace v A* inner loop
     private static long nodeKey(int x, int y) {
         return ((long)(x + 10000)) << 20 | (y + 10000);
     }
 
     public static boolean hasClearPath(int startX, int startY, int goalX, int goalY, WallManager wallManager) {
-        // Hrubší krok (GRID_SIZE místo GRID_SIZE/2) = 2× méně isWall() volání
         int steps = (int)(Math.hypot(goalX - startX, goalY - startY) / GRID_SIZE);
         if (steps == 0) return true;
         double dx = (goalX - startX) / (double) steps;
@@ -75,7 +68,7 @@ public class PathFinding {
             Node n = path.get(1);
             return new Point(n.x * GRID_SIZE + GRID_SIZE / 2, n.y * GRID_SIZE + GRID_SIZE / 2);
         }
-        // Fallback: zkus bez entitySize padding – ale jen pokud máme token
+
         if (canRunAStar()) {
             List<Node> fb = findPathInternal(gsx, gsy, ggx, ggy, wallManager, 0);
             if (fb != null && fb.size() > 1) {
@@ -99,7 +92,7 @@ public class PathFinding {
         allNodes.put(nodeKey(startX, startY), start);
 
         int iter = 0;
-        while (!open.isEmpty() && iter < 150) {   // 150 místo 500
+        while (!open.isEmpty() && iter < 150) {
             iter++;
             Node cur = open.poll();
             if (cur.x == goalX && cur.y == goalY) return reconstructPath(cur);

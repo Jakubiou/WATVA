@@ -73,7 +73,7 @@ public class MapManager {
 
 
     private java.util.HashMap<Long, java.awt.image.BufferedImage> chunkCache = new java.util.HashMap<>();
-    private static final int TILES_PER_CHUNK_CACHE = 20; // same as chunk size used in drawBackground
+    private static final int TILES_PER_CHUNK_CACHE = 20;
 
     private long chunkKey(int cx, int cy) {
         return ((long)(cx + 100000)) << 20 | (cy + 100000);

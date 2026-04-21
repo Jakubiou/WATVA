@@ -23,8 +23,8 @@ public class GameRenderer {
     private GamePanel gamePanel;
     private Image[] blockImages;
     private Font pixelPurlFont;
-    private Font uiFontLarge;   // pre-derived, never re-created
-    private Font uiFontSmall;   // pre-derived, never re-created
+    private Font uiFontLarge;
+    private Font uiFontSmall;
     private static final Color COLOR_OVERLAY = new Color(0, 0, 0, 150);
     private static final Color COLOR_BAR_BG  = new Color(50, 50, 50, 180);
 
@@ -53,8 +53,6 @@ public class GameRenderer {
                 if (is != null) {
                     java.awt.image.BufferedImage original = ImageIO.read(is);
                     if (original != null) {
-                        // Pre-renderuj do BufferedImage správné velikosti s NEAREST_NEIGHBOR
-                        // (SCALE_SMOOTH je pomalý a nepotřebný pro pixel-art)
                         java.awt.image.BufferedImage scaled = new java.awt.image.BufferedImage(
                                 GamePanel.BLOCK_SIZE, GamePanel.BLOCK_SIZE,
                                 java.awt.image.BufferedImage.TYPE_INT_RGB);
@@ -251,7 +249,6 @@ public class GameRenderer {
                 Game.scale(10) + GameLogic.cameraX,
                 Game.scale(80) + GameLogic.cameraY);
 
-        // FPS counter – zobraz jen pokud je zapnuto v Settings
         if (UI.SettingsPanel.isShowFps()) {
             g2d.setFont(uiFontSmall);
             int fps = gamePanel.getCurrentFps();

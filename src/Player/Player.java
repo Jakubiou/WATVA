@@ -70,21 +70,18 @@ public class Player implements Serializable {
     private long lastShieldRegenerationTime = 0;
     private long lastHpRegenerationTime = 0;
     private int slowEnemiesLevel = 0;
-    // New upgrades
     private int bulletSpeedLevel = 0;
     private int critChanceLevel = 0;
-    private int shieldAbsorbLevel = 1; // max absorb count per activation (permanent upgrade)
+    private int shieldAbsorbLevel = 1;
 
     private transient PlayerGraphics graphics;
     private transient PlayerMovement movement;
-    // Arc shield (right-click)
     private boolean shieldBeamActive = false;
     private long shieldBeamStartTime = 0;
-    private static final long SHIELD_BEAM_DURATION = 2000; // 2 seconds active
+    private static final long SHIELD_BEAM_DURATION = 2000;
     private static final long SHIELD_BEAM_COOLDOWN = 8000;
     private long lastShieldBeamTime = 0;
     private int shieldBeamAbsorbsLeft = 0;
-    // Mouse world-space position for shield direction (updated every frame by GamePanel)
     private transient int shieldMouseX = 0;
     private transient int shieldMouseY = -9999;
     public void setShieldMouseTarget(int wx, int wy) { shieldMouseX = wx; shieldMouseY = wy; }
@@ -376,7 +373,7 @@ public class Player implements Serializable {
      * @param damage Raw damage amount before reductions
      */
     public void hit(int damage) {
-        if (isDashInvincible()) return;  // nezranitelný během dashe
+        if (isDashInvincible()) return;
         int reducedDamage = damage;
         if (defense > 0) {
             reducedDamage = (int) Math.ceil(damage * (100 - defense) / 100.0);
@@ -401,13 +398,11 @@ public class Player implements Serializable {
         }
     }
 
-    // ---- Bullet Speed ----
     public int getBulletSpeedLevel() { return bulletSpeedLevel; }
     public void upgradeBulletSpeed() {
         if (bulletSpeedLevel < 3) bulletSpeedLevel++;
     }
 
-    // ---- Crit Chance ----
     public int getCritChanceLevel() { return critChanceLevel; }
     public void upgradeCritChance() {
         if (critChanceLevel < 5) {
@@ -416,13 +411,11 @@ public class Player implements Serializable {
         }
     }
 
-    // ---- Shield Absorb (arc shield capacity) ----
     public int getShieldAbsorbLevel() { return shieldAbsorbLevel; }
     public void upgradeShieldAbsorb() {
         if (shieldAbsorbLevel < 5) shieldAbsorbLevel++;
     }
 
-    // ---- Arc Shield (right-click beam) ----
     public boolean canActivateShieldBeam() {
         return System.currentTimeMillis() - lastShieldBeamTime >= SHIELD_BEAM_COOLDOWN && !shieldBeamActive;
     }

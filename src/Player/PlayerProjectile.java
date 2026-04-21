@@ -51,7 +51,7 @@ public class PlayerProjectile {
         this.pierceCount = 1 + piercingLevel;
         this.fireDamageLevel = fireLevel;
         this.slowEffect = hasSlowEffect;
-        this.speed = Game.scale(10 + bulletSpeedLevel * 4); // +4 per level
+        this.speed = Game.scale(10 + bulletSpeedLevel * 4);
 
         double dx = targetX - x;
         double dy = targetY - y;
@@ -126,11 +126,9 @@ public class PlayerProjectile {
     public void setCanRicochet(boolean r) { canRicochet = r; }
     public boolean canRicochet() { return canRicochet; }
     public int getRicochetCount() { return ricochetCount; }
-    // Called when hitting a wall — bounces and returns true if bounced, false if should die
     public boolean tryRicochet(Logic.World.WallManager wallManager) {
         if (!canRicochet || ricochetCount >= MAX_RICOCHET) return false;
         ricochetCount++;
-        // Reset travel distance so the arrow can travel full range after bounce
         distanceTravelled = 0;
         int nx = (int)(x + velocityX);
         int ny = (int)(y + velocityY);
@@ -147,7 +145,6 @@ public class PlayerProjectile {
             velocityX = -velocityX;
             velocityY = -velocityY;
         }
-        // Step back out of wall
         x -= (int)velocityX;
         y -= (int)velocityY;
         return true;

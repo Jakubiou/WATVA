@@ -242,7 +242,6 @@ public class GamePanel extends JPanel implements ActionListener {
                         currentMouseY = e.getY() + getCameraY();
                         gameLogic.tryToShoot(currentMouseX, currentMouseY);
                     } else if (e.getButton() == MouseEvent.BUTTON3) {
-                        // Right-click: activate arc shield
                         Player p = gameLogic.getPlayer();
                         if (p != null && p.canActivateShieldBeam()) {
                             p.activateShieldBeam();
@@ -409,7 +408,6 @@ public class GamePanel extends JPanel implements ActionListener {
     public void actionPerformed(ActionEvent e) {
         fpsCounter.update();
 
-        // Vlastní FPS tracking
         frameCount++;
         long now = System.currentTimeMillis();
         if (now - fpsTimer >= 1000) {
@@ -447,7 +445,6 @@ public class GamePanel extends JPanel implements ActionListener {
             gameLogic.tryToShoot(currentMouseX, currentMouseY);
         }
 
-        // Keep shield arc aimed at current mouse position every frame
         if (shouldUpdate && !gameLogic.isPaused()) {
             Point mp = getMousePosition();
             if (mp != null) {
@@ -463,7 +460,6 @@ public class GamePanel extends JPanel implements ActionListener {
 
         repaint();
 
-        // frameEnd po repaint() = celý frame (logic + render) je v reportu
         Logic.PerformanceMonitor.frameEnd();
     }
 

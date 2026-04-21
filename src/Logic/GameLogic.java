@@ -42,7 +42,7 @@ public class GameLogic {
     private LevelManager levelManager;
     private CrystalExplosion crystalExplosion;
     private boolean waveCompletionInProgress = false;
-    private boolean isBossWave = false;  // cached, updated in nextWave()
+    private boolean isBossWave = false;
     private WallManager wallManager;
     private boolean isTutorialMode;
     private PetInventory petInventory;
@@ -90,8 +90,6 @@ public class GameLogic {
         DarkMageBoss.setWallManager(wallManager);
         spawningEnemies = new SpawningEnemies(gamePanel, enemies);
         spawningEnemies.setPlayerReference(player);
-
-        // Pet system
         petInventory = PetInventory.load();
         petManager = new PetManager(petInventory, player);
 
@@ -103,9 +101,8 @@ public class GameLogic {
         if (running) return;
         running = true;
         gameLoopThread = new Thread(() -> {
-            final long TARGET_NS = 1_000_000_000L / 60; // 60 FPS
+            final long TARGET_NS = 1_000_000_000L / 60;
             long lastTime = System.nanoTime();
-            // Windows timer fix – 1ms sleep granularity
             try { Thread.sleep(0, 1); } catch (InterruptedException ignored) {}
             while (running) {
                 long now = System.nanoTime();
@@ -116,7 +113,7 @@ public class GameLogic {
                         gamePanel.actionPerformed(null);
                     });
                 } else {
-                    long sleepNs = TARGET_NS - elapsed - 500_000; // -0.5ms margin
+                    long sleepNs = TARGET_NS - elapsed - 500_000;
                     if (sleepNs > 0) {
                         try {
                             Thread.sleep(sleepNs / 1_000_000, (int)(sleepNs % 1_000_000));
@@ -191,7 +188,6 @@ public class GameLogic {
 
             updateAttackSpeed();
 
-            // isBossWave: nepočítej každý frame iterací – cached v nextWave()
             PerformanceMonitor.begin("wallUpdate");
             wallManager.update(player, isBossWave);
             PerformanceMonitor.end("wallUpdate");
@@ -462,7 +458,6 @@ public class GameLogic {
     private void addProjectile(int cx, int cy, int tx, int ty, int pierce, int fire, boolean slow, int bulletSpd, boolean ricochet) {
         PlayerProjectile p = new PlayerProjectile(cx, cy, tx, ty, pierce, fire, slow, bulletSpd);
         if (ricochet) p.setCanRicochet(true);
-        // Roll crit
         int critChance = player.getCritChance();
         if (critChance > 0 && CRIT_RNG.nextInt(100) < critChance) {
             p.setIsCrit(true);

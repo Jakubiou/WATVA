@@ -165,7 +165,7 @@ public class CreditsPanel extends JFrame {
     private void drawCredits(Graphics2D g2d) {
         int centerX = getWidth() / 2;
         int currentY = scrollY;
-        int lineGap = Game.scale(14);  // extra mezera mezi řádky
+        int lineGap = Game.scale(14);
 
         g2d.setFont(titleFont);
         FontMetrics fmTitle = g2d.getFontMetrics();

@@ -59,16 +59,15 @@ public class Enemy {
 
     private Point nextPathStep = null;
     private long lastPathCalcTime = 0;
-    private static final long PATH_RECALC_INTERVAL = 700;  // bylo 300ms
+    private static final long PATH_RECALC_INTERVAL = 700;
 
-    // Detekce zaseknutí + wall-steering
     private int lastRecordedX = Integer.MIN_VALUE;
     private int lastRecordedY = Integer.MIN_VALUE;
     private long lastStuckSampleTime = 0;
-    private static final long STUCK_SAMPLE_INTERVAL = 400; // jak často měříme pohyb
-    private static final int  STUCK_THRESHOLD = Game.scale(4); // méně než X px za interval = zaseklý
-    private int stuckCounter = 0;                // kolik po sobě jsme zaseklí
-    private int wallSteerDir = 0;               // +1 nebo -1: smysl obcházení rohu
+    private static final long STUCK_SAMPLE_INTERVAL = 400;
+    private static final int  STUCK_THRESHOLD = Game.scale(4);
+    private int stuckCounter = 0;
+    private int wallSteerDir = 0;
 
     public Enemy(int x, int y, double hp, Type type) {
         this.x = x;
@@ -121,10 +120,9 @@ public class Enemy {
     }
 
 
-    // Cachovaný LOS výsledek – nepočítej každý frame
     private boolean cachedHasLOS = true;
     private long lastLOSCheck = 0;
-    private static final long LOS_CHECK_INTERVAL = 600;  // bylo 250ms
+    private static final long LOS_CHECK_INTERVAL = 600;
 
     public void moveTowards(int targetPlayerX, int targetPlayerY, WallManager wallManager) {
         long currentTime = System.currentTimeMillis();
@@ -161,7 +159,6 @@ public class Enemy {
             }
         }
 
-        // Cache LOS – nekontroluj každý frame (drahé pro 100+ enemáků)
         if (currentTime - lastLOSCheck > LOS_CHECK_INTERVAL) {
             cachedHasLOS = PathFinding.hasClearPath(centerX, centerY, targetCenterX, targetCenterY, wallManager);
             lastLOSCheck = currentTime;
@@ -175,7 +172,6 @@ public class Enemy {
             nextPathStep = null;
         } else {
             if (currentTime - lastPathCalcTime > PATH_RECALC_INTERVAL || nextPathStep == null) {
-                // Pro velké entity (GIANT) použij findNextStepLarge – A* pak vyhýbá i rohům
                 Point newStep;
                 Rectangle col = getCollider();
                 int entitySize = Math.max(col.width, col.height);
@@ -185,10 +181,9 @@ public class Enemy {
                     newStep = PathFinding.findNextStep(centerX, centerY, targetCenterX, targetCenterY, wallManager);
                 }
                 if (newStep != null) {
-                    nextPathStep = newStep;      // aktualizuj jen pokud A* nebyl limitován
+                    nextPathStep = newStep;
                     lastPathCalcTime = currentTime;
                 }
-                // null = frame limit překročen → nextPathStep zůstane starý cached krok
             }
 
             if (nextPathStep != null) {
@@ -210,19 +205,16 @@ public class Enemy {
             double normalizedX = deltaX / distance;
             double normalizedY = deltaY / distance;
 
-            // ── Detekce zaseknutí ────────────────────────────────────────────
             if (currentTime - lastStuckSampleTime >= STUCK_SAMPLE_INTERVAL) {
                 int movedDist = (int) Math.hypot(x - lastRecordedX, y - lastRecordedY);
                 if (lastRecordedX != Integer.MIN_VALUE && movedDist < STUCK_THRESHOLD) {
                     stuckCounter++;
                     if (stuckCounter == 1) {
-                        // Zvol smysl obcházení: zkus kolmý směr, ten který vede blíže k cíli
                         double perpAX = -normalizedY, perpAY = normalizedX;
                         double perpBX =  normalizedY, perpBY = -normalizedX;
                         double dotA = perpAX * deltaX + perpAY * deltaY;
                         wallSteerDir = (dotA >= 0) ? 1 : -1;
                     }
-                    // Vynuť přepočet cesty, zaseklí ignorují cache
                     lastPathCalcTime = 0;
                 } else {
                     stuckCounter = 0;
@@ -233,28 +225,21 @@ public class Enemy {
                 lastStuckSampleTime = currentTime;
             }
 
-            // ── Wall-hugging / corner steering ───────────────────────────────
-            // Pokud jsme zaseklí, přimíchej kolmý vektor k pohybu (wall hugging)
             double moveX = normalizedX;
             double moveY = normalizedY;
 
             if (stuckCounter >= 1 && wallSteerDir != 0) {
-                // Kolmý vektor (otočení o 90°) ve zvoleném smyslu
                 double perpX = -normalizedY * wallSteerDir;
                 double perpY =  normalizedX * wallSteerDir;
 
-                // Přimíchej kolmou složku – čím déle zaseklý, tím více se otočíme (max 90°)
                 double steerStrength = Math.min(stuckCounter * 0.4, 1.0);
                 moveX = normalizedX * (1.0 - steerStrength) + perpX * steerStrength;
                 moveY = normalizedY * (1.0 - steerStrength) + perpY * steerStrength;
 
-                // Normalizuj výsledný vektor
                 double len = Math.sqrt(moveX * moveX + moveY * moveY);
                 if (len > 0.001) { moveX /= len; moveY /= len; }
             }
 
-            // ── Sub-step sliding ─────────────────────────────────────────────
-            // Pohyb po 1 px na každé ose zvlášť – kloužení po rovné zdi.
             int stepsX = (int) Math.abs(Math.round(moveX * currentSpeed));
             int stepsY = (int) Math.abs(Math.round(moveY * currentSpeed));
             int signX  = moveX >= 0 ? 1 : -1;
@@ -270,25 +255,21 @@ public class Enemy {
                 else { blockedY = true; cachedHasLOS = false; lastPathCalcTime = 0; break; }
             }
 
-            // Pokud obě osy zablokovány a steer nepomohl, vyber opačný steer
             if (blockedX && blockedY && stuckCounter > 3) {
                 wallSteerDir = -wallSteerDir;
-                stuckCounter = 1; // reset počítadla, ale nezapomeň že jsme zaseklí
+                stuckCounter = 1;
             }
 
             updateAnimation();
         } else {
-            // Dorazili jsme k cílovému kroku – resetuj stuck state
             stuckCounter = 0;
             wallSteerDir = 0;
         }
     }
 
     private boolean checkWallCollision(int nextX, int nextY, WallManager wallManager) {
-        // Použij skutečný collider (s offsety jako u Slime/Giant) místo raw getWidth/Height.
-        // getCollider() vrací Rectangle relativní vůči (x,y), takže offsety přepočítáme.
         Rectangle col = getCollider();
-        int offX = col.x - x;   // offset od levého horního rohu sprite
+        int offX = col.x - x;
         int offY = col.y - y;
         int cw   = col.width;
         int ch   = col.height;

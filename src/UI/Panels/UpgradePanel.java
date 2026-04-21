@@ -55,21 +55,18 @@ public class UpgradePanel extends JPanel {
         setLayout(null);
         setOpaque(false);
 
-        // Wider panel: 3 cols × 2 rows, each card 200×130
         int cols = 3, cardW = 200, cardH = 130, gapX = 18, gapY = 16;
         int gridW = cols * cardW + (cols-1) * gapX;
-        int pw = gridW + 48;     // padding
-        int ph = 2 * cardH + gapY + 200; // title area + 2 rows + play button
+        int pw = gridW + 48;
+        int ph = 2 * cardH + gapY + 200;
         setBounds((GamePanel.PANEL_WIDTH - pw) / 2, (GamePanel.PANEL_HEIGHT - ph) / 2, pw, ph);
 
-        // Coins label
         coinsLabel = new JLabel("", JLabel.CENTER);
         coinsLabel.setForeground(new Color(255, 215, 0));
         coinsLabel.setFont(pixelFont.deriveFont(Font.BOLD, 22f));
         coinsLabel.setBounds(0, 60, pw, 32);
         add(coinsLabel);
 
-        // Cards
         int startX = 24, startY = 90;
         int idx = 0;
         for (String stat : BASE_COSTS.keySet()) {
@@ -82,7 +79,6 @@ public class UpgradePanel extends JPanel {
             idx++;
         }
 
-        // Play Again button
         int btnW = 200, btnH = 44;
         JButton play = makeBtn("Play Again", new Color(38, 148, 62), new Color(55, 190, 82));
         play.setBounds((pw - btnW) / 2, ph - btnH - 14, btnW, btnH);
@@ -142,7 +138,6 @@ public class UpgradePanel extends JPanel {
         g2.drawString(title, tx, 43);
     }
 
-    // ── helpers ──────────────────────────────────────────────────────────────
     private int getMaxLevel(String stat) {
         if (levelManager != null) {
             var ld = levelManager.getLevel(levelManager.getCurrentLevel());
@@ -215,7 +210,6 @@ public class UpgradePanel extends JPanel {
     public void hidePanel()  { setVisible(false); visible = false; }
     @Override public boolean isVisible() { return visible; }
 
-    // ── Upgrade card ─────────────────────────────────────────────────────────
     private class UpgradeCard extends JPanel {
         private final String stat;
         private boolean hovered = false;
@@ -239,26 +233,22 @@ public class UpgradePanel extends JPanel {
             boolean canBuy = !maxed && player.getCoins() >= calcCost(stat);
             Color ac = ACCENT.getOrDefault(stat, Color.WHITE);
 
-            // Card background
             Color bg = maxed   ? new Color(22, 68, 28, 220)
                     : hovered ? new Color(34, 28, 62, 235)
                     :           new Color(16, 12, 34, 215);
             g2.setColor(bg);
             g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
 
-            // Border
             g2.setStroke(new BasicStroke(maxed ? 2.2f : hovered ? 1.8f : 1.2f));
             g2.setColor(maxed ? new Color(50, 200, 70) : hovered ? ac : ac.darker().darker());
             g2.drawRoundRect(1, 1, getWidth()-2, getHeight()-2, 12, 12);
             g2.setStroke(new BasicStroke(1));
 
-            // Top accent bar
             g2.setColor(new Color(ac.getRed(), ac.getGreen(), ac.getBlue(), maxed ? 200 : 120));
             g2.fillRoundRect(10, 0, getWidth()-20, 4, 2, 2);
 
             int y = 22;
 
-            // Stat name
             Font nf = (pixelFont != null) ? pixelFont.deriveFont(Font.BOLD, 17f)
                     : new Font("Courier New", Font.BOLD, 17);
             g2.setFont(nf);
@@ -268,7 +258,6 @@ public class UpgradePanel extends JPanel {
             g2.drawString(nameStr, (getWidth() - fm.stringWidth(nameStr)) / 2, y);
             y += 20;
 
-            // Current value
             Font vf = (smallFont != null) ? smallFont.deriveFont(14f)
                     : new Font("Courier New", Font.PLAIN, 14);
             g2.setFont(vf);
@@ -278,7 +267,6 @@ public class UpgradePanel extends JPanel {
             g2.drawString(val, (getWidth() - fm.stringWidth(val)) / 2, y);
             y += 18;
 
-            // Level pips — sized to fit maxLevel
             int maxL  = Math.min(getMaxLevel(stat), 10);
             int curL  = Math.min(getCurrentLevel(stat), maxL);
             int avail = getWidth() - 20;
@@ -292,7 +280,6 @@ public class UpgradePanel extends JPanel {
                 if (i < curL) {
                     g2.setColor(ac);
                     g2.fillRoundRect(px, y, pipW, pipH, 4, 4);
-                    // shine
                     g2.setColor(new Color(255,255,255,60));
                     g2.fillRoundRect(px, y, pipW, pipH/2, 4, 4);
                 } else {
@@ -302,7 +289,6 @@ public class UpgradePanel extends JPanel {
             }
             y += pipH + 14;
 
-            // Cost or MAX
             Font cf = (pixelFont != null) ? pixelFont.deriveFont(Font.BOLD, 15f)
                     : new Font("Courier New", Font.BOLD, 15);
             g2.setFont(cf);

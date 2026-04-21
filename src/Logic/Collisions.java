@@ -77,7 +77,6 @@ public class Collisions {
     private void checkBossProjectileCollisions() {
         for (Enemy enemy : enemies) {
             if (enemy instanceof DarkMageBoss boss) {
-                // Check shield first
                 if (player.isShieldBeamActive()) {
                     java.awt.geom.Arc2D arc = getShieldArc(player);
                     boss.absorbProjectilesInArc(arc, player);
@@ -96,7 +95,6 @@ public class Collisions {
             EnemyProjectile projectile = projectileIterator.next();
             if (!projectile.isActive()) { projectileIterator.remove(); continue; }
 
-            // Arc shield absorb check
             if (p.isShieldBeamActive()) {
                 java.awt.geom.Arc2D arc = getShieldArc(p);
                 if (arc.contains(projectile.getCollider().getCenterX(), projectile.getCollider().getCenterY())) {
@@ -118,13 +116,11 @@ public class Collisions {
     public static java.awt.geom.Arc2D getShieldArc(Player p) {
         int cx = p.getX() + Player.WIDTH / 2;
         int cy = p.getY() + Player.HEIGHT / 2;
-        int r = (int)(Player.WIDTH * 1.35);  // reasonable half-circle size
+        int r = (int)(Player.WIDTH * 1.35);
 
         double dx = p.getShieldMouseX() - cx;
         double dy = p.getShieldMouseY() - cy;
-        // Screen Y grows downward, so negate dy for standard math angle
         double angleDeg = Math.toDegrees(Math.atan2(-dy, dx));
-        // Semicircle centred on direction to mouse. Arc2D uses CCW-positive angles.
         double arcStart = angleDeg - 90.0;
         return new java.awt.geom.Arc2D.Double(
                 cx - r, cy - r, r * 2, r * 2,
@@ -262,7 +258,7 @@ public class Collisions {
 
             if (wallManager.isWall(projCenterX, projCenterY)) {
                 if (playerProjectile.canRicochet() && playerProjectile.tryRicochet(wallManager)) {
-                    continue; // bounced, don't remove
+                    continue;
                 }
                 arrowsToRemove.add(playerProjectile);
                 continue;
@@ -279,16 +275,13 @@ public class Collisions {
                 Rectangle enemyCollider = enemy.getCollider();
 
                 if (arrowCollider.intersects(enemyCollider)) {
-                    // Damage with crit + small normal variance
                     int baseDmg = player.getDamage();
                     boolean isCrit = playerProjectile.isCrit();
                     int finalDmg;
                     if (isCrit) {
-                        // 2x–4x, random in that range
                         double mult = 2.0 + DAMAGE_RNG.nextDouble() * 2.0;
                         finalDmg = (int)(baseDmg * mult);
                     } else {
-                        // ±15% variance on every hit
                         double variance = 0.85 + DAMAGE_RNG.nextDouble() * 0.30;
                         finalDmg = (int)(baseDmg * variance);
                     }
@@ -340,12 +333,9 @@ public class Collisions {
     }
 
     private void resolveEnemyCollisions() {
-        // Spatial grid separace – O(N) místo O(N²)
-        // Vampire Survivors styl: push overlap resolution bez rušení pathfindingu
-        int gridCell = Game.scale(80); // zhruba velikost nepřítele
+        int gridCell = Game.scale(80);
         java.util.HashMap<Long, java.util.List<Enemy>> grid = new java.util.HashMap<>();
 
-        // Vloži každého do grid buněk
         for (Enemy e : enemies) {
             if (e.getType() == Enemy.Type.SHOOTING ||
                     e.getType() == Enemy.Type.DARK_MAGE_BOSS ||
@@ -361,7 +351,6 @@ public class Collisions {
             }
         }
 
-        // Zkontroluj a resolvi kolize jen v blízkých buňkách
         java.util.Set<Enemy> processed = new java.util.HashSet<>();
         for (Enemy e1 : enemies) {
             if (e1.getType() == Enemy.Type.SHOOTING ||
@@ -383,7 +372,6 @@ public class Collisions {
                 float dist = (float) Math.sqrt(dx * dx + dy * dy);
 
                 if (dist < minDist && dist > 0.1f) {
-                    // Tiny push – jen minimální aby se nepřekrývali, neruší pathfinding
                     float push = (minDist - dist) * 0.3f;
                     int px = (int)(dx / dist * push);
                     int py = (int)(dy / dist * push);

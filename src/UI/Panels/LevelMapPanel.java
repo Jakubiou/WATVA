@@ -335,7 +335,6 @@ public class LevelMapPanel extends JPanel {
         int buttonX = Game.scale(185);
         int buttonY = Game.scale(20);
 
-        // Purple/violet color for pet shop
         g2d.setColor(new Color(80, 40, 130));
         g2d.fillRoundRect(buttonX, buttonY, buttonWidth, buttonHeight, Game.scale(15), Game.scale(15));
         g2d.setColor(new Color(180, 100, 255));
@@ -350,7 +349,6 @@ public class LevelMapPanel extends JPanel {
         int textY = buttonY + (buttonHeight + fm.getHeight()) / 2 - Game.scale(3);
         g2d.drawString(text, textX, textY);
 
-        // Show selected pet name below button if any
         if (petInventory != null && petInventory.getSelectedPetType() != null) {
             g2d.setFont(pixelFont.deriveFont((float)Game.scale(11)));
             g2d.setColor(new Color(160, 255, 160));

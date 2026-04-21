@@ -23,7 +23,6 @@ public class AbilityPanel extends JPanel {
     private Font smallFont;
     private BufferedImage demonQueenImg;
 
-    // Ability buttons stored so we can repaint them
     private final List<AbilityButton> shownButtons = new ArrayList<>();
 
     public AbilityPanel(GamePanel gamePanel, Player player) {
@@ -142,7 +141,6 @@ public class AbilityPanel extends JPanel {
             JPanel imgPanel = new JPanel() {
                 @Override protected void paintComponent(Graphics g) {
                     Graphics2D g2 = (Graphics2D) g;
-                    // CRITICAL FIX: Use Nearest Neighbor for crisp pixel art scaling
                     g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
 
                     int panelWidth = getWidth();
@@ -150,16 +148,11 @@ public class AbilityPanel extends JPanel {
                     int sourceWidth = demonQueenImg.getWidth();
                     int sourceHeight = demonQueenImg.getHeight();
 
-                    // Calculate the scaling factor to fit the image without stretching
                     double scale = Math.min((double) panelWidth / sourceWidth, (double) panelHeight / sourceHeight);
-
-                    // You can optionally cap the scale if you don't want it to get TOO big
-                    // scale = Math.min(scale, 4.0); // e.g., max 4x scale (256x256)
 
                     int drawWidth = (int) (sourceWidth * scale);
                     int drawHeight = (int) (sourceHeight * scale);
 
-                    // Center the image horizontally and vertically
                     int drawX = (panelWidth - drawWidth) / 2;
                     int drawY = (panelHeight - drawHeight) / 2;
 
@@ -180,24 +173,20 @@ public class AbilityPanel extends JPanel {
         Graphics2D g2 = (Graphics2D) g;
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // Background
         g2.setColor(new Color(12, 8, 28, 240));
         g2.fillRoundRect(0, 0, getWidth(), getHeight(), 18, 18);
 
-        // Border
         g2.setStroke(new BasicStroke(2f));
         g2.setColor(new Color(100, 60, 160));
         g2.drawRoundRect(1, 1, getWidth()-3, getHeight()-3, 18, 18);
         g2.setStroke(new BasicStroke(1));
 
-        // Vertical divider if image present
         if (demonQueenImg != null) {
             int lw = getWidth() - 240;
             g2.setColor(new Color(70, 40, 110, 140));
             g2.drawLine(lw, 16, lw, getHeight() - 16);
         }
 
-        // Title
         if (pixelFont != null) g2.setFont(pixelFont.deriveFont(Font.BOLD, 22f));
         else g2.setFont(new Font("Courier New", Font.BOLD, 22));
         FontMetrics fm = g2.getFontMetrics();
@@ -238,7 +227,6 @@ public class AbilityPanel extends JPanel {
 
     public void updateAbilityPanel() { repaint(); }
 
-    // ── Ability button ──────────────────────────────────────────────────────
     private class AbilityButton extends JPanel {
         private final Ability ability;
         private boolean hovered = false;
@@ -262,21 +250,17 @@ public class AbilityPanel extends JPanel {
 
             Color accent = accentFor(ability.getType());
 
-            // Background
             g2.setColor(hovered ? new Color(35, 26, 60, 235) : new Color(18, 12, 38, 220));
             g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
 
-            // Border
             g2.setStroke(new BasicStroke(hovered ? 2.2f : 1.4f));
             g2.setColor(hovered ? accent : accent.darker().darker());
             g2.drawRoundRect(1, 1, getWidth()-2, getHeight()-2, 12, 12);
             g2.setStroke(new BasicStroke(1));
 
-            // Left accent bar
             g2.setColor(accent);
             g2.fillRoundRect(0, 10, 4, getHeight()-20, 3, 3);
 
-            // Name — bigger, no emoji
             Font nameFont = (pixelFont != null) ? pixelFont.deriveFont(Font.BOLD, 20f)
                     : new Font("Courier New", Font.BOLD, 20);
             g2.setFont(nameFont);
@@ -285,7 +269,6 @@ public class AbilityPanel extends JPanel {
             g2.setColor(hovered ? Color.WHITE : new Color(215, 205, 255));
             g2.drawString(name, 16, fm.getAscent() + 12);
 
-            // Description
             Font descFont = (smallFont != null) ? smallFont.deriveFont(14f)
                     : new Font("Courier New", Font.PLAIN, 14);
             g2.setFont(descFont);
@@ -293,7 +276,6 @@ public class AbilityPanel extends JPanel {
             g2.setColor(new Color(150, 145, 180));
             g2.drawString(ability.getDescription(), 16, getHeight() - fm.getDescent() - 14);
 
-            // Level pips in middle
             int maxL = 3;
             int curL = levelOf(ability);
             if (curL >= 0) {
@@ -311,7 +293,6 @@ public class AbilityPanel extends JPanel {
                 }
             }
 
-            // Hover shimmer
             if (hovered) {
                 g2.setColor(new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 18));
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
@@ -344,7 +325,7 @@ public class AbilityPanel extends JPanel {
             case "explosion" -> player.getExplosionRangeLevel();
             case "regen"     -> player.getRegenerationLevel();
             case "shield"    -> player.getShieldLevel();
-            default          -> -1; // no pips for these
+            default          -> -1;
         };
     }
 

@@ -16,7 +16,6 @@ import java.io.Serializable;
 public class Pet implements Serializable {
     private static final long serialVersionUID = 2L;
 
-    // ── Rarity ───────────────────────────────────────────────────────────────
     public enum Rarity {
         COMMON    ("Common",    new Color(180,180,180), 1.0),
         UNCOMMON  ("Uncommon",  new Color( 80,200, 80), 1.5),
@@ -30,9 +29,6 @@ public class Pet implements Serializable {
         Rarity(String n, Color c, double m){ name=n; color=c; statMult=m; }
     }
 
-    // ── PetType ───────────────────────────────────────────────────────────────
-    // (displayName, rarity, statBonus, baseStatVal, baseAtkDmg, isAttacker,
-    //  dupesPerUpgLevel, baseUpgradeCoinCost, description, texturePath)
     public enum PetType {
         SLIMELING  ("Slimeling",   Rarity.COMMON,    StatBonus.HP_BONUS,     8,  0, false, 1,  60,
                 "Adds max HP each level.",          "/WATVA/Pets/GreenSlime1"),
@@ -78,12 +74,10 @@ public class Pet implements Serializable {
 
     public enum StatBonus { HP_BONUS, REGEN, SPEED, DEFENSE, DAMAGE_BONUS, ATTACK_PET, ALL_STATS }
 
-    // ── Instance fields ───────────────────────────────────────────────────────
     private final PetType type;
     private int level = 1;
     public static final int MAX_LEVEL = 10;
 
-    // Transient – not serialized
     private transient Image[] rightFrames;
     private transient Image[] leftFrames;
     private transient boolean texturesLoaded = false;
@@ -100,7 +94,6 @@ public class Pet implements Serializable {
 
     public Pet(PetType type) { this.type = type; }
 
-    // ── Upgrade cost queries ──────────────────────────────────────────────────
     /** Coins needed to upgrade from current level to level+1 */
     public int getUpgradeCoinCost() {
         return (int)(type.baseUpgradeCoinCost * Math.pow(1.35, level - 1));
@@ -112,7 +105,6 @@ public class Pet implements Serializable {
     public boolean canUpgrade() { return level < MAX_LEVEL; }
     public void upgrade() { if (canUpgrade()) level++; }
 
-    // ── Stat values ───────────────────────────────────────────────────────────
     public int getCurrentStatValue() {
         return (int)(type.baseStatValue * level * type.rarity.statMult);
     }
@@ -120,7 +112,6 @@ public class Pet implements Serializable {
         return (int)(type.baseAttackDmg * (1 + (level - 1) * 0.3) * type.rarity.statMult);
     }
 
-    // ── Textures ──────────────────────────────────────────────────────────────
     public void loadTextures(Object contextObject) {
         if (texturesLoaded) return;
         rightFrames = new Image[4];
@@ -133,7 +124,6 @@ public class Pet implements Serializable {
         texturesLoaded = true;
     }
 
-    // ── Wall-aware movement ───────────────────────────────────────────────────
     public void update(double playerX, double playerY, WallManager wallManager, Player player) {
         if (worldX == 0 && worldY == 0) { worldX = playerX; worldY = playerY; }
 
@@ -187,7 +177,6 @@ public class Pet implements Serializable {
         return false;
     }
 
-    // ── Draw in-game ──────────────────────────────────────────────────────────
     public void draw(Graphics g) {
         if (!texturesLoaded) return;
         Image[] frames = movingRight ? rightFrames : leftFrames;
@@ -198,7 +187,6 @@ public class Pet implements Serializable {
         if (frame != null) {
             g.drawImage(frame, dx, dy, size, size, null);
         } else {
-            // Fallback colored circle
             Graphics2D g2 = (Graphics2D) g;
             g2.setColor(type.rarity.color);
             g2.fillOval(dx, dy, size, size);
@@ -208,7 +196,6 @@ public class Pet implements Serializable {
             String ch = String.valueOf(type.displayName.charAt(0));
             g2.drawString(ch, dx + (size - fm.stringWidth(ch)) / 2, dy + (size + fm.getAscent() - fm.getDescent()) / 2);
         }
-        // Level badge
         Graphics2D g2 = (Graphics2D) g;
         int bx = (int)worldX + Game.scale(26), by = (int)worldY;
         int bs = Game.scale(14);
@@ -219,7 +206,6 @@ public class Pet implements Serializable {
         g2.drawString(String.valueOf(level), bx + Game.scale(2), by + Game.scale(10));
     }
 
-    // ── Getters ───────────────────────────────────────────────────────────────
     public PetType getType()           { return type; }
     public int     getLevel()          { return level; }
     public int     getMaxLevel()       { return MAX_LEVEL; }

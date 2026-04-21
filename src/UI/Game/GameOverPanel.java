@@ -34,7 +34,6 @@ public class GameOverPanel extends JPanel {
                 (GamePanel.PANEL_HEIGHT - ph) / 2, pw, ph);
 
         int btnW = 220, btnH = 44, bx = (pw - btnW) / 2;
-        // All buttons use the same neutral dark style — no colour coding
         addBtn("Play Again", bx, 158, btnW, btnH, e -> gamePanel.restartGame());
         addBtn("Upgrades",   bx, 214, btnW, btnH, e -> { setVisible(false); gamePanel.initializeUpgradePanel(); });
         addBtn("Main Menu",  bx, 270, btnW, btnH, e -> { new MainMenuPanel(); gamePanel.closeGame(); });
@@ -84,26 +83,22 @@ public class GameOverPanel extends JPanel {
         Composite saved = g2.getComposite();
         g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
 
-        // Background
         g2.setColor(new Color(6, 4, 16, 232));
         g2.fillRoundRect(0, 0, getWidth(), getHeight(), 16, 16);
 
-        // Border
         g2.setStroke(new BasicStroke(2f));
         g2.setColor(new Color(140, 20, 20));
         g2.drawRoundRect(1, 1, getWidth()-3, getHeight()-3, 15, 15);
         g2.setStroke(new BasicStroke(1));
 
-        // Divider
         g2.setColor(new Color(100, 15, 15, 120));
         g2.fillRect(18, 138, getWidth() - 36, 1);
 
-        // "YOU DIED"
         g2.setFont(pixelFont.deriveFont(Font.BOLD, 32f));
         FontMetrics fm = g2.getFontMetrics();
         String title = "YOU DIED";
         int tx = (getWidth() - fm.stringWidth(title)) / 2;
-        // dark outline
+
         g2.setColor(new Color(100, 0, 0, 150));
         for (int ox = -2; ox <= 2; ox++)
             for (int oy = -2; oy <= 2; oy++)
@@ -112,14 +107,12 @@ public class GameOverPanel extends JPanel {
         g2.setColor(new Color(220, 60, 60));
         g2.drawString(title, tx, 78);
 
-        // Subtitle
         g2.setFont(smallFont.deriveFont(13f));
         fm = g2.getFontMetrics();
         String sub = "Your journey ends here.";
         g2.setColor(new Color(130, 95, 100));
         g2.drawString(sub, (getWidth()-fm.stringWidth(sub))/2, 106);
 
-        // Wave reached
         String wave = "Wave reached: " + GamePanel.getWaveNumber();
         g2.setColor(new Color(150, 125, 90));
         g2.drawString(wave, (getWidth()-fm.stringWidth(wave))/2, 126);

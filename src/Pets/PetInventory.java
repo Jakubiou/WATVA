@@ -24,7 +24,6 @@ public class PetInventory implements Serializable {
     /** Which pet is selected for the NEXT run (persisted) */
     private Pet.PetType selectedPetType = null;
 
-    // ── Persistence ───────────────────────────────────────────────────────────
     public static PetInventory load() {
         File f = new File(SAVE_FILE);
         if (!f.exists()) return new PetInventory();
@@ -44,7 +43,6 @@ public class PetInventory implements Serializable {
         }
     }
 
-    // ── Acquiring pets ────────────────────────────────────────────────────────
     /**
      * Add one copy of the given pet type.
      * If not yet owned, unlocks it at level 1 (this copy IS the base copy).
@@ -59,7 +57,6 @@ public class PetInventory implements Serializable {
         }
     }
 
-    // ── Upgrading ─────────────────────────────────────────────────────────────
     /**
      * Returns true if we can upgrade the given pet type right now
      * (enough dupes + enough coins check is done externally for the coin part).
@@ -87,7 +84,6 @@ public class PetInventory implements Serializable {
         return true;
     }
 
-    // ── Selection ─────────────────────────────────────────────────────────────
     public void selectPet(Pet.PetType type) {
         if (isUnlocked(type)) selectedPetType = type;
     }
@@ -100,7 +96,6 @@ public class PetInventory implements Serializable {
         return ownedPets.get(selectedPetType);
     }
 
-    // ── Queries ───────────────────────────────────────────────────────────────
     public boolean isUnlocked(Pet.PetType type) { return ownedPets.containsKey(type); }
     public Pet getPet(Pet.PetType type)          { return ownedPets.get(type); }
     public int getDuplicateCount(Pet.PetType type) {

@@ -49,7 +49,6 @@ public class SettingsPanel extends JPanel {
     private static final Color TEXT      = new Color(220, 220, 220);
     private static final Color HIGHLIGHT = new Color(60, 140, 255);
 
-    // Static accessor so other classes can read current FPS show preference
     public static boolean isShowFps() { return PREFS.getBoolean(PREF_SHOW_FPS, false); }
     public static int getSavedKey(String prefKey, int defaultKey) {
         return PREFS.getInt(prefKey, defaultKey);
@@ -97,7 +96,6 @@ public class SettingsPanel extends JPanel {
         setOpaque(false);
         setLayout(null);
 
-        // Panel narrower – less empty space on sides
         int pw = (int)(Game.getRealScreenWidth()  * 0.42);
         int ph = (int)(Game.getRealScreenHeight() * 0.82);
         int px = (GamePanel.PANEL_WIDTH  - pw) / 2;
@@ -109,14 +107,12 @@ public class SettingsPanel extends JPanel {
         content.setOpaque(false);
         content.setBorder(new EmptyBorder(Game.scale(18), Game.scale(24), Game.scale(18), Game.scale(24)));
 
-        // Title
         content.add(centeredLabel("SETTINGS", Game.scale(24), ACCENT));
         content.add(vgap(Game.scale(4)));
 
-        // Svabinator mascot
         try {
             java.awt.image.BufferedImage sva = javax.imageio.ImageIO.read(
-                    getClass().getResourceAsStream("/WATVA/Other/svabinator.png"));
+                    getClass().getResourceAsStream("/WATVA/Other/Svabinator.png"));
             if (sva != null) {
                 int ih = Game.scale(64);
                 int iw = (int)(sva.getWidth() * ((double)ih / sva.getHeight()));
@@ -127,13 +123,11 @@ public class SettingsPanel extends JPanel {
         } catch (Exception ignored) {}
         content.add(vgap(Game.scale(12)));
 
-        // ── AUDIO ──────────────────────────────────────────────────────────────
         content.add(sectionLabel("  AUDIO"));
         content.add(vgap(Game.scale(6)));
 
         int savedVol = PREFS.getInt("vol_pct", 50);
         volumeSlider = new JSlider(0, 100, savedVol);
-        // Click-to-position fix
         volumeSlider.addMouseListener(new MouseAdapter() {
             @Override public void mousePressed(MouseEvent e) {
                 JSlider src = (JSlider) e.getSource();
@@ -160,7 +154,6 @@ public class SettingsPanel extends JPanel {
         content.add(labeledRow("Volume", volumeSlider, volumeValueLabel));
         content.add(vgap(Game.scale(16)));
 
-        // ── DISPLAY ────────────────────────────────────────────────────────────
         content.add(sectionLabel("  DISPLAY"));
         content.add(vgap(Game.scale(6)));
 
@@ -173,7 +166,6 @@ public class SettingsPanel extends JPanel {
         content.add(showFpsBox);
         content.add(vgap(Game.scale(16)));
 
-        // ── KEYBINDS ───────────────────────────────────────────────────────────
         content.add(sectionLabel("  KEYBINDS"));
         content.add(vgap(Game.scale(6)));
 
@@ -191,7 +183,6 @@ public class SettingsPanel extends JPanel {
         }
         content.add(vgap(Game.scale(16)));
 
-        // ── BUTTONS ────────────────────────────────────────────────────────────
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.CENTER, Game.scale(12), 0));
         btnRow.setOpaque(false);
         btnRow.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -264,7 +255,6 @@ public class SettingsPanel extends JPanel {
                 if (code == KeyEvent.VK_ESCAPE) {
                     cancelRebind(btn, prefKey);
                 } else {
-                    // Validate: no duplicate keybind
                     if (isDuplicateKey(code, prefKey)) {
                         btn.setText("TAKEN!");
                         btn.setBackground(new Color(120, 20, 20));

@@ -136,7 +136,6 @@ public class WallManager {
         }
         permanentChunkWalls.put(chunkKey, chunkWalls);
 
-        // Přidej do O(1) lookup setu
         for (Rectangle rect : chunkWalls) {
             addToWallSet(wallTileSet, rect);
         }
@@ -191,7 +190,6 @@ public class WallManager {
             updateChunkWalls(player);
         }
 
-        // Při aktivní aréně nebo boss vlně nejsou žádné dočasné zdi – přeskoč vše
         if (isBossWave || bossArenaActive) return;
 
         long currentTime = System.currentTimeMillis();
@@ -394,11 +392,10 @@ public class WallManager {
         int camBottom = cameraY + GamePanel.PANEL_HEIGHT + GamePanel.BLOCK_SIZE;
 
         if (!bossArenaActive) {
-            Image tex = permanentWallImages[5]; // statická textura – žádný random každý frame
+            Image tex = permanentWallImages[5];
             if (tex != null) {
                 for (List<Rectangle> chunkWalls : permanentChunkWalls.values()) {
                     for (Rectangle wall : chunkWalls) {
-                        // Frustum culling – nekresli bloky mimo obrazovku
                         if (wall.x + GamePanel.BLOCK_SIZE < cameraX || wall.x > camRight) continue;
                         if (wall.y + GamePanel.BLOCK_SIZE < cameraY || wall.y > camBottom) continue;
                         g2d.drawImage(tex, wall.x, wall.y, null);
