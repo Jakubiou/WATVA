@@ -17,7 +17,7 @@ public class LevelManager {
         levels = new LevelData[10];
 
         levels[0] = new LevelData(1, "Map1.txt", 5, 150, 5);
-        levels[0].setWave(0, 1, 0, 0, 0, 0, LevelData.BossType.DARK_MAGE_BOSS);
+        levels[0].setWave(0, 1, 0, 0, 0, 0);
         levels[0].setWave(1, 2, 0, 1, 0, 0);
         levels[0].setWave(2, 3, 1, 1, 0, 0);
         levels[0].setWave(3, 4, 1, 2, 1, 0);
@@ -29,7 +29,7 @@ public class LevelManager {
         levels[0].setWave(9, 0, 0, 0, 0, 0, LevelData.BossType.DARK_MAGE_BOSS);
 
         levels[1] = new LevelData(2, "Map1.txt", 10, 30, 10);
-        levels[1].setWave(0, 3, 1, 2, 1, 1, LevelData.BossType.BUNNY_BOSS);
+        levels[1].setWave(0, 3, 1, 2, 1, 1);
         levels[1].setWave(1, 4, 2, 3, 1, 2);
         levels[1].setWave(2, 5, 2, 4, 2, 2);
         levels[1].setWave(3, 6, 3, 4, 2, 3);

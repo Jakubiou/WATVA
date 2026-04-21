@@ -20,9 +20,9 @@ public class UpgradePanel extends JPanel {
 
     private static final Map<String, Integer> BASE_COSTS = new LinkedHashMap<>();
     static {
-        BASE_COSTS.put("Damage",        150);
-        BASE_COSTS.put("HP",            200);
-        BASE_COSTS.put("Defense",      400);
+        BASE_COSTS.put("Damage",        500);
+        BASE_COSTS.put("HP",            450);
+        BASE_COSTS.put("Defense",      800);
         BASE_COSTS.put("Crit Chance",  10000);
         BASE_COSTS.put("Shield Absorb", 5000);
     }
@@ -59,18 +59,18 @@ public class UpgradePanel extends JPanel {
         int cols = 3, cardW = 200, cardH = 130, gapX = 18, gapY = 16;
         int gridW = cols * cardW + (cols-1) * gapX;
         int pw = gridW + 48;     // padding
-        int ph = 2 * cardH + gapY + 120; // title area + 2 rows + play button
+        int ph = 2 * cardH + gapY + 200; // title area + 2 rows + play button
         setBounds((GamePanel.PANEL_WIDTH - pw) / 2, (GamePanel.PANEL_HEIGHT - ph) / 2, pw, ph);
 
         // Coins label
         coinsLabel = new JLabel("", JLabel.CENTER);
         coinsLabel.setForeground(new Color(255, 215, 0));
         coinsLabel.setFont(pixelFont.deriveFont(Font.BOLD, 22f));
-        coinsLabel.setBounds(0, 10, pw, 32);
+        coinsLabel.setBounds(0, 60, pw, 32);
         add(coinsLabel);
 
         // Cards
-        int startX = 24, startY = 56;
+        int startX = 24, startY = 90;
         int idx = 0;
         for (String stat : BASE_COSTS.keySet()) {
             int col = idx % cols, row = idx / cols;
@@ -153,7 +153,7 @@ public class UpgradePanel extends JPanel {
             }
         }
         return switch (stat) {
-            case "Crit Chance" -> 3;
+            case "Crit Chance" -> 5;
             case "Shield Absorb" -> 5;
             default -> 999;
         };

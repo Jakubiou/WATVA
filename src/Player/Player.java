@@ -410,9 +410,9 @@ public class Player implements Serializable {
     // ---- Crit Chance ----
     public int getCritChanceLevel() { return critChanceLevel; }
     public void upgradeCritChance() {
-        if (critChanceLevel < 3) {
+        if (critChanceLevel < 5) {
             critChanceLevel++;
-            critChance = Math.min(critChanceLevel * 25, MAX_CRIT_CHANCE);
+            critChance = Math.min(critChanceLevel * 10, MAX_CRIT_CHANCE);
         }
     }
 

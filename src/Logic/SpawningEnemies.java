@@ -163,7 +163,7 @@ public class SpawningEnemies {
         System.out.println("Bunny Boss spawn point: " + spawnPoint);
 
         if (spawnPoint != null) {
-            int bossHp = 200 * GameLogic.getWaveNumber();
+            int bossHp = 6700 * GameLogic.getWaveNumber();
             System.out.println("Creating Bunny Boss with HP: " + bossHp + " at position: (" +
                     spawnPoint.x + ", " + spawnPoint.y + ")");
 
