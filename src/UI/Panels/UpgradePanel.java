@@ -20,12 +20,11 @@ public class UpgradePanel extends JPanel {
 
     private static final Map<String, Integer> BASE_COSTS = new LinkedHashMap<>();
     static {
-        BASE_COSTS.put("Damage",        50);
-        BASE_COSTS.put("HP",            55);
-        BASE_COSTS.put("Defense",      100);
-        BASE_COSTS.put("Bullet Speed",  80);
-        BASE_COSTS.put("Crit Chance",  120);
-        BASE_COSTS.put("Shield Absorb", 90);
+        BASE_COSTS.put("Damage",        150);
+        BASE_COSTS.put("HP",            200);
+        BASE_COSTS.put("Defense",      400);
+        BASE_COSTS.put("Crit Chance",  10000);
+        BASE_COSTS.put("Shield Absorb", 5000);
     }
 
     private static final Map<String, Color> ACCENT = new LinkedHashMap<>();
@@ -33,7 +32,6 @@ public class UpgradePanel extends JPanel {
         ACCENT.put("Damage",        new Color(255, 80,  80));
         ACCENT.put("HP",            new Color(80,  220, 100));
         ACCENT.put("Defense",       new Color(80,  160, 255));
-        ACCENT.put("Bullet Speed",  new Color(255, 220, 50));
         ACCENT.put("Crit Chance",   new Color(220, 80,  255));
         ACCENT.put("Shield Absorb", new Color(80,  220, 255));
     }
@@ -155,7 +153,7 @@ public class UpgradePanel extends JPanel {
             }
         }
         return switch (stat) {
-            case "Bullet Speed", "Crit Chance" -> 3;
+            case "Crit Chance" -> 3;
             case "Shield Absorb" -> 5;
             default -> 999;
         };
@@ -166,7 +164,6 @@ public class UpgradePanel extends JPanel {
             case "Damage"        -> player.getDamage() - 1;
             case "HP"            -> Math.max(0, (player.getHp() - 100) / 10);
             case "Defense"       -> player.getDefense();
-            case "Bullet Speed"  -> player.getBulletSpeedLevel();
             case "Crit Chance"   -> player.getCritChanceLevel();
             case "Shield Absorb" -> player.getShieldAbsorbLevel() - 1;
             default -> 0;
@@ -186,7 +183,6 @@ public class UpgradePanel extends JPanel {
             case "Damage"        -> "DMG  " + player.getDamage();
             case "HP"            -> "HP   " + player.getHp();
             case "Defense"       -> "DEF  " + player.getDefense() + "%";
-            case "Bullet Speed"  -> "SPD  " + (10 + player.getBulletSpeedLevel() * 4);
             case "Crit Chance"   -> "CRIT " + player.getCritChance() + "%";
             case "Shield Absorb" -> "ABS  " + player.getShieldAbsorbLevel();
             default -> "";
@@ -202,7 +198,6 @@ public class UpgradePanel extends JPanel {
             case "Damage"        -> player.increaseDamage();
             case "HP"            -> player.increaseHp();
             case "Defense"       -> player.increaseDefense();
-            case "Bullet Speed"  -> player.upgradeBulletSpeed();
             case "Crit Chance"   -> player.upgradeCritChance();
             case "Shield Absorb" -> player.upgradeShieldAbsorb();
         }

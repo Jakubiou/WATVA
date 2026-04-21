@@ -106,7 +106,7 @@ public class SpawningEnemies {
         Point spawnPoint = getSpawnPointForBoss();
 
         if (spawnPoint != null) {
-            int bossHp = 1000 * GameLogic.getWaveNumber();
+            int bossHp = 10000 * GameLogic.getWaveNumber();
             DarkMageBoss darkMageBoss = new DarkMageBoss(spawnPoint.x, spawnPoint.y, bossHp);
 
             Logic.World.WallManager wm = gamePanel.getGameLogic().getWallManager();

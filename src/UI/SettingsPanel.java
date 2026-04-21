@@ -110,7 +110,7 @@ public class SettingsPanel extends JPanel {
         content.setBorder(new EmptyBorder(Game.scale(18), Game.scale(24), Game.scale(18), Game.scale(24)));
 
         // Title
-        content.add(centeredLabel("⚙  SETTINGS", Game.scale(24), ACCENT));
+        content.add(centeredLabel("SETTINGS", Game.scale(24), ACCENT));
         content.add(vgap(Game.scale(4)));
 
         // Svabinator mascot

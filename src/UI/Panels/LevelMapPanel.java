@@ -344,7 +344,7 @@ public class LevelMapPanel extends JPanel {
 
         g2d.setFont(pixelFont.deriveFont((float)Game.scale(18)));
         g2d.setColor(Color.WHITE);
-        String text = "🐾  PETS";
+        String text = "PETS";
         FontMetrics fm = g2d.getFontMetrics();
         int textX = buttonX + (buttonWidth - fm.stringWidth(text)) / 2;
         int textY = buttonY + (buttonHeight + fm.getHeight()) / 2 - Game.scale(3);
@@ -354,7 +354,7 @@ public class LevelMapPanel extends JPanel {
         if (petInventory != null && petInventory.getSelectedPetType() != null) {
             g2d.setFont(pixelFont.deriveFont((float)Game.scale(11)));
             g2d.setColor(new Color(160, 255, 160));
-            String selText = "⚔ " + petInventory.getSelectedPetType().displayName;
+            String selText =  petInventory.getSelectedPetType().displayName;
             int sw = g2d.getFontMetrics().stringWidth(selText);
             g2d.drawString(selText, buttonX + (buttonWidth - sw) / 2, buttonY + buttonHeight + Game.scale(16));
         }

@@ -45,8 +45,6 @@ public class AbilityPanel extends JPanel {
     private void loadDemonQueen() {
         String[] paths = {
                 "/WATVA/enemy/Enemy_bossDemonQueen1.png",
-                "/WATVA/enemy/DemonQueenBoss.png",
-                "/WATVA/Boss/DemonQueen/DemonQueen1.png"
         };
         for (String p : paths) {
             try {
@@ -73,7 +71,7 @@ public class AbilityPanel extends JPanel {
     private void initPanel() {
         setLayout(null);
         setOpaque(false);
-        int pw = 720, ph = 500;
+        int pw = 900, ph = 500;
         setBounds((GamePanel.PANEL_WIDTH - pw) / 2, (GamePanel.PANEL_HEIGHT - ph) / 2, pw, ph);
         setVisible(false);
     }
@@ -144,8 +142,28 @@ public class AbilityPanel extends JPanel {
             JPanel imgPanel = new JPanel() {
                 @Override protected void paintComponent(Graphics g) {
                     Graphics2D g2 = (Graphics2D) g;
-                    g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-                    g2.drawImage(demonQueenImg, 0, 0, getWidth(), getHeight(), null);
+                    // CRITICAL FIX: Use Nearest Neighbor for crisp pixel art scaling
+                    g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+
+                    int panelWidth = getWidth();
+                    int panelHeight = getHeight();
+                    int sourceWidth = demonQueenImg.getWidth();
+                    int sourceHeight = demonQueenImg.getHeight();
+
+                    // Calculate the scaling factor to fit the image without stretching
+                    double scale = Math.min((double) panelWidth / sourceWidth, (double) panelHeight / sourceHeight);
+
+                    // You can optionally cap the scale if you don't want it to get TOO big
+                    // scale = Math.min(scale, 4.0); // e.g., max 4x scale (256x256)
+
+                    int drawWidth = (int) (sourceWidth * scale);
+                    int drawHeight = (int) (sourceHeight * scale);
+
+                    // Center the image horizontally and vertically
+                    int drawX = (panelWidth - drawWidth) / 2;
+                    int drawY = (panelHeight - drawHeight) / 2;
+
+                    g2.drawImage(demonQueenImg, drawX, drawY, drawWidth, drawHeight, null);
                 }
             };
             imgPanel.setOpaque(false);
