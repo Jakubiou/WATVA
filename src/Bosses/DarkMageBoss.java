@@ -58,7 +58,6 @@ public class DarkMageBoss extends Enemy {
     private boolean movingRight = true;
 
     private static WallManager wallManager;
-    private long lastStuckCheck = 0;
 
     private boolean isTeleporting = false;
     private long teleportStartTime = 0;
@@ -92,35 +91,46 @@ public class DarkMageBoss extends Enemy {
         loadTextures();
     }
 
+    // Pre-scale all boss textures once at load time to avoid per-frame scaling during draw
+    private java.awt.image.BufferedImage prescale(String path, int w, int h) {
+        try {
+            java.awt.image.BufferedImage src = ImageIO.read(getClass().getResourceAsStream(path));
+            if (src == null) return null;
+            java.awt.image.BufferedImage dst = new java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+            java.awt.Graphics2D sg = dst.createGraphics();
+            sg.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
+                    java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+            sg.drawImage(src, 0, 0, w, h, null);
+            sg.dispose();
+            return dst;
+        } catch (Exception e) {
+            System.err.println("Could not load/scale: " + path);
+            return null;
+        }
+    }
+
     private void loadTextures() {
         bossTexturesLeft = new Image[5];
         bossTexturesRight = new Image[5];
         bossMeteorAttackTextures = new Image[5];
         deathTextures = new Image[10];
 
-        try {
-            for (int i = 0; i < 5; i++) {
-                bossTexturesLeft[i] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Boss/DarkMage/DarkMage" + (i + 1) + ".png"));
-                bossTexturesRight[i] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Boss/DarkMage/DarkMage" + (i + 6) + ".png"));
-                bossMeteorAttackTextures[i] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Boss/DarkMage/DarkMage" + (i + 6) + ".png"));
-            }
-
-            for (int i = 0; i < 10; i++) {
-                deathTextures[i] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Boss/DarkMage/DarkMage" + (i + 11) + ".png"));
-            }
-
-            for (int i = 0; i < 6; i++) {
-                try {
-                    meteorExplosionFrames[i] = ImageIO.read(getClass().getResourceAsStream("/WATVA/Other/Boss_meteor" + (i + 1) + ".png"));
-                } catch (Exception e) {
-                    System.err.println("Could not load meteor explosion frame " + (i + 1));
-                }
-            }
-
-            hpBarFrame1 = ImageIO.read(getClass().getResourceAsStream("/WATVA/Boss/DarkMage/DarkMageHPBar1.png"));
-        } catch (IOException e) {
-            e.printStackTrace();
+        for (int i = 0; i < 5; i++) {
+            bossTexturesLeft[i]        = prescale("/WATVA/Boss/DarkMage/DarkMage" + (i + 1)  + ".png", BOSS_SIZE, BOSS_SIZE);
+            bossTexturesRight[i]       = prescale("/WATVA/Boss/DarkMage/DarkMage" + (i + 6)  + ".png", BOSS_SIZE, BOSS_SIZE);
+            bossMeteorAttackTextures[i]= prescale("/WATVA/Boss/DarkMage/DarkMage" + (i + 6)  + ".png", BOSS_SIZE, BOSS_SIZE);
         }
+
+        for (int i = 0; i < 10; i++) {
+            deathTextures[i] = prescale("/WATVA/Boss/DarkMage/DarkMage" + (i + 11) + ".png", BOSS_SIZE, BOSS_SIZE);
+        }
+
+        int meteorSize = Game.scale(160); // meteor zones are drawn at radius*2
+        for (int i = 0; i < 6; i++) {
+            meteorExplosionFrames[i] = prescale("/WATVA/Other/Boss_meteor" + (i + 1) + ".png", meteorSize, meteorSize);
+        }
+
+        hpBarFrame1 = prescale("/WATVA/Boss/DarkMage/DarkMageHPBar1.png", Game.scale(416), Game.scale(132));
     }
 
     @Override
@@ -132,7 +142,7 @@ public class DarkMageBoss extends Enemy {
                 deathStartTime = currentTime;
             }
             if (deathFrame < deathTextures.length) {
-                g.drawImage(deathTextures[deathFrame], x, y, BOSS_SIZE, BOSS_SIZE, null);
+                g.drawImage(deathTextures[deathFrame], x, y, null);
             } else {
                 isDead = true;
             }
@@ -151,7 +161,7 @@ public class DarkMageBoss extends Enemy {
             }
 
             if (textures[currentFrame] != null) {
-                g2d.drawImage(textures[currentFrame], x, y, BOSS_SIZE, BOSS_SIZE, null);
+                g2d.drawImage(textures[currentFrame], x, y, null);
             }
 
             g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
@@ -193,11 +203,9 @@ public class DarkMageBoss extends Enemy {
         g.drawRect(hpBarX + GameLogic.cameraX, hpBarY + GameLogic.cameraY, hpBarWidth, hpBarHeight);
 
         if (hpBarFrame1 != null) {
-            int frameWidth = Game.scale(416);
-            int frameHeight = Game.scale(132);
             int frameX = hpBarX + GameLogic.cameraX - Game.scale(54);
             int frameY = hpBarY + GameLogic.cameraY - Game.scale(58);
-            g.drawImage(hpBarFrame1, frameX, frameY, frameWidth, frameHeight, null);
+            g.drawImage(hpBarFrame1, frameX, frameY, null);
         }
     }
 
@@ -241,6 +249,9 @@ public class DarkMageBoss extends Enemy {
         }
     }
 
+    private long lastStuckSampleTime = 0;
+    private static final long STUCK_SAMPLE_INTERVAL = 300;
+
     private boolean shouldTeleportDueToWall(Player player, long currentTime) {
         if (currentTime - lastTeleportTime < TELEPORT_COOLDOWN) {
             return false;
@@ -252,18 +263,23 @@ public class DarkMageBoss extends Enemy {
             return false;
         }
 
-        if (lastPosition != null) {
-            int distMoved = (int) Math.hypot(x - lastPosition.x, y - lastPosition.y);
-            if (distMoved < Game.scale(2)) {
-                stuckCounter++;
-            } else {
-                stuckCounter = 0;
+        // Měř pohyb pouze každých STUCK_SAMPLE_INTERVAL ms – ne každý frame.
+        // Jinak pomalý legitimní pohyb vypadá jako zaseknutí.
+        if (currentTime - lastStuckSampleTime >= STUCK_SAMPLE_INTERVAL) {
+            if (lastPosition != null) {
+                int distMoved = (int) Math.hypot(x - lastPosition.x, y - lastPosition.y);
+                if (distMoved < Game.scale(3)) {
+                    stuckCounter++;
+                } else {
+                    stuckCounter = 0;
+                }
             }
+            lastPosition = new Point(x, y);
+            lastStuckSampleTime = currentTime;
         }
-        lastPosition = new Point(x, y);
 
-        // Teleportuj rychle – po 3 framech zaseknutí (ne 10)
-        if (stuckCounter >= 3) {
+        // Teleportuj po 4 po sobě jdoucích intervalech bez pohybu (= ~1.2s skutečného zaseknutí)
+        if (stuckCounter >= 4) {
             startTeleport(player);
             stuckCounter = 0;
             return true;
@@ -316,18 +332,34 @@ public class DarkMageBoss extends Enemy {
 
     private boolean bossHitsWall(int bx, int by) {
         if (wallManager == null) return false;
-        int pad = Game.scale(6);
-        return wallManager.isWall(bx + pad,             by + pad)
-                || wallManager.isWall(bx + BOSS_SIZE / 2 - pad, by + pad)
-                || wallManager.isWall(bx + pad,             by + BOSS_SIZE / 2 - pad)
-                || wallManager.isWall(bx + BOSS_SIZE /2 - pad, by + BOSS_SIZE / 2 - pad)
-                || wallManager.isWall(bx + BOSS_SIZE / 4,   by + BOSS_SIZE / 4);
+        // Používáme stejné offsety jako getCollider() (padding = scale(30))
+        // a přidáme střední body hran pro spolehlivé zachycení 2×2 sloupů
+        int pad = Game.scale(30);
+        int inner = BOSS_SIZE - pad;
+        int mid   = BOSS_SIZE / 2;
+        return wallManager.isWall(bx + pad,       by + pad)
+                || wallManager.isWall(bx + inner,     by + pad)
+                || wallManager.isWall(bx + pad,       by + inner)
+                || wallManager.isWall(bx + inner,     by + inner)
+                || wallManager.isWall(bx + mid,       by + pad)
+                || wallManager.isWall(bx + mid,       by + inner)
+                || wallManager.isWall(bx + pad,       by + mid)
+                || wallManager.isWall(bx + inner,     by + mid)
+                || wallManager.isWall(bx + mid,       by + mid);
     }
 
     // Cache pro pathfinding – nepočítej každý frame
     private Point cachedPathTarget = null;
     private long lastPathCalcTime = 0;
-    private static final long PATH_RECALC_INTERVAL = 400;
+    private static final long PATH_RECALC_INTERVAL = 600;  // bylo 400ms
+
+    // Wall-steering stav (obcházení rohů sloupů)
+    private int moveStuckCounter = 0;
+    private int moveSteerDir = 0;
+    private int lastMoveRecordedX = Integer.MIN_VALUE;
+    private int lastMoveRecordedY = Integer.MIN_VALUE;
+    private long lastMoveSampleTime = 0;
+    private static final long MOVE_STUCK_SAMPLE = 250;
 
     private void moveTowardsPlayer(Player player) {
         int targetX = player.getX() + Player.WIDTH / 2;
@@ -349,12 +381,15 @@ public class DarkMageBoss extends Enemy {
             moveTargetY = targetY;
             cachedPathTarget = null;
         } else {
-            // Pathfinding – přepočítej cestu jen každých 400ms, použij large-entity variantu
             long now = System.currentTimeMillis();
             if (cachedPathTarget == null || now - lastPathCalcTime > PATH_RECALC_INTERVAL) {
-                cachedPathTarget = PathFinding.findNextStepLarge(
+                Point newStep = PathFinding.findNextStepLarge(
                         bossCenterX, bossCenterY, targetX, targetY, wallManager, BOSS_SIZE);
-                lastPathCalcTime = now;
+                if (newStep != null) {
+                    cachedPathTarget = newStep;
+                    lastPathCalcTime = now;
+                }
+                // null = frame limit → cachedPathTarget zůstane starý cached krok
             }
             if (cachedPathTarget != null) {
                 moveTargetX = cachedPathTarget.x;
@@ -373,8 +408,50 @@ public class DarkMageBoss extends Enemy {
 
         movingRight = dx > 0;
         double speed = Game.scale(baseSpeed);
-        moveAccX += (dx / dist) * speed;
-        moveAccY += (dy / dist) * speed;
+
+        double normX = dx / dist;
+        double normY = dy / dist;
+
+        // ── Wall-steering: detekce zaseknutí o roh sloupu ────────────────────
+        long nowMs = System.currentTimeMillis();
+        if (nowMs - lastMoveSampleTime >= MOVE_STUCK_SAMPLE) {
+            if (lastMoveRecordedX != Integer.MIN_VALUE) {
+                int moved = (int) Math.hypot(x - lastMoveRecordedX, y - lastMoveRecordedY);
+                if (moved < Game.scale(3)) {
+                    moveStuckCounter++;
+                    if (moveStuckCounter == 1) {
+                        // Zvolíme smysl obcházení: ten kolmý vektor, který míří blíže k cíli
+                        double perpAX = -normY, perpAY = normX;
+                        double dotA = perpAX * dx + perpAY * dy;
+                        moveSteerDir = (dotA >= 0) ? 1 : -1;
+                    }
+                    cachedPathTarget = null;
+                    lastPathCalcTime = 0;
+                } else {
+                    moveStuckCounter = 0;
+                    moveSteerDir = 0;
+                }
+            }
+            lastMoveRecordedX = x;
+            lastMoveRecordedY = y;
+            lastMoveSampleTime = nowMs;
+        }
+
+        // Přimíchej kolmou složku při zaseknutí
+        double moveX = normX;
+        double moveY = normY;
+        if (moveStuckCounter >= 1 && moveSteerDir != 0) {
+            double perpX = -normY * moveSteerDir;
+            double perpY =  normX * moveSteerDir;
+            double steer = Math.min(moveStuckCounter * 0.35, 1.0);
+            moveX = normX * (1.0 - steer) + perpX * steer;
+            moveY = normY * (1.0 - steer) + perpY * steer;
+            double len = Math.sqrt(moveX * moveX + moveY * moveY);
+            if (len > 0.001) { moveX /= len; moveY /= len; }
+        }
+
+        moveAccX += moveX * speed;
+        moveAccY += moveY * speed;
 
         int stepX = (int) moveAccX;
         int stepY = (int) moveAccY;
@@ -383,18 +460,33 @@ public class DarkMageBoss extends Enemy {
 
         if (stepX == 0 && stepY == 0) return;
 
-        if (!bossHitsWall(x + stepX, y + stepY)) {
-            x += stepX;
-            y += stepY;
-        } else if (!bossHitsWall(x + stepX, y)) {
-            x += stepX;
-            moveAccY = 0;
-        } else if (!bossHitsWall(x, y + stepY)) {
-            y += stepY;
-            moveAccX = 0;
-        } else {
-            moveAccX = 0;
-            moveAccY = 0;
+        // Sub-step sliding pro bosse: pohybuj se 1px po 1px na každé ose zvlášť.
+        int signX = stepX >= 0 ? 1 : -1;
+        int signY = stepY >= 0 ? 1 : -1;
+        int absX  = Math.abs(stepX);
+        int absY  = Math.abs(stepY);
+
+        boolean hitWallX = false;
+        for (int s = 0; s < absX; s++) {
+            if (!bossHitsWall(x + signX, y)) { x += signX; }
+            else { hitWallX = true; moveAccX = 0; break; }
+        }
+
+        boolean hitWallY = false;
+        for (int s = 0; s < absY; s++) {
+            if (!bossHitsWall(x, y + signY)) { y += signY; }
+            else { hitWallY = true; moveAccY = 0; break; }
+        }
+
+        // Pokud narazíme do zdi na obou osách a steering nepomohl, přehoď smysl
+        if (hitWallX && hitWallY && moveStuckCounter > 4) {
+            moveSteerDir = -moveSteerDir;
+            moveStuckCounter = 1;
+        }
+
+        if (hitWallX || hitWallY) {
+            cachedPathTarget = null;
+            lastPathCalcTime = 0;
         }
     }
 
@@ -411,7 +503,7 @@ public class DarkMageBoss extends Enemy {
     private void startMeteorAttack() {
         isChannelingMeteors = true;
         meteorChannelStartTime = System.currentTimeMillis();
-        meteorsToSpawn = 25;
+        meteorsToSpawn = 40;
         meteorZones.clear();
     }
 
@@ -457,7 +549,7 @@ public class DarkMageBoss extends Enemy {
         int mx = player.getX() + (int)((Math.random() - 0.5) * 2 * range);
         int my = player.getY() + (int)((Math.random() - 0.5) * 2 * range);
 
-        int radius = Game.scale(80);
+        int radius = Game.scale(100);
         meteorZones.add(new MeteorZone(mx, my, radius));
     }
 

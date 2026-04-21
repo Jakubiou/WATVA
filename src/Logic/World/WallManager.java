@@ -80,7 +80,7 @@ public class WallManager {
         try {
             for (int i = 0; i < 6; i++) {
                 temporaryWallImages[i] = toBufferedImage(
-                        ImageIO.read(getClass().getResourceAsStream("/WATVA/Background/Wall" + (i + 1) + ".png")));
+                        ImageIO.read(getClass().getResourceAsStream("/WATVA/Background/Wall" + (i + 7) + ".png")));
 
                 permanentWallImages[i] = toBufferedImage(
                         ImageIO.read(getClass().getResourceAsStream("/WATVA/Background/Wall6.png")));
@@ -191,7 +191,8 @@ public class WallManager {
             updateChunkWalls(player);
         }
 
-        if (isBossWave) return;
+        // Při aktivní aréně nebo boss vlně nejsou žádné dočasné zdi – přeskoč vše
+        if (isBossWave || bossArenaActive) return;
 
         long currentTime = System.currentTimeMillis();
         boolean changed = temporaryWalls.removeIf(wall -> currentTime - wall.spawnTime >= wall.lifetime);
@@ -281,7 +282,7 @@ public class WallManager {
         for (int i = 0; i < segments; i++) {
             double angle = (i / (double)segments) * Math.PI * 2;
 
-            for (int thickness = 0; thickness < 2; thickness++) {
+            for (int thickness = 0; thickness < 4; thickness++) {
                 int currentRadius = arenaRadius - (thickness * WALL_BLOCK_SIZE);
                 int wallX = centerX + (int)(Math.cos(angle) * currentRadius);
                 int wallY = centerY + (int)(Math.sin(angle) * currentRadius);
@@ -299,8 +300,8 @@ public class WallManager {
             pillarX = (pillarX / WALL_BLOCK_SIZE) * WALL_BLOCK_SIZE;
             pillarY = (pillarY / WALL_BLOCK_SIZE) * WALL_BLOCK_SIZE;
 
-            for (int py = 0; py < 2; py++) {
-                for (int px = 0; px < 2; px++) {
+            for (int py = 0; py < 1; py++) {
+                for (int px = 0; px < 1; px++) {
                     arenaPillars.add(new Rectangle(
                             pillarX + px * WALL_BLOCK_SIZE,
                             pillarY + py * WALL_BLOCK_SIZE,
@@ -389,27 +390,40 @@ public class WallManager {
     public void draw(Graphics g, int cameraX, int cameraY) {
         Graphics2D g2d = (Graphics2D) g;
 
+        int camRight  = cameraX + GamePanel.PANEL_WIDTH  + GamePanel.BLOCK_SIZE;
+        int camBottom = cameraY + GamePanel.PANEL_HEIGHT + GamePanel.BLOCK_SIZE;
+
         if (!bossArenaActive) {
-            for (List<Rectangle> chunkWalls : permanentChunkWalls.values()) {
-                for (Rectangle wall : chunkWalls) {
-                    Image texture = permanentWallImages[random.nextInt(permanentWallImages.length)];
-                    if (texture != null) {
-                        g2d.drawImage(texture, wall.x, wall.y, null);
+            Image tex = permanentWallImages[5]; // statická textura – žádný random každý frame
+            if (tex != null) {
+                for (List<Rectangle> chunkWalls : permanentChunkWalls.values()) {
+                    for (Rectangle wall : chunkWalls) {
+                        // Frustum culling – nekresli bloky mimo obrazovku
+                        if (wall.x + GamePanel.BLOCK_SIZE < cameraX || wall.x > camRight) continue;
+                        if (wall.y + GamePanel.BLOCK_SIZE < cameraY || wall.y > camBottom) continue;
+                        g2d.drawImage(tex, wall.x, wall.y, null);
                     }
                 }
             }
         }
 
         if (bossArenaActive) {
-            if (permanentWallImages[5] != null) {
+            Image wallTex   = permanentWallImages[5];
+            Image pillarTex = permanentWallImages[3];
+
+            if (wallTex != null) {
                 for (Rectangle wall : arenaWalls) {
-                    g2d.drawImage(permanentWallImages[5], wall.x, wall.y, null);
+                    if (wall.x + GamePanel.BLOCK_SIZE < cameraX || wall.x > camRight) continue;
+                    if (wall.y + GamePanel.BLOCK_SIZE < cameraY || wall.y > camBottom) continue;
+                    g2d.drawImage(wallTex, wall.x, wall.y, null);
                 }
             }
 
-            if (permanentWallImages[3] != null) {
+            if (pillarTex != null) {
                 for (Rectangle pillar : arenaPillars) {
-                    g2d.drawImage(permanentWallImages[3], pillar.x, pillar.y, null);
+                    if (pillar.x + GamePanel.BLOCK_SIZE < cameraX || pillar.x > camRight) continue;
+                    if (pillar.y + GamePanel.BLOCK_SIZE < cameraY || pillar.y > camBottom) continue;
+                    g2d.drawImage(pillarTex, pillar.x, pillar.y, null);
                 }
             }
         }

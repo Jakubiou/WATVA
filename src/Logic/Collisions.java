@@ -81,22 +81,40 @@ public class Collisions {
     }
 
     private void checkEnemyProjectileCollisions() {
+        Player p = player;
         List<EnemyProjectile> globalProjectiles = Enemy.getAllProjectiles();
         Iterator<EnemyProjectile> projectileIterator = globalProjectiles.iterator();
 
         while (projectileIterator.hasNext()) {
             EnemyProjectile projectile = projectileIterator.next();
+            if (!projectile.isActive()) { projectileIterator.remove(); continue; }
 
-            if (projectile.isActive() && projectile.checkCollisionWithPlayer(player)) {
-                player.hit(20);
-                projectileIterator.remove();
-
-                if (player.getHp() <= 0) {
-                    gameOver = true;
+            // Arc shield absorb check
+            if (p.isShieldBeamActive()) {
+                java.awt.geom.Arc2D arc = getShieldArc(p);
+                if (arc.contains(projectile.getCollider().getCenterX(), projectile.getCollider().getCenterY())) {
+                    p.shieldBeamAbsorbProjectile();
+                    projectileIterator.remove();
+                    continue;
                 }
+            }
+
+            if (projectile.checkCollisionWithPlayer(p)) {
+                p.hit(20);
+                projectileIterator.remove();
+                if (p.getHp() <= 0) gameOver = true;
                 break;
             }
         }
+    }
+
+    public static java.awt.geom.Arc2D getShieldArc(Player p) {
+        int cx = p.getX() + Player.WIDTH / 2;
+        int cy = p.getY() + Player.HEIGHT / 2;
+        int r = Player.WIDTH * 2;
+        // Arc faces the mouse/forward — we use a 180° semicircle in front of player
+        // For simplicity: full half-circle facing top (can be improved with mouse dir)
+        return new java.awt.geom.Arc2D.Double(cx - r, cy - r, r * 2, r * 2, -90 - 90, 180, java.awt.geom.Arc2D.PIE);
     }
 
     private void checkDeadBosses() {
@@ -228,6 +246,9 @@ public class Collisions {
             int projCenterY = playerProjectile.getY() + PlayerProjectile.SIZE / 2;
 
             if (wallManager.isWall(projCenterX, projCenterY)) {
+                if (playerProjectile.canRicochet() && playerProjectile.tryRicochet(wallManager)) {
+                    continue; // bounced, don't remove
+                }
                 arrowsToRemove.add(playerProjectile);
                 continue;
             }

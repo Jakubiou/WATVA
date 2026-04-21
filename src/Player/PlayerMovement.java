@@ -17,6 +17,7 @@ public class PlayerMovement {
     private Player player;
     private boolean up, down, left, right, idle;
     private boolean dashing = false;
+    private boolean dashInvincible = false;
     private int dashDirectionX = 0, dashDirectionY = 0;
     private int dashProgress = 0;
 
@@ -56,10 +57,40 @@ public class PlayerMovement {
         }
 
         if (dashing) {
-            dashProgress += player.getDashSpeed();
+            dashInvincible = true;
+            int step = player.getDashSpeed();
+            dashProgress += step;
+
+            // Pohni hráčem v dash směru – step po stepu s kontrolou zdí
+            int moveX = dashDirectionX * step;
+            int moveY = dashDirectionY * step;
+
+            // Diagonální dash: normalizuj aby nebylo rychlejší
+            if (dashDirectionX != 0 && dashDirectionY != 0) {
+                moveX = (int)(dashDirectionX * step * 0.707);
+                moveY = (int)(dashDirectionY * step * 0.707);
+            }
+
+            int newX = player.getX() + moveX;
+            int newY = player.getY() + moveY;
+
+            boolean hitX = wallManager.isWall(newX + Player.WIDTH / 2, player.getY() + Player.HEIGHT / 2);
+            boolean hitY = wallManager.isWall(player.getX() + Player.WIDTH / 2, newY + Player.HEIGHT / 2);
+            boolean hitXY = wallManager.isWall(newX + Player.WIDTH / 2, newY + Player.HEIGHT / 2);
+
+            if (!hitXY) {
+                player.setX(newX);
+                player.setY(newY);
+            } else if (!hitX) {
+                player.setX(newX);
+            } else if (!hitY) {
+                player.setY(newY);
+            }
+            // hit všech os = stojíme u zdi, dash se ukončí
 
             if (dashProgress >= player.getDashDistance()) {
                 dashing = false;
+                dashInvincible = false;
             }
             player.setLastMovementTime(currentTime);
             idle = false;
@@ -186,6 +217,7 @@ public class PlayerMovement {
     private void startDash() {
         dashing = true;
         dashProgress = 0;
+        dashInvincible = true;
         player.setLastDashTime(System.currentTimeMillis());
 
         dashDirectionX = 0;
@@ -216,4 +248,5 @@ public class PlayerMovement {
     public boolean isLeft() { return left && !right; }
     public boolean isRight() { return right && !left; }
     public boolean isIdle() { return idle; }
+    public boolean isDashInvincible() { return dashInvincible; }
 }

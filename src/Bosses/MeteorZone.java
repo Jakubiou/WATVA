@@ -39,22 +39,25 @@ public class MeteorZone {
         return System.currentTimeMillis() - createdTime > (WARN_TIME + EXPLODE_TIME);
     }
 
+    private static final Color COLOR_FALLBACK = new Color(150, 0, 200, 200);
+    private static final Composite COMPOSITE_FULL = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f);
+
     public void draw(Graphics g, Image[] meteorExplosionFrames) {
         long age = System.currentTimeMillis() - createdTime;
         Graphics2D g2d = (Graphics2D) g;
 
         if (age < WARN_TIME) {
-            float alpha = Math.min(1.0f, age / (float) WARN_TIME);
-            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha * 0.5f));
+            float alpha = Math.min(1.0f, Math.max(0f, age / (float) WARN_TIME)) * 0.5f;
+            Composite saved = g2d.getComposite();
+            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
             g2d.setColor(DarkMageBoss.COLOR_METEOR_WARN);
             g2d.fillOval(x, y, radius * 2, radius * 2);
-            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
+            g2d.setComposite(saved);
         } else if (shouldDealDamage()) {
             if (meteorExplosionFrames[currentExplosionFrame] != null) {
-                int size = radius * 2;
-                g2d.drawImage(meteorExplosionFrames[currentExplosionFrame], x, y, size, size, null);
+                g2d.drawImage(meteorExplosionFrames[currentExplosionFrame], x, y, null);
             } else {
-                g2d.setColor(new Color(150, 0, 200, 200));
+                g2d.setColor(COLOR_FALLBACK);
                 g2d.fillOval(x, y, radius * 2, radius * 2);
             }
         }

@@ -72,6 +72,34 @@ public class MapManager {
     }
 
 
+    private java.util.HashMap<Long, java.awt.image.BufferedImage> chunkCache = new java.util.HashMap<>();
+    private static final int TILES_PER_CHUNK_CACHE = 20; // same as chunk size used in drawBackground
+
+    private long chunkKey(int cx, int cy) {
+        return ((long)(cx + 100000)) << 20 | (cy + 100000);
+    }
+
+    private java.awt.image.BufferedImage renderChunk(int cx, int cy) {
+        int chunkPixelW = baseWidth  * GamePanel.BLOCK_SIZE;
+        int chunkPixelH = baseHeight * GamePanel.BLOCK_SIZE;
+        java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(
+                chunkPixelW, chunkPixelH, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        java.awt.Graphics2D cg = img.createGraphics();
+        cg.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
+                java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        for (int ty = 0; ty < baseHeight; ty++) {
+            for (int tx = 0; tx < baseWidth; tx++) {
+                int blockType = baseMap[ty][tx];
+                Image blockImage = blockImages[blockType];
+                if (blockImage != null) {
+                    cg.drawImage(blockImage, tx * GamePanel.BLOCK_SIZE, ty * GamePanel.BLOCK_SIZE, null);
+                }
+            }
+        }
+        cg.dispose();
+        return img;
+    }
+
     public void drawBackground(java.awt.Graphics g, Player player) {
         if (baseMap == null || baseWidth == 0 || baseHeight == 0) return;
 
@@ -86,8 +114,8 @@ public class MapManager {
 
         int camX   = Logic.GameLogic.cameraX;
         int camY   = Logic.GameLogic.cameraY;
-        int camX2  = camX + GamePanel.PANEL_WIDTH  + GamePanel.BLOCK_SIZE;
-        int camY2  = camY + GamePanel.PANEL_HEIGHT + GamePanel.BLOCK_SIZE;
+        int camX2  = camX + GamePanel.PANEL_WIDTH  + chunkPixelW;
+        int camY2  = camY + GamePanel.PANEL_HEIGHT + chunkPixelH;
 
         for (int cy = playerChunkY - 1; cy <= playerChunkY + 1; cy++) {
             for (int cx = playerChunkX - 1; cx <= playerChunkX + 1; cx++) {
@@ -97,21 +125,13 @@ public class MapManager {
                 if (chunkOffsetX + chunkPixelW < camX || chunkOffsetX > camX2) continue;
                 if (chunkOffsetY + chunkPixelH < camY || chunkOffsetY > camY2) continue;
 
-                for (int ty = 0; ty < baseHeight; ty++) {
-                    int worldY = chunkOffsetY + ty * GamePanel.BLOCK_SIZE;
-                    if (worldY + GamePanel.BLOCK_SIZE < camY || worldY > camY2) continue;
-
-                    for (int tx = 0; tx < baseWidth; tx++) {
-                        int worldX = chunkOffsetX + tx * GamePanel.BLOCK_SIZE;
-                        if (worldX + GamePanel.BLOCK_SIZE < camX || worldX > camX2) continue;
-
-                        int blockType = baseMap[ty][tx];
-                        Image blockImage = blockImages[blockType];
-                        if (blockImage != null) {
-                            g.drawImage(blockImage, worldX, worldY, null);
-                        }
-                    }
+                long key = chunkKey(cx, cy);
+                java.awt.image.BufferedImage cached = chunkCache.get(key);
+                if (cached == null) {
+                    cached = renderChunk(cx, cy);
+                    chunkCache.put(key, cached);
                 }
+                g.drawImage(cached, chunkOffsetX, chunkOffsetY, null);
             }
         }
     }

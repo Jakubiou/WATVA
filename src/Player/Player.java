@@ -24,7 +24,7 @@ public class Player implements Serializable {
     public static final long HP_REGENERATION_INTERVAL = 1000;
     public static final long IDLE_TRIGGER_DELAY = 500;
 
-    private ArrayList<Explosion> explosions = new ArrayList<>();
+    private transient ArrayList<Explosion> explosions = new ArrayList<>();
     private int x, y, hp;
     private int maxHp;
     private int speed = Game.scale(6);
@@ -70,9 +70,20 @@ public class Player implements Serializable {
     private long lastShieldRegenerationTime = 0;
     private long lastHpRegenerationTime = 0;
     private int slowEnemiesLevel = 0;
+    // New upgrades
+    private int bulletSpeedLevel = 0;
+    private int critChanceLevel = 0;
+    private int shieldAbsorbLevel = 1; // max absorb count per activation (permanent upgrade)
 
     private transient PlayerGraphics graphics;
     private transient PlayerMovement movement;
+    // Arc shield (right-click)
+    private boolean shieldBeamActive = false;
+    private long shieldBeamStartTime = 0;
+    private static final long SHIELD_BEAM_DURATION = 2000; // 2 seconds active
+    private static final long SHIELD_BEAM_COOLDOWN = 8000;
+    private long lastShieldBeamTime = 0;
+    private int shieldBeamAbsorbsLeft = 0;
 
     /**
      * Constructs a new Player at specified coordinates with given health.
@@ -111,6 +122,7 @@ public class Player implements Serializable {
     private void initializeTransientFields() {
         this.graphics = new PlayerGraphics(this);
         this.movement = new PlayerMovement(this);
+        if (this.explosions == null) this.explosions = new ArrayList<>();
     }
 
     public void move(WallManager wallManager) {
@@ -302,8 +314,9 @@ public class Player implements Serializable {
     public boolean isDown() { return movement.isDown(); }
     public boolean isLeft() { return movement.isLeft(); }
     public boolean isRight() { return movement.isRight(); }
-    public boolean isIdle() { return movement.isIdle(); }
+    public boolean isDashInvincible() { return movement != null && movement.isDashInvincible(); }
     public void setSlowEnemiesUnlocked(boolean unlocked) { slowEnemiesUnlocked = unlocked; }
+    public boolean isIdle() { return movement.isIdle(); }
     public int getCritChance() { return critChance; }
     public void setCritChance(int critChance) {
         this.critChance = Math.min(critChance, MAX_CRIT_CHANCE);
@@ -357,6 +370,7 @@ public class Player implements Serializable {
      * @param damage Raw damage amount before reductions
      */
     public void hit(int damage) {
+        if (isDashInvincible()) return;  // nezranitelný během dashe
         int reducedDamage = damage;
         if (defense > 0) {
             reducedDamage = (int) Math.ceil(damage * (100 - defense) / 100.0);
@@ -380,4 +394,56 @@ public class Player implements Serializable {
             shieldHP = MAX_SHIELD_HP;
         }
     }
-}
+
+    // ---- Bullet Speed ----
+    public int getBulletSpeedLevel() { return bulletSpeedLevel; }
+    public void upgradeBulletSpeed() {
+        if (bulletSpeedLevel < 3) bulletSpeedLevel++;
+    }
+
+    // ---- Crit Chance ----
+    public int getCritChanceLevel() { return critChanceLevel; }
+    public void upgradeCritChance() {
+        if (critChanceLevel < 3) {
+            critChanceLevel++;
+            critChance = Math.min(critChanceLevel * 25, MAX_CRIT_CHANCE);
+        }
+    }
+
+    // ---- Shield Absorb (arc shield capacity) ----
+    public int getShieldAbsorbLevel() { return shieldAbsorbLevel; }
+    public void upgradeShieldAbsorb() {
+        if (shieldAbsorbLevel < 5) shieldAbsorbLevel++;
+    }
+
+    // ---- Arc Shield (right-click beam) ----
+    public boolean canActivateShieldBeam() {
+        return System.currentTimeMillis() - lastShieldBeamTime >= SHIELD_BEAM_COOLDOWN && !shieldBeamActive;
+    }
+    public void activateShieldBeam() {
+        shieldBeamActive = true;
+        shieldBeamStartTime = System.currentTimeMillis();
+        lastShieldBeamTime = System.currentTimeMillis();
+        shieldBeamAbsorbsLeft = shieldAbsorbLevel;
+    }
+    public boolean isShieldBeamActive() {
+        if (!shieldBeamActive) return false;
+        if (System.currentTimeMillis() - shieldBeamStartTime > SHIELD_BEAM_DURATION || shieldBeamAbsorbsLeft <= 0) {
+            shieldBeamActive = false;
+            return false;
+        }
+        return true;
+    }
+    public void shieldBeamAbsorbProjectile() {
+        shieldBeamAbsorbsLeft--;
+        if (shieldBeamAbsorbsLeft <= 0) shieldBeamActive = false;
+    }
+    public int getShieldBeamAbsorbsLeft() { return shieldBeamAbsorbsLeft; }
+    public long getLastShieldBeamTime() { return lastShieldBeamTime; }
+    public long getShieldBeamCooldown() { return SHIELD_BEAM_COOLDOWN; }
+    public long getShieldBeamDuration() { return SHIELD_BEAM_DURATION; }
+    private boolean ricochetAbility = false;
+    public boolean hasRicochetAbility() { return ricochetAbility; }
+    public void setRicochetAbility(boolean v) { ricochetAbility = v; }
+
+    public long getShieldBeamStartTime() { return shieldBeamStartTime; }}

@@ -46,6 +46,9 @@ public class GamePanel extends JPanel implements ActionListener {
     private LevelMapPanel levelMapPanel;
     private boolean menuVisible = false;
     private FPSCounter fpsCounter = new FPSCounter();
+    private int currentFps = 0;
+    private int frameCount = 0;
+    private long fpsTimer = System.currentTimeMillis();
 
     private TutorialManager tutorialManager;
     private boolean isTutorialMode;
@@ -233,16 +236,26 @@ public class GamePanel extends JPanel implements ActionListener {
                     tutorialManager.handleReminderBoxClick(e.getX(), e.getY());
                 }
                 if ((!isTutorialMode || !tutorialManager.isGameFrozen()) && !gameLogic.isPaused()) {
-                    mousePressed = true;
-                    currentMouseX = e.getX() + getCameraX();
-                    currentMouseY = e.getY() + getCameraY();
-                    gameLogic.tryToShoot(currentMouseX, currentMouseY);
+                    if (e.getButton() == MouseEvent.BUTTON1) {
+                        mousePressed = true;
+                        currentMouseX = e.getX() + getCameraX();
+                        currentMouseY = e.getY() + getCameraY();
+                        gameLogic.tryToShoot(currentMouseX, currentMouseY);
+                    } else if (e.getButton() == MouseEvent.BUTTON3) {
+                        // Right-click: activate arc shield
+                        Player p = gameLogic.getPlayer();
+                        if (p != null && p.canActivateShieldBeam()) {
+                            p.activateShieldBeam();
+                        }
+                    }
                 }
             }
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                mousePressed = false;
+                if (e.getButton() == MouseEvent.BUTTON1) {
+                    mousePressed = false;
+                }
             }
         });
 
@@ -394,6 +407,15 @@ public class GamePanel extends JPanel implements ActionListener {
     public void actionPerformed(ActionEvent e) {
         fpsCounter.update();
 
+        // Vlastní FPS tracking
+        frameCount++;
+        long now = System.currentTimeMillis();
+        if (now - fpsTimer >= 1000) {
+            currentFps = frameCount;
+            frameCount = 0;
+            fpsTimer = now;
+        }
+
         if (isTutorialMode && tutorialManager != null) {
             tutorialManager.update();
             if (tutorialManager.isTutorialComplete()) {
@@ -428,6 +450,9 @@ public class GamePanel extends JPanel implements ActionListener {
         }
 
         repaint();
+
+        // frameEnd po repaint() = celý frame (logic + render) je v reportu
+        Logic.PerformanceMonitor.frameEnd();
     }
 
     public void onTutorialProjectileFired() {
@@ -440,11 +465,13 @@ public class GamePanel extends JPanel implements ActionListener {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
+        Logic.PerformanceMonitor.begin("render_total");
         renderer.render(g, gameLogic.getPlayer(), gameLogic.getEnemies(),
                 gameLogic.getPlayerProjectiles(), gameLogic.isGameOver(),
                 gameLogic.isPaused(), abilityPanelVisible, upgradePanelVisible,
                 gameLogic.getKillCount(), damageManager, gameLogic.getCrystalExplosion(),
                 menuVisible);
+        Logic.PerformanceMonitor.end("render_total");
 
         if (isTutorialMode && tutorialManager != null && tutorialManager.isTutorialActive()) {
             tutorialManager.draw(g, 0, 0);
@@ -461,4 +488,5 @@ public class GamePanel extends JPanel implements ActionListener {
     public static int getWaveNumber() { return GameLogic.getWaveNumber(); }
     public GameLogic getGameLogic() { return gameLogic; }
     public boolean isTutorialMode() { return isTutorialMode; }
+    public int getCurrentFps() { return currentFps; }
 }

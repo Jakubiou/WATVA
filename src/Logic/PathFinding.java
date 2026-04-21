@@ -7,141 +7,129 @@ import java.util.*;
 import java.util.List;
 
 public class PathFinding {
-    private static final int GRID_SIZE = GamePanel.BLOCK_SIZE;
-    private static final int MAX_PATH_LENGTH = 30;
+    public static final int GRID_SIZE = GamePanel.BLOCK_SIZE;
 
+    // ── Globální limit A* za frame – max 3 výpočty per 16ms ──────────────────
+    private static int  aStarThisFrame = 0;
+    private static long lastFrameMs    = 0;
+    // Globální cooldown mezi A* dávkami – zabraňuje storm spikům při resetu
+    private static long lastAStarMs    = 0;
+    private static final long A_STAR_GLOBAL_COOLDOWN = 2; // min 2ms mezi A* výpočty
+
+    private static boolean canRunAStar() {
+        long now = System.currentTimeMillis();
+        // Nový frame = reset počítadla
+        if (now - lastFrameMs > 16) {
+            aStarThisFrame = 0;
+            lastFrameMs = now;
+        }
+        // Nepřekroč limit per frame
+        if (aStarThisFrame >= 3) return false;
+        // Nezačínáme příliš rychle po sobě (rozmaž výpočty přes čas)
+        if (now - lastAStarMs < A_STAR_GLOBAL_COOLDOWN && aStarThisFrame > 0) return false;
+        aStarThisFrame++;
+        lastAStarMs = now;
+        return true;
+    }
+
+    // Long key = žádné String alokace v A* inner loop
+    private static long nodeKey(int x, int y) {
+        return ((long)(x + 10000)) << 20 | (y + 10000);
+    }
 
     public static boolean hasClearPath(int startX, int startY, int goalX, int goalY, WallManager wallManager) {
-        int steps = (int) (Math.hypot(goalX - startX, goalY - startY) / (GRID_SIZE / 2));
+        // Hrubší krok (GRID_SIZE místo GRID_SIZE/2) = 2× méně isWall() volání
+        int steps = (int)(Math.hypot(goalX - startX, goalY - startY) / GRID_SIZE);
         if (steps == 0) return true;
-
         double dx = (goalX - startX) / (double) steps;
         double dy = (goalY - startY) / (double) steps;
-
-        double currentX = startX;
-        double currentY = startY;
-
+        double cx = startX, cy = startY;
         for (int i = 0; i < steps; i++) {
-            currentX += dx;
-            currentY += dy;
-            if (wallManager.isWall((int)currentX, (int)currentY)) {
-                return false;
-            }
-            if (wallManager.isWall((int)currentX + 15, (int)currentY + 15)) return false;
-            if (wallManager.isWall((int)currentX - 15, (int)currentY - 15)) return false;
+            cx += dx; cy += dy;
+            if (wallManager.isWall((int)cx, (int)cy))           return false;
+            if (wallManager.isWall((int)cx + 15, (int)cy + 15)) return false;
+            if (wallManager.isWall((int)cx - 15, (int)cy - 15)) return false;
         }
-
         return true;
     }
 
     public static Point findNextStep(int startX, int startY, int goalX, int goalY, WallManager wallManager) {
-        int gridStartX = startX / GRID_SIZE;
-        int gridStartY = startY / GRID_SIZE;
-        int gridGoalX = goalX / GRID_SIZE;
-        int gridGoalY = goalY / GRID_SIZE;
-
-        List<Node> path = findPath(gridStartX, gridStartY, gridGoalX, gridGoalY, wallManager);
-
+        if (!canRunAStar()) return null;
+        int gsx = startX / GRID_SIZE, gsy = startY / GRID_SIZE;
+        int ggx = goalX  / GRID_SIZE, ggy = goalY  / GRID_SIZE;
+        List<Node> path = findPathInternal(gsx, gsy, ggx, ggy, wallManager, 0);
         if (path != null && path.size() > 1) {
-            Node nextNode = path.get(1);
-            return new Point(nextNode.x * GRID_SIZE + GRID_SIZE/2, nextNode.y * GRID_SIZE + GRID_SIZE/2);
+            Node n = path.get(1);
+            return new Point(n.x * GRID_SIZE + GRID_SIZE / 2, n.y * GRID_SIZE + GRID_SIZE / 2);
         }
-
         return new Point(goalX, goalY);
     }
 
-    /**
-     * Pathfinding pro velké entity (boss 128px+).
-     * Kontroluje okolí buňky s ohledem na velikost entity.
-     */
     public static Point findNextStepLarge(int startX, int startY, int goalX, int goalY,
                                           WallManager wallManager, int entitySize) {
-        int gridStartX = startX / GRID_SIZE;
-        int gridStartY = startY / GRID_SIZE;
-        int gridGoalX = goalX / GRID_SIZE;
-        int gridGoalY = goalY / GRID_SIZE;
-
-        List<Node> path = findPathLarge(gridStartX, gridStartY, gridGoalX, gridGoalY, wallManager, entitySize);
-
+        if (!canRunAStar()) return null;
+        int gsx = startX / GRID_SIZE, gsy = startY / GRID_SIZE;
+        int ggx = goalX  / GRID_SIZE, ggy = goalY  / GRID_SIZE;
+        List<Node> path = findPathInternal(gsx, gsy, ggx, ggy, wallManager, entitySize);
         if (path != null && path.size() > 1) {
-            Node nextNode = path.get(1);
-            return new Point(nextNode.x * GRID_SIZE + GRID_SIZE/2, nextNode.y * GRID_SIZE + GRID_SIZE/2);
+            Node n = path.get(1);
+            return new Point(n.x * GRID_SIZE + GRID_SIZE / 2, n.y * GRID_SIZE + GRID_SIZE / 2);
         }
-
-        // Fallback na standard
-        return findNextStep(startX, startY, goalX, goalY, wallManager);
-    }
-
-    private static List<Node> findPath(int startX, int startY, int goalX, int goalY, WallManager wallManager) {
-        return findPathLarge(startX, startY, goalX, goalY, wallManager, 0);
-    }
-
-    /**
-     * A* pathfinding. entitySize > 0 = kontroluj okolní buňky aby velká entita neprojde těsně u zdi.
-     */
-    private static List<Node> findPathLarge(int startX, int startY, int goalX, int goalY,
-                                            WallManager wallManager, int entitySize) {
-        PriorityQueue<Node> openSet = new PriorityQueue<>();
-        Set<String> closedSet = new HashSet<>();
-        Map<String, Node> allNodes = new HashMap<>();
-
-        Node startNode = new Node(startX, startY, null, 0, heuristic(startX, startY, goalX, goalY));
-        openSet.add(startNode);
-        allNodes.put(startNode.key(), startNode);
-
-        int iterations = 0;
-        int maxIterations = 500;
-
-        while (!openSet.isEmpty() && iterations < maxIterations) {
-            iterations++;
-            Node current = openSet.poll();
-
-            if (current.x == goalX && current.y == goalY) {
-                return reconstructPath(current);
+        // Fallback: zkus bez entitySize padding – ale jen pokud máme token
+        if (canRunAStar()) {
+            List<Node> fb = findPathInternal(gsx, gsy, ggx, ggy, wallManager, 0);
+            if (fb != null && fb.size() > 1) {
+                Node n = fb.get(1);
+                return new Point(n.x * GRID_SIZE + GRID_SIZE / 2, n.y * GRID_SIZE + GRID_SIZE / 2);
             }
+        }
+        return new Point(goalX, goalY);
+    }
 
-            closedSet.add(current.key());
+    private static final int[][] DIRS = {{0,-1},{0,1},{-1,0},{1,0},{-1,-1},{-1,1},{1,-1},{1,1}};
 
-            int[][] directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}, {-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
+    private static List<Node> findPathInternal(int startX, int startY, int goalX, int goalY,
+                                               WallManager wallManager, int entitySize) {
+        PriorityQueue<Node>  open     = new PriorityQueue<>();
+        HashSet<Long>        closed   = new HashSet<>();
+        HashMap<Long, Node>  allNodes = new HashMap<>();
 
-            for (int[] dir : directions) {
-                int newX = current.x + dir[0];
-                int newY = current.y + dir[1];
-                String neighborKey = newX + "," + newY;
+        Node start = new Node(startX, startY, null, 0, heuristic(startX, startY, goalX, goalY));
+        open.add(start);
+        allNodes.put(nodeKey(startX, startY), start);
 
-                if (closedSet.contains(neighborKey)) continue;
+        int iter = 0;
+        while (!open.isEmpty() && iter < 150) {   // 150 místo 500
+            iter++;
+            Node cur = open.poll();
+            if (cur.x == goalX && cur.y == goalY) return reconstructPath(cur);
+            long ck = nodeKey(cur.x, cur.y);
+            if (!closed.add(ck)) continue;
 
-                int worldX = newX * GRID_SIZE + GRID_SIZE / 2;
-                int worldY = newY * GRID_SIZE + GRID_SIZE / 2;
-
-                // Základní kontrola středu buňky
-                if (wallManager.isWall(worldX, worldY)) continue;
-
-                // Pro velké entity zkontroluj že buňka má dostatek místa
+            for (int[] dir : DIRS) {
+                int nx = cur.x + dir[0], ny = cur.y + dir[1];
+                long nk = nodeKey(nx, ny);
+                if (closed.contains(nk)) continue;
+                int wx = nx * GRID_SIZE + GRID_SIZE / 2;
+                int wy = ny * GRID_SIZE + GRID_SIZE / 2;
+                if (wallManager.isWall(wx, wy)) continue;
                 if (entitySize > GRID_SIZE / 2) {
-                    int pad = entitySize / 2;
-                    int bx = newX * GRID_SIZE;
-                    int by = newY * GRID_SIZE;
+                    int pad = entitySize / 2, bx = nx * GRID_SIZE, by = ny * GRID_SIZE;
                     if (wallManager.isWall(bx + pad, by + pad) ||
                             wallManager.isWall(bx + GRID_SIZE - pad, by + pad) ||
                             wallManager.isWall(bx + pad, by + GRID_SIZE - pad) ||
                             wallManager.isWall(bx + GRID_SIZE - pad, by + GRID_SIZE - pad)) continue;
                 }
-
                 double moveCost = (Math.abs(dir[0]) + Math.abs(dir[1]) == 2) ? 1.414 : 1.0;
-                double newG = current.g + moveCost;
-
-                Node neighbor = allNodes.get(neighborKey);
-                if (neighbor == null) {
-                    neighbor = new Node(newX, newY, current, newG, heuristic(newX, newY, goalX, goalY));
-                    allNodes.put(neighborKey, neighbor);
-                    openSet.add(neighbor);
-                } else if (newG < neighbor.g) {
-                    neighbor.g = newG;
-                    neighbor.parent = current;
-                    neighbor.f = neighbor.g + neighbor.h;
-                    openSet.remove(neighbor);
-                    openSet.add(neighbor);
+                double newG = cur.g + moveCost;
+                Node nb = allNodes.get(nk);
+                if (nb == null) {
+                    nb = new Node(nx, ny, cur, newG, heuristic(nx, ny, goalX, goalY));
+                    allNodes.put(nk, nb);
+                    open.add(nb);
+                } else if (newG < nb.g) {
+                    nb.g = newG; nb.parent = cur; nb.f = nb.g + nb.h;
+                    open.remove(nb); open.add(nb);
                 }
             }
         }
@@ -149,36 +137,21 @@ public class PathFinding {
     }
 
     private static double heuristic(int x1, int y1, int x2, int y2) {
-        return Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
+        int dx = Math.abs(x1 - x2), dy = Math.abs(y1 - y2);
+        return Math.max(dx, dy) + (Math.sqrt(2.0) - 1.0) * Math.min(dx, dy);
     }
 
-    private static List<Node> reconstructPath(Node goalNode) {
+    private static List<Node> reconstructPath(Node goal) {
         List<Node> path = new ArrayList<>();
-        Node current = goalNode;
-        while (current != null) {
-            path.add(0, current);
-            current = current.parent;
-        }
+        for (Node n = goal; n != null; n = n.parent) path.add(0, n);
         return path;
     }
 
     private static class Node implements Comparable<Node> {
-        int x, y;
-        Node parent;
-        double g, h, f;
-
-        public Node(int x, int y, Node parent, double g, double h) {
-            this.x = x;
-            this.y = y;
-            this.parent = parent;
-            this.g = g;
-            this.h = h;
-            this.f = g + h;
+        int x, y; Node parent; double g, h, f;
+        Node(int x, int y, Node p, double g, double h) {
+            this.x=x; this.y=y; parent=p; this.g=g; this.h=h; f=g+h;
         }
-
-        public String key() { return x + "," + y; }
-
-        @Override
-        public int compareTo(Node other) { return Double.compare(this.f, other.f); }
+        @Override public int compareTo(Node o) { return Double.compare(f, o.f); }
     }
 }

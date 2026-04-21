@@ -165,30 +165,33 @@ public class CreditsPanel extends JFrame {
     private void drawCredits(Graphics2D g2d) {
         int centerX = getWidth() / 2;
         int currentY = scrollY;
+        int lineGap = Game.scale(14);  // extra mezera mezi řádky
 
         g2d.setFont(titleFont);
+        FontMetrics fmTitle = g2d.getFontMetrics();
         g2d.setColor(new Color(255, 215, 0));
         drawCenteredText(g2d, "WATVA", centerX, currentY, false);
-        currentY += 160;
+        currentY += fmTitle.getHeight() + Game.scale(20);
 
         g2d.setFont(headerFont);
+        FontMetrics fmHeader = g2d.getFontMetrics();
         g2d.setColor(Color.CYAN);
         drawCenteredText(g2d, "Survivor Game", centerX, currentY, false);
-        currentY += 250;
+        currentY += fmHeader.getHeight() + Game.scale(60);
 
         currentY = drawSection(g2d, centerX, currentY, "GAME DEVELOPMENT",
                 "Lead Developer", "Jakub Šrámek",
                 "Lead Programmer", "Jakub Šrámek",
                 "Game Designer", "Jakub Šrámek"
         );
-        currentY += 150;
+        currentY += Game.scale(60);
 
         currentY = drawSection(g2d, centerX, currentY, "ART & UI",
                 "Character Artist", "Jakub Šrámek",
                 "Environment Artist", "Jakub Šrámek",
                 "UI / UX Design", "Jakub Šrámek"
         );
-        currentY += 150;
+        currentY += Game.scale(60);
 
         currentY = drawSection(g2d, centerX, currentY, "INSPIRATION & IDEAS",
                 "Art Inspiration", "Vilma Tomanová",
@@ -200,32 +203,34 @@ public class CreditsPanel extends JFrame {
                 "", "Filip Heger",
                 "", "Dan Oujeský"
         );
-        currentY += 150;
+        currentY += Game.scale(60);
 
         currentY = drawSection(g2d, centerX, currentY, "QUALITY ASSURANCE",
                 "Lead Tester", "Jakub Šrámek",
                 "Beta Testing", ""
         );
-        currentY += 150;
+        currentY += Game.scale(60);
 
         currentY = drawSection(g2d, centerX, currentY, "TOOLS & TECH",
                 "Language", "Java",
                 "IDE", "IntelliJ IDEA"
         );
-        currentY += 150;
+        currentY += Game.scale(60);
 
         currentY = drawSection(g2d, centerX, currentY, "SPECIAL THANKS",
                 "Family & Friends", "For endless support"
         );
+        currentY += Game.scale(100);
     }
 
     private int drawSection(Graphics2D g2d, int centerX, int startY, String sectionTitle, String... lines) {
         int currentY = startY;
 
         g2d.setFont(headerFont);
+        FontMetrics fmH = g2d.getFontMetrics();
         g2d.setColor(new Color(255, 165, 0));
         drawCenteredText(g2d, sectionTitle, centerX, currentY, false);
-        currentY += 100;
+        currentY += fmH.getHeight() + Game.scale(16);
 
         for (int i = 0; i < lines.length; i += 2) {
             if (i + 1 < lines.length) {
@@ -233,19 +238,20 @@ public class CreditsPanel extends JFrame {
                 String name = lines[i + 1];
 
                 if (!role.isEmpty()) {
-                    currentY += 20;
                     g2d.setFont(roleFont);
+                    FontMetrics fmR = g2d.getFontMetrics();
                     g2d.setColor(Color.CYAN);
                     drawCenteredText(g2d, role, centerX, currentY, false);
-                    currentY += 55;
-                } else {
-                    currentY += 5;
+                    currentY += fmR.getHeight() + Game.scale(6);
                 }
 
-                g2d.setFont(nameFont);
-                g2d.setColor(Color.WHITE);
-                drawCenteredText(g2d, name, centerX, currentY, true);
-                currentY += 45;
+                if (!name.isEmpty()) {
+                    g2d.setFont(nameFont);
+                    FontMetrics fmN = g2d.getFontMetrics();
+                    g2d.setColor(Color.WHITE);
+                    drawCenteredText(g2d, name, centerX, currentY, true);
+                    currentY += fmN.getHeight() + Game.scale(10);
+                }
             }
         }
         return currentY;

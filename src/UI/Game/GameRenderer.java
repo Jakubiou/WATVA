@@ -23,6 +23,10 @@ public class GameRenderer {
     private GamePanel gamePanel;
     private Image[] blockImages;
     private Font pixelPurlFont;
+    private Font uiFontLarge;   // pre-derived, never re-created
+    private Font uiFontSmall;   // pre-derived, never re-created
+    private static final Color COLOR_OVERLAY = new Color(0, 0, 0, 150);
+    private static final Color COLOR_BAR_BG  = new Color(50, 50, 50, 180);
 
     /**
      * Creates a new GameRenderer with references to game panel and font.
@@ -33,6 +37,8 @@ public class GameRenderer {
     public GameRenderer(GamePanel gamePanel, Font pixelPurlFont) {
         this.gamePanel = gamePanel;
         this.pixelPurlFont = pixelPurlFont;
+        this.uiFontLarge = pixelPurlFont.deriveFont((float) Game.scale(48));
+        this.uiFontSmall  = pixelPurlFont.deriveFont((float) Game.scale(16));
         loadBlockImages();
     }
 
@@ -45,13 +51,19 @@ public class GameRenderer {
         for (int i = 0; i < blockImages.length; i++) {
             try (InputStream is = getClass().getResourceAsStream("/WATVA/Background/Block" + i + ".png")) {
                 if (is != null) {
-                    Image original = ImageIO.read(is);
+                    java.awt.image.BufferedImage original = ImageIO.read(is);
                     if (original != null) {
-                        blockImages[i] = original.getScaledInstance(
-                                GamePanel.BLOCK_SIZE,
-                                GamePanel.BLOCK_SIZE,
-                                Image.SCALE_SMOOTH
-                        );
+                        // Pre-renderuj do BufferedImage správné velikosti s NEAREST_NEIGHBOR
+                        // (SCALE_SMOOTH je pomalý a nepotřebný pro pixel-art)
+                        java.awt.image.BufferedImage scaled = new java.awt.image.BufferedImage(
+                                GamePanel.BLOCK_SIZE, GamePanel.BLOCK_SIZE,
+                                java.awt.image.BufferedImage.TYPE_INT_RGB);
+                        java.awt.Graphics2D sg = scaled.createGraphics();
+                        sg.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
+                                java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+                        sg.drawImage(original, 0, 0, GamePanel.BLOCK_SIZE, GamePanel.BLOCK_SIZE, null);
+                        sg.dispose();
+                        blockImages[i] = scaled;
                     }
                 }
             } catch (Exception e) {
@@ -85,18 +97,44 @@ public class GameRenderer {
 
         g2d.translate(-GameLogic.cameraX, -GameLogic.cameraY);
 
+        Logic.PerformanceMonitor.begin("render_background");
         drawBackground(g2d, player);
-        drawWalls(g2d);
-        drawEnemies(g2d, enemies);
-        damageManager.draw(g);
-        drawArrows(g2d, playerProjectiles);
-        drawBossEnemies(g2d, enemies);
-        drawUI(g2d, player);
+        Logic.PerformanceMonitor.end("render_background");
 
+        Logic.PerformanceMonitor.begin("render_walls");
+        drawWalls(g2d);
+        Logic.PerformanceMonitor.end("render_walls");
+
+        Logic.PerformanceMonitor.begin("render_enemies");
+        drawEnemies(g2d, enemies);
+        Logic.PerformanceMonitor.end("render_enemies");
+
+        Logic.PerformanceMonitor.begin("render_dmgNumbers");
+        damageManager.draw(g);
+        Logic.PerformanceMonitor.end("render_dmgNumbers");
+
+        Logic.PerformanceMonitor.begin("render_arrows");
+        drawArrows(g2d, playerProjectiles);
+        Logic.PerformanceMonitor.end("render_arrows");
+
+        Logic.PerformanceMonitor.begin("render_bosses");
+        drawBossEnemies(g2d, enemies);
+        Logic.PerformanceMonitor.end("render_bosses");
+
+        Logic.PerformanceMonitor.begin("render_ui");
+        drawUI(g2d, player);
+        Logic.PerformanceMonitor.end("render_ui");
+
+        Logic.PerformanceMonitor.begin("render_player");
         drawPlayer(g2d, player);
+        Logic.PerformanceMonitor.end("render_player");
 
         Pets.PetManager pm = gamePanel.getGameLogic().getPetManager();
-        if (pm != null) pm.draw(g2d);
+        if (pm != null) {
+            Logic.PerformanceMonitor.begin("render_pets");
+            pm.draw(g2d);
+            Logic.PerformanceMonitor.end("render_pets");
+        }
 
         if (crystalExplosion != null) {
             crystalExplosion.draw(g2d, GameLogic.cameraX, GameLogic.cameraY);
@@ -107,7 +145,9 @@ public class GameRenderer {
 
         g2d.translate(GameLogic.cameraX, GameLogic.cameraY);
 
+        Logic.PerformanceMonitor.begin("render_enemyProjectiles");
         Enemy.drawAllProjectiles(g);
+        Logic.PerformanceMonitor.end("render_enemyProjectiles");
 
         if (abilityPanelVisible) {
             g.setColor(new Color(0, 0, 0, 150));
@@ -203,15 +243,24 @@ public class GameRenderer {
      */
     private void drawUI(Graphics g, Player player) {
         Graphics2D g2d = (Graphics2D) g;
-        int fontSize = Game.scale(48);
-        pixelPurlFont = pixelPurlFont.deriveFont((float)fontSize);
-        g2d.setFont(pixelPurlFont);
+        g2d.setFont(uiFontLarge);
         drawOutlinedText(g2d, "Wave: " + GamePanel.getWaveNumber(),
                 Game.scale(20) + GameLogic.cameraX,
                 Game.scale(40) + GameLogic.cameraY);
         drawOutlinedText(g2d, "Coins: " + player.getCoins(),
                 Game.scale(10) + GameLogic.cameraX,
                 Game.scale(80) + GameLogic.cameraY);
+
+        // FPS counter – zobraz jen pokud je zapnuto v Settings
+        if (UI.SettingsPanel.isShowFps()) {
+            g2d.setFont(uiFontSmall);
+            int fps = gamePanel.getCurrentFps();
+            Color fpsColor = fps >= 55 ? new Color(0, 220, 0) : fps >= 30 ? Color.YELLOW : Color.RED;
+            g2d.setColor(Color.BLACK);
+            g2d.drawString("FPS: " + fps, Game.scale(22) + GameLogic.cameraX, Game.scale(115) + GameLogic.cameraY);
+            g2d.setColor(fpsColor);
+            g2d.drawString("FPS: " + fps, Game.scale(20) + GameLogic.cameraX, Game.scale(113) + GameLogic.cameraY);
+        }
     }
 
     /**
@@ -270,7 +319,7 @@ public class GameRenderer {
         g2d.setColor(Color.BLACK);
         g2d.drawRoundRect(x, y, barWidth, barHeight, Game.scale(15), Game.scale(15));
 
-        g2d.setFont(pixelPurlFont.deriveFont((float)Game.scale(16)));
+        g2d.setFont(uiFontSmall);
         g2d.setColor(Color.WHITE);
         String text = "Wave Progress: " + killCount + " / " + maxKills;
         int textWidth = g2d.getFontMetrics().stringWidth(text);

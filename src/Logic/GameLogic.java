@@ -18,7 +18,6 @@ import UI.Game.GamePanel;
 import Player.PlayerProjectile;
 
 import java.util.concurrent.CopyOnWriteArrayList;
-import javax.swing.Timer;
 
 public class GameLogic {
     public static int[][] map;
@@ -26,7 +25,8 @@ public class GameLogic {
     private Player player;
     private CopyOnWriteArrayList<Enemy> enemies;
     private CopyOnWriteArrayList<PlayerProjectile> playerProjectiles;
-    private Timer timer;
+    private Thread gameLoopThread;
+    private volatile boolean running = false;
     private boolean gameOver = false;
     private boolean isPaused = false;
     private static int waveNumber = 0;
@@ -42,6 +42,7 @@ public class GameLogic {
     private LevelManager levelManager;
     private CrystalExplosion crystalExplosion;
     private boolean waveCompletionInProgress = false;
+    private boolean isBossWave = false;  // cached, updated in nextWave()
     private WallManager wallManager;
     private boolean isTutorialMode;
     private PetInventory petInventory;
@@ -69,9 +70,9 @@ public class GameLogic {
     }
 
     private void initializeGame(DamageNumberManager damageManager) {
-        if (player != null) {
+        if (player == null) {
             player = new Player(mapWidth * GamePanel.BLOCK_SIZE / 2, mapHeight * GamePanel.BLOCK_SIZE / 2, 100);
-            player.saveState("player_save.dat");
+            //player.saveState("player_save.dat");
         } else {
             if (!isTutorialMode) {
                 loadPlayerStatus();
@@ -94,8 +95,51 @@ public class GameLogic {
         petInventory = PetInventory.load();
         petManager = new PetManager(petInventory, player);
 
-        timer = new Timer(16, gamePanel);
+        gameLoopThread = null;
         waveNumber = 0;
+    }
+
+    private void startGameLoop() {
+        if (running) return;
+        running = true;
+        gameLoopThread = new Thread(() -> {
+            final long TARGET_NS = 1_000_000_000L / 60; // 60 FPS
+            long lastTime = System.nanoTime();
+            // Windows timer fix – 1ms sleep granularity
+            try { Thread.sleep(0, 1); } catch (InterruptedException ignored) {}
+            while (running) {
+                long now = System.nanoTime();
+                long elapsed = now - lastTime;
+                if (elapsed >= TARGET_NS) {
+                    lastTime = now;
+                    javax.swing.SwingUtilities.invokeLater(() -> {
+                        gamePanel.actionPerformed(null);
+                    });
+                } else {
+                    long sleepNs = TARGET_NS - elapsed - 500_000; // -0.5ms margin
+                    if (sleepNs > 0) {
+                        try {
+                            Thread.sleep(sleepNs / 1_000_000, (int)(sleepNs % 1_000_000));
+                        } catch (InterruptedException e) {
+                            break;
+                        }
+                    } else {
+                        Thread.yield();
+                    }
+                }
+            }
+        }, "GameLoop");
+        gameLoopThread.setDaemon(true);
+        gameLoopThread.setPriority(Thread.MAX_PRIORITY);
+        gameLoopThread.start();
+    }
+
+    private void stopGameLoop() {
+        running = false;
+        if (gameLoopThread != null) {
+            gameLoopThread.interrupt();
+            gameLoopThread = null;
+        }
     }
 
     public void startTutorial() {
@@ -114,7 +158,7 @@ public class GameLogic {
 
         spawningEnemies.spawnTutorialEnemies(10);
 
-        timer.start();
+        startGameLoop();
         resumeGame();
     }
 
@@ -136,69 +180,64 @@ public class GameLogic {
         playerProjectiles.clear();
 
         nextWave();
-        timer.start();
+        startGameLoop();
     }
 
     public void update(DamageNumberManager damageManager) {
         if (!gameOver && !isPaused) {
+            PerformanceMonitor.begin("damageNumbers");
             damageManager.update();
+            PerformanceMonitor.end("damageNumbers");
+
             updateAttackSpeed();
 
-            boolean isBossWave = false;
-            for (Enemy enemy : enemies) {
-                if (enemy instanceof DarkMageBoss || enemy instanceof BunnyBoss) {
-                    isBossWave = true;
-                    break;
-                }
-            }
-
+            // isBossWave: nepočítej každý frame iterací – cached v nextWave()
+            PerformanceMonitor.begin("wallUpdate");
             wallManager.update(player, isBossWave);
+            PerformanceMonitor.end("wallUpdate");
 
+            PerformanceMonitor.begin("playerMove");
             player.move(wallManager);
+            PerformanceMonitor.end("playerMove");
 
+            PerformanceMonitor.begin("enemyProjectiles");
             Enemy.updateAllProjectiles();
+            PerformanceMonitor.end("enemyProjectiles");
 
-            // Always update enemies and pet – even during wave completion animation
-            // so enemies keep moving (but can't deal damage – checkCollisions is skipped)
+            PerformanceMonitor.begin("updateEnemies");
             updateEnemies(damageManager);
+            PerformanceMonitor.end("updateEnemies");
+
+            PerformanceMonitor.begin("petManager");
             if (petManager != null) petManager.update(enemies, damageManager, wallManager);
+            PerformanceMonitor.end("petManager");
 
             if (crystalExplosion != null) {
                 crystalExplosion.update();
                 updateProjectiles();
-
-                if (crystalExplosion.isWaveActive()) {
-                    destroyEnemiesInWave();
-                }
-
+                if (crystalExplosion.isWaveActive()) destroyEnemiesInWave();
                 if (crystalExplosion.isComplete()) {
                     crystalExplosion = null;
                     waveCompletionInProgress = false;
-
-                    if (isTutorialMode) {
-                        pauseGame();
-                        gamePanel.onWaveComplete();
-                    } else if (waveNumber >= 10) {
-                        onLevelComplete();
-                    } else {
-                        pauseGame();
-                        gamePanel.onWaveComplete();
-                    }
+                    if (isTutorialMode) { pauseGame(); gamePanel.onWaveComplete(); }
+                    else if (waveNumber >= 10) { onLevelComplete(); }
+                    else { pauseGame(); gamePanel.onWaveComplete(); }
                 }
-
                 return;
             }
 
             if (!waveCompletionInProgress) {
+                PerformanceMonitor.begin("collisions");
                 collisions.checkCollisions();
+                PerformanceMonitor.end("collisions");
                 gameOver = collisions.isGameOver();
             }
 
+            PerformanceMonitor.begin("removeDistant");
             spawningEnemies.removeDistantEnemies(player.getX(), player.getY());
+            PerformanceMonitor.end("removeDistant");
 
-            if (!waveCompletionInProgress) {
-                checkWaveCompletion();
-            }
+            if (!waveCompletionInProgress) checkWaveCompletion();
             checkGameOver();
         }
     }
@@ -212,6 +251,7 @@ public class GameLogic {
         killCount = 0;
         waveCompletionInProgress = false;
         crystalExplosion = null;
+        isBossWave = false;
 
         if (isTutorialMode) {
             if (waveNumber <= 3) {
@@ -237,8 +277,10 @@ public class GameLogic {
 
                     if (waveData.bossType == LevelData.BossType.DARK_MAGE_BOSS) {
                         spawningEnemies.spawnDarkMageBoss();
+                        isBossWave = true;
                     } else if (waveData.bossType == LevelData.BossType.BUNNY_BOSS) {
                         spawningEnemies.spawnBunnyBoss();
+                        isBossWave = true;
                     } else {
                         spawningEnemies.spawnEnemies(
                                 waveData.normalPerSecond,
@@ -310,7 +352,7 @@ public class GameLogic {
                 waveData = currentLevelData.getWave(waveNumber - 1);
             }
 
-            boolean isBossWave = (waveData != null && waveData.hasBoss());
+            isBossWave = (waveData != null && waveData.hasBoss());
 
             if (isBossWave) {
                 boolean bossAlive = false;
@@ -382,26 +424,28 @@ public class GameLogic {
             int piercingLevel = player.getPiercingLevel();
             int fireLevel = player.getFireLevel();
             boolean hasSlow = player.hasSlowEnemies();
+            int bulletSpeedLevel = player.getBulletSpeedLevel();
+            boolean ricochet = player.hasRicochetAbility();
 
             int doubleOffset = Game.scale(20);
 
             int projectilesCreated = 0;
 
             if (player.isDoubleShotActive() && player.isForwardBackwardShotActive()) {
-                playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX + doubleOffset, mouseY + doubleOffset, piercingLevel, fireLevel, hasSlow));
-                playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX - doubleOffset, mouseY - doubleOffset, piercingLevel, fireLevel, hasSlow));
-                playerProjectiles.add(new PlayerProjectile(centerX, centerY, centerX - (mouseX - centerX), centerY - (mouseY - centerY), piercingLevel, fireLevel, hasSlow));
+                addProjectile(centerX, centerY, mouseX + doubleOffset, mouseY + doubleOffset, piercingLevel, fireLevel, hasSlow, bulletSpeedLevel, ricochet);
+                addProjectile(centerX, centerY, mouseX - doubleOffset, mouseY - doubleOffset, piercingLevel, fireLevel, hasSlow, bulletSpeedLevel, ricochet);
+                addProjectile(centerX, centerY, centerX - (mouseX - centerX), centerY - (mouseY - centerY), piercingLevel, fireLevel, hasSlow, bulletSpeedLevel, ricochet);
                 projectilesCreated = 3;
             } else if (player.isDoubleShotActive()) {
-                playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX + doubleOffset, mouseY + doubleOffset, piercingLevel, fireLevel, hasSlow));
-                playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX - doubleOffset, mouseY - doubleOffset, piercingLevel, fireLevel, hasSlow));
+                addProjectile(centerX, centerY, mouseX + doubleOffset, mouseY + doubleOffset, piercingLevel, fireLevel, hasSlow, bulletSpeedLevel, ricochet);
+                addProjectile(centerX, centerY, mouseX - doubleOffset, mouseY - doubleOffset, piercingLevel, fireLevel, hasSlow, bulletSpeedLevel, ricochet);
                 projectilesCreated = 2;
             } else if (player.isForwardBackwardShotActive()) {
-                playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX, mouseY, piercingLevel, fireLevel, hasSlow));
-                playerProjectiles.add(new PlayerProjectile(centerX, centerY, centerX - (mouseX - centerX), centerY - (mouseY - centerY), piercingLevel, fireLevel, hasSlow));
+                addProjectile(centerX, centerY, mouseX, mouseY, piercingLevel, fireLevel, hasSlow, bulletSpeedLevel, ricochet);
+                addProjectile(centerX, centerY, centerX - (mouseX - centerX), centerY - (mouseY - centerY), piercingLevel, fireLevel, hasSlow, bulletSpeedLevel, ricochet);
                 projectilesCreated = 2;
             } else {
-                playerProjectiles.add(new PlayerProjectile(centerX, centerY, mouseX, mouseY, piercingLevel, fireLevel, hasSlow));
+                addProjectile(centerX, centerY, mouseX, mouseY, piercingLevel, fireLevel, hasSlow, bulletSpeedLevel, ricochet);
                 projectilesCreated = 1;
             }
 
@@ -413,15 +457,21 @@ public class GameLogic {
         }
     }
 
+    private void addProjectile(int cx, int cy, int tx, int ty, int pierce, int fire, boolean slow, int bulletSpd, boolean ricochet) {
+        PlayerProjectile p = new PlayerProjectile(cx, cy, tx, ty, pierce, fire, slow, bulletSpd);
+        if (ricochet) p.setCanRicochet(true);
+        playerProjectiles.add(p);
+    }
+
     public void pauseGame() {
-        timer.stop();
+        stopGameLoop();
         isPaused = true;
         backgroundMusic.stop();
         spawningEnemies.pauseSpawning();
     }
 
     public void resumeGame() {
-        timer.start();
+        startGameLoop();
         isPaused = false;
         backgroundMusic.playLoop();
         spawningEnemies.resumeSpawning();

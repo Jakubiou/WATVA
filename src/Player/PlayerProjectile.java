@@ -23,6 +23,9 @@ public class PlayerProjectile {
     private int pierceCount;
     private int fireDamageLevel;
     private boolean slowEffect;
+    private boolean canRicochet = false;
+    private int ricochetCount = 0;
+    private static final int MAX_RICOCHET = 2;
 
     /**
      * Creates a new player projectile.
@@ -36,11 +39,16 @@ public class PlayerProjectile {
      * @param hasSlowEffect Whether projectile slows enemies
      */
     public PlayerProjectile(int x, int y, int targetX, int targetY, int piercingLevel, int fireLevel, boolean hasSlowEffect) {
+        this(x, y, targetX, targetY, piercingLevel, fireLevel, hasSlowEffect, 0);
+    }
+
+    public PlayerProjectile(int x, int y, int targetX, int targetY, int piercingLevel, int fireLevel, boolean hasSlowEffect, int bulletSpeedLevel) {
         this.x = x;
         this.y = y;
         this.pierceCount = 1 + piercingLevel;
         this.fireDamageLevel = fireLevel;
         this.slowEffect = hasSlowEffect;
+        this.speed = Game.scale(10 + bulletSpeedLevel * 4); // +4 per level
 
         double dx = targetX - x;
         double dy = targetY - y;
@@ -111,4 +119,21 @@ public class PlayerProjectile {
     public boolean hasSlowEffect() {
         return slowEffect;
     }
-}
+
+    public void setCanRicochet(boolean r) { canRicochet = r; }
+    public boolean canRicochet() { return canRicochet; }
+    public int getRicochetCount() { return ricochetCount; }
+    // Called when hitting a wall — bounces and returns true if bounced, false if should die
+    public boolean tryRicochet(Logic.World.WallManager wallManager) {
+        if (!canRicochet || ricochetCount >= MAX_RICOCHET) return false;
+        ricochetCount++;
+        // Test which axis is blocked, reverse that velocity
+        int nx = (int)(x + velocityX);
+        int ny = (int)(y + velocityY);
+        boolean wallX = wallManager.isWall(nx + SIZE/2, y + SIZE/2);
+        boolean wallY = wallManager.isWall(x + SIZE/2, ny + SIZE/2);
+        if (wallX) velocityX = -velocityX;
+        if (wallY) velocityY = -velocityY;
+        if (!wallX && !wallY) velocityX = -velocityX; // corner fallback
+        return true;
+    }}

@@ -99,7 +99,7 @@ public class LevelMapPanel extends JPanel {
             }
 
             @Override
-            public void mouseClicked(MouseEvent e) {
+            public void mousePressed(MouseEvent e) {
                 if (isPointInBack(e.getPoint())) {
                     returnToMainMenu();
                     return;
