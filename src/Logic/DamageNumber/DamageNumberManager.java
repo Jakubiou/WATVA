@@ -1,4 +1,3 @@
-
 package Logic.DamageNumber;
 
 import java.awt.*;
@@ -20,7 +19,11 @@ public class DamageNumberManager {
      * Adds a new damage number at the specified position.
      */
     public void addDamageNumber(int x, int y, int damage) {
-        damageNumbers.add(new DamageNumber(x, y, damage));
+        damageNumbers.add(new DamageNumber(x, y, damage, false));
+    }
+
+    public void addDamageNumber(int x, int y, int damage, boolean isCrit) {
+        damageNumbers.add(new DamageNumber(x, y, damage, isCrit));
     }
 
     /**

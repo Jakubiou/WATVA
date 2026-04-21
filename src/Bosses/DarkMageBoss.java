@@ -621,6 +621,18 @@ public class DarkMageBoss extends Enemy {
         }
     }
 
+    /** Called by Collisions — absorbs any active projectile whose centre is inside the shield arc */
+    public void absorbProjectilesInArc(java.awt.geom.Arc2D arc, Player player) {
+        if (arc == null) return;
+        for (DarkMageProjectile proj : projectiles) {
+            if (!proj.isActive()) continue;
+            if (arc.contains(proj.getX(), proj.getY())) {
+                player.shieldBeamAbsorbProjectile();
+                proj.setActive(false);
+            }
+        }
+    }
+
     public void checkProjectileCollisions(Player player) {
         Rectangle playerCollider = player.getCollider();
         for (DarkMageProjectile projectile : projectiles) {

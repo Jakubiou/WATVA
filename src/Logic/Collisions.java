@@ -16,9 +16,11 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Collisions {
+    private static final Random DAMAGE_RNG = new Random();
     private Player player;
     private CopyOnWriteArrayList<Enemy> enemies;
     private CopyOnWriteArrayList<PlayerProjectile> playerProjectiles;
@@ -74,8 +76,13 @@ public class Collisions {
 
     private void checkBossProjectileCollisions() {
         for (Enemy enemy : enemies) {
-            if (enemy instanceof DarkMageBoss) {
-                ((DarkMageBoss)enemy).checkProjectileCollisions(player);
+            if (enemy instanceof DarkMageBoss boss) {
+                // Check shield first
+                if (player.isShieldBeamActive()) {
+                    java.awt.geom.Arc2D arc = getShieldArc(player);
+                    boss.absorbProjectilesInArc(arc, player);
+                }
+                boss.checkProjectileCollisions(player);
             }
         }
     }
@@ -111,10 +118,18 @@ public class Collisions {
     public static java.awt.geom.Arc2D getShieldArc(Player p) {
         int cx = p.getX() + Player.WIDTH / 2;
         int cy = p.getY() + Player.HEIGHT / 2;
-        int r = Player.WIDTH * 2;
-        // Arc faces the mouse/forward — we use a 180° semicircle in front of player
-        // For simplicity: full half-circle facing top (can be improved with mouse dir)
-        return new java.awt.geom.Arc2D.Double(cx - r, cy - r, r * 2, r * 2, -90 - 90, 180, java.awt.geom.Arc2D.PIE);
+        int r = (int)(Player.WIDTH * 1.35);  // reasonable half-circle size
+
+        double dx = p.getShieldMouseX() - cx;
+        double dy = p.getShieldMouseY() - cy;
+        // Screen Y grows downward, so negate dy for standard math angle
+        double angleDeg = Math.toDegrees(Math.atan2(-dy, dx));
+        // Semicircle centred on direction to mouse. Arc2D uses CCW-positive angles.
+        double arcStart = angleDeg - 90.0;
+        return new java.awt.geom.Arc2D.Double(
+                cx - r, cy - r, r * 2, r * 2,
+                arcStart, 180.0,
+                java.awt.geom.Arc2D.PIE);
     }
 
     private void checkDeadBosses() {
@@ -264,7 +279,21 @@ public class Collisions {
                 Rectangle enemyCollider = enemy.getCollider();
 
                 if (arrowCollider.intersects(enemyCollider)) {
-                    enemy.hit(player.getDamage(), damageManager);
+                    // Damage with crit + small normal variance
+                    int baseDmg = player.getDamage();
+                    boolean isCrit = playerProjectile.isCrit();
+                    int finalDmg;
+                    if (isCrit) {
+                        // 2x–4x, random in that range
+                        double mult = 2.0 + DAMAGE_RNG.nextDouble() * 2.0;
+                        finalDmg = (int)(baseDmg * mult);
+                    } else {
+                        // ±15% variance on every hit
+                        double variance = 0.85 + DAMAGE_RNG.nextDouble() * 0.30;
+                        finalDmg = (int)(baseDmg * variance);
+                    }
+                    finalDmg = Math.max(1, finalDmg);
+                    enemy.hitCrit(finalDmg, damageManager, isCrit);
 
                     if (playerProjectile.getFireDamageLevel() > 0) {
                         enemy.setFire(

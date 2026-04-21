@@ -26,6 +26,9 @@ public class PlayerProjectile {
     private boolean canRicochet = false;
     private int ricochetCount = 0;
     private static final int MAX_RICOCHET = 2;
+    private boolean isCrit = false;
+    public void setIsCrit(boolean c) { isCrit = c; }
+    public boolean isCrit() { return isCrit; }
 
     /**
      * Creates a new player projectile.
@@ -127,13 +130,26 @@ public class PlayerProjectile {
     public boolean tryRicochet(Logic.World.WallManager wallManager) {
         if (!canRicochet || ricochetCount >= MAX_RICOCHET) return false;
         ricochetCount++;
-        // Test which axis is blocked, reverse that velocity
+        // Reset travel distance so the arrow can travel full range after bounce
+        distanceTravelled = 0;
         int nx = (int)(x + velocityX);
         int ny = (int)(y + velocityY);
-        boolean wallX = wallManager.isWall(nx + SIZE/2, y + SIZE/2);
-        boolean wallY = wallManager.isWall(x + SIZE/2, ny + SIZE/2);
-        if (wallX) velocityX = -velocityX;
-        if (wallY) velocityY = -velocityY;
-        if (!wallX && !wallY) velocityX = -velocityX; // corner fallback
+        boolean wallX = wallManager.isWall(nx + SIZE/2, y   + SIZE/2);
+        boolean wallY = wallManager.isWall(x  + SIZE/2, ny  + SIZE/2);
+        if (wallX && wallY) {
+            velocityX = -velocityX;
+            velocityY = -velocityY;
+        } else if (wallX) {
+            velocityX = -velocityX;
+        } else if (wallY) {
+            velocityY = -velocityY;
+        } else {
+            velocityX = -velocityX;
+            velocityY = -velocityY;
+        }
+        // Step back out of wall
+        x -= (int)velocityX;
+        y -= (int)velocityY;
         return true;
-    }}
+    }
+}

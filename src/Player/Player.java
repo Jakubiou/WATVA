@@ -84,6 +84,12 @@ public class Player implements Serializable {
     private static final long SHIELD_BEAM_COOLDOWN = 8000;
     private long lastShieldBeamTime = 0;
     private int shieldBeamAbsorbsLeft = 0;
+    // Mouse world-space position for shield direction (updated every frame by GamePanel)
+    private transient int shieldMouseX = 0;
+    private transient int shieldMouseY = -9999;
+    public void setShieldMouseTarget(int wx, int wy) { shieldMouseX = wx; shieldMouseY = wy; }
+    public int getShieldMouseX() { return shieldMouseX; }
+    public int getShieldMouseY() { return shieldMouseY; }
 
     /**
      * Constructs a new Player at specified coordinates with given health.

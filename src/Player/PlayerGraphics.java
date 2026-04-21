@@ -92,6 +92,8 @@ public class PlayerGraphics {
             explosion.draw(g);
         }
         drawExplosionCooldown(g);
+        drawShieldBeam(g);
+        drawShieldBeamCooldown(g);
         drawHealthBar(g);
     }
 
@@ -214,6 +216,90 @@ public class PlayerGraphics {
             g.fillArc(centerX - radius, centerY - radius, radius * 2, radius * 2,
                     90, (int) (360 * percentage));
         }
+    }
+
+    private void drawShieldBeam(Graphics g) {
+        if (!player.isShieldBeamActive()) return;
+        Graphics2D g2d = (Graphics2D) g;
+
+        int cx = player.getX() + Player.WIDTH / 2;
+        int cy = player.getY() + Player.HEIGHT / 2;
+        // Same radius as collision arc
+        int r = (int)(Player.WIDTH * 1.35);
+
+        // Direction toward mouse (screen Y inverted)
+        double dx = player.getShieldMouseX() - cx;
+        double dy = player.getShieldMouseY() - cy;
+        double angleDeg = Math.toDegrees(Math.atan2(-dy, dx));
+        int arcStart = (int)(angleDeg - 90.0);
+        int arcExtent = 180;
+
+        long elapsed = System.currentTimeMillis() - player.getShieldBeamStartTime();
+        float pulse = (float)(0.72 + 0.28 * Math.sin(elapsed / 90.0));
+
+        Composite saved = g2d.getComposite();
+
+        // Soft outer glow
+        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.15f * pulse));
+        g2d.setColor(new Color(40, 140, 255));
+        int gr = r + Game.scale(8);
+        g2d.fillArc(cx - gr, cy - gr, gr * 2, gr * 2, arcStart, arcExtent);
+
+        // Main fill — semi-transparent blue
+        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.38f * pulse));
+        g2d.setColor(new Color(70, 170, 255));
+        g2d.fillArc(cx - r, cy - r, r * 2, r * 2, arcStart, arcExtent);
+
+        // Bright edge arc
+        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.92f));
+        g2d.setColor(new Color(160, 220, 255));
+        g2d.setStroke(new java.awt.BasicStroke(Game.scale(3),
+                java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
+        g2d.drawArc(cx - r, cy - r, r * 2, r * 2, arcStart, arcExtent);
+
+        // Two radius lines at the arc edges
+        g2d.setStroke(new java.awt.BasicStroke(Game.scale(2),
+                java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
+        g2d.setColor(new Color(200, 235, 255));
+        double a1r = Math.toRadians(arcStart);
+        double a2r = Math.toRadians(arcStart + arcExtent);
+        // Arc2D CCW from East; convert to screen coords (Y down)
+        g2d.drawLine(cx, cy,
+                cx + (int)(Math.cos(a1r) * r),
+                cy - (int)(Math.sin(a1r) * r));
+        g2d.drawLine(cx, cy,
+                cx + (int)(Math.cos(a2r) * r),
+                cy - (int)(Math.sin(a2r) * r));
+
+        // Absorb dots along the arc edge
+        int maxAbs = player.getShieldAbsorbLevel();
+        int remAbs = player.getShieldBeamAbsorbsLeft();
+        int dotR   = Game.scale(5);
+        for (int i = 0; i < maxAbs; i++) {
+            double dotAngleDeg = arcStart + (i + 0.5) * ((double)arcExtent / maxAbs);
+            double dar = Math.toRadians(dotAngleDeg);
+            int dotX = cx + (int)(Math.cos(dar) * (r - Game.scale(6)));
+            int dotY = cy - (int)(Math.sin(dar) * (r - Game.scale(6)));
+            g2d.setColor(i < remAbs
+                    ? new Color(100, 255, 190)
+                    : new Color(45, 65, 90));
+            g2d.fillOval(dotX - dotR, dotY - dotR, dotR * 2, dotR * 2);
+        }
+
+        g2d.setComposite(saved);
+        g2d.setStroke(new java.awt.BasicStroke(1));
+    }
+
+    private void drawShieldBeamCooldown(Graphics g) {
+        long timeSince = System.currentTimeMillis() - player.getLastShieldBeamTime();
+        if (player.isShieldBeamActive() || timeSince >= player.getShieldBeamCooldown()) return;
+        double pct = 1.0 - (double) timeSince / player.getShieldBeamCooldown();
+        int radius = Game.scale(30);
+        int centerX = Game.scale(150) + GameLogic.cameraX;
+        int centerY = GamePanel.PANEL_HEIGHT - Game.scale(50) + GameLogic.cameraY;
+        g.setColor(new Color(80, 180, 255));
+        ((Graphics2D)g).fillArc(centerX - radius, centerY - radius, radius * 2, radius * 2,
+                90, (int)(360 * pct));
     }
 
     public Image[] getIdleTextures() {

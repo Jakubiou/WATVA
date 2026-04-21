@@ -479,7 +479,13 @@ public class Enemy {
 
     public void hit(int damage, DamageNumberManager damageManager) {
         hp -= damage;
-        damageManager.addDamageNumber(x + getWidth() / 2, y, damage);
+        damageManager.addDamageNumber(x + getWidth() / 2, y, damage, false);
+        if (hp <= 0) isAlive = false;
+    }
+
+    public void hitCrit(int damage, DamageNumberManager damageManager, boolean isCrit) {
+        hp -= damage;
+        damageManager.addDamageNumber(x + getWidth() / 2, y, damage, isCrit);
         if (hp <= 0) isAlive = false;
     }
 

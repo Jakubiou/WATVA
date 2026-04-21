@@ -2,181 +2,160 @@ package Logic.DamageNumber;
 
 import Core.Game;
 import java.awt.*;
+import java.awt.geom.AffineTransform;
 import java.util.Random;
 
-/**
- * Represents a floating damage number that appears when an enemy takes damage.
- * The number floats upward at a slight random angle and fades out over time with color based on damage amount.
- * Numbers appear at random positions around the damage source for visual variety.
- */
 public class DamageNumber {
     private double x, y;
     private int damage;
+    private boolean isCrit;
     private long creationTime;
-    private static final long DURATION_MS = 1500;
-    private static final int FLOAT_SPEED = Game.scale(2);
-    private boolean isActive = true;
+    private static final long DURATION_MS = 1600;
     private static final Random random = new Random();
-
-    private static final int RANDOM_OFFSET_RANGE = Game.scale(40);
 
     private double velocityX;
     private double velocityY;
-    private static final double MAX_ANGLE_RADIANS = Math.PI / 12;
+    private double rotation;
+    private double rotationSpeed;
+    private int style;
 
-    /**
-     * Creates a new damage number at a random position around the specified coordinates.
-     *
-     * @param centerX The center x-coordinate where damage occurred
-     * @param centerY The center y-coordinate where damage occurred
-     * @param damage The amount of damage dealt
-     */
     public DamageNumber(int centerX, int centerY, int damage) {
-        int offsetX = random.nextInt(RANDOM_OFFSET_RANGE * 2) - RANDOM_OFFSET_RANGE;
-        int offsetY = random.nextInt(RANDOM_OFFSET_RANGE) - RANDOM_OFFSET_RANGE / 2;
+        this(centerX, centerY, damage, false);
+    }
 
-        this.x = centerX + offsetX;
-        this.y = centerY + offsetY;
+    public DamageNumber(int centerX, int centerY, int damage, boolean isCrit) {
+        int off = Game.scale(30);
+        this.x = centerX + random.nextInt(off * 2) - off;
+        this.y = centerY + random.nextInt(off) - off / 2;
         this.damage = damage;
+        this.isCrit = isCrit;
         this.creationTime = System.currentTimeMillis();
 
-        double angle = (random.nextDouble() - 0.5) * 2 * MAX_ANGLE_RADIANS;
-        this.velocityX = Math.sin(angle) * FLOAT_SPEED;
-        this.velocityY = -Math.cos(angle) * FLOAT_SPEED;
+        double angle = (random.nextDouble() - 0.5) * Math.PI / 5;
+        double spd = Game.scale(isCrit ? 3.5 : 2.2);
+        this.velocityX = Math.sin(angle) * spd;
+        this.velocityY = -Math.cos(angle) * spd;
+
+        this.rotation = (random.nextDouble() - 0.5) * 0.3;
+        this.rotationSpeed = (random.nextDouble() - 0.5) * 0.12;
+
+        if (isCrit) style = 1;
+        else if (damage >= 50) style = 2;
+        else style = 0;
     }
 
-    /**
-     * Updates the damage number position and checks if it should still be active.
-     */
     public void update() {
+        velocityY += Game.scale(0.07);
         x += velocityX;
         y += velocityY;
-
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - creationTime >= DURATION_MS) {
-            isActive = false;
-        }
+        rotation += rotationSpeed;
+        rotationSpeed *= 0.93;
     }
 
-    /**
-     * Draws the damage number with appropriate color and transparency.
-     *
-     * @param g Graphics context to draw with
-     */
+    public boolean isActive() {
+        return System.currentTimeMillis() - creationTime < DURATION_MS;
+    }
+
     public void draw(Graphics g) {
-        if (!isActive) return;
-
+        if (!isActive()) return;
         Graphics2D g2d = (Graphics2D) g;
-        long currentTime = System.currentTimeMillis();
-        long elapsed = currentTime - creationTime;
-        float alpha = 1.0f - (float) elapsed / DURATION_MS;
-        alpha = Math.max(0, Math.min(1, alpha));
 
-        Color baseColor = getDamageColor(damage);
-        Color colorWithAlpha = new Color(
-                baseColor.getRed(),
-                baseColor.getGreen(),
-                baseColor.getBlue(),
-                (int) (255 * alpha)
-        );
+        long elapsed = System.currentTimeMillis() - creationTime;
+        float t = elapsed / (float) DURATION_MS;
 
-        Color outlineColor = new Color(0, 0, 0, (int) (255 * alpha));
+        float alpha;
+        if (t < 0.1f) alpha = t / 0.1f;
+        else alpha = 1f - ((t - 0.1f) / 0.9f);
+        alpha = Math.max(0f, Math.min(1f, alpha));
 
-        Font font = new Font("Arial", Font.BOLD, getFontSize(damage));
+        float scale;
+        if (t < 0.15f) {
+            scale = (float)(1.4 * Math.sin((t / 0.15f) * Math.PI / 2));
+        } else if (t < 0.28f) {
+            scale = (float)(1.4 - 0.45 * ((t - 0.15f) / 0.13f));
+        } else {
+            scale = 1.0f - (t - 0.28f) * 0.35f;
+        }
+        scale = Math.max(0.05f, scale);
+        if (isCrit) scale *= 1.5f;
+
+        int fontSize = getFontSize();
+        Font font = new Font("Arial", Font.BOLD, Math.max(8, (int)(fontSize * scale)));
         g2d.setFont(font);
+        String text = buildText();
+
+        AffineTransform savedTx = g2d.getTransform();
+        Composite savedComposite = g2d.getComposite();
+        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+        g2d.rotate(rotation, x, y);
 
         FontMetrics fm = g2d.getFontMetrics();
-        String damageText = String.valueOf(damage);
-        int textWidth = fm.stringWidth(damageText);
-        int textHeight = fm.getHeight();
+        int tw = fm.stringWidth(text);
+        int drawX = (int)x - tw / 2;
+        int drawY = (int)y;
 
-        int drawX = (int)(x - textWidth / 2);
-        int drawY = (int)(y + textHeight / 4);
+        // Shadow
+        g2d.setColor(new Color(0, 0, 0, (int)(160 * alpha)));
+        g2d.drawString(text, drawX + Game.scale(2), drawY + Game.scale(2));
 
-        int outlineSize = Game.scale(1);
-        g2d.setColor(outlineColor);
-        g2d.drawString(damageText, drawX - outlineSize, drawY);
-        g2d.drawString(damageText, drawX + outlineSize, drawY);
-        g2d.drawString(damageText, drawX, drawY - outlineSize);
-        g2d.drawString(damageText, drawX, drawY + outlineSize);
+        // Outline
+        Color outline = getOutlineColor();
+        g2d.setColor(new Color(outline.getRed(), outline.getGreen(), outline.getBlue(), (int)(255 * alpha)));
+        int out = Math.max(1, Game.scale(2));
+        g2d.drawString(text, drawX - out, drawY);
+        g2d.drawString(text, drawX + out, drawY);
+        g2d.drawString(text, drawX, drawY - out);
+        g2d.drawString(text, drawX, drawY + out);
 
-        g2d.setColor(colorWithAlpha);
-        g2d.drawString(damageText, drawX, drawY);
-    }
-
-    /**
-     * Determines the color based on damage amount.
-     *
-     * @param damage The damage amount
-     * @return Color for the damage number
-     */
-    private Color getDamageColor(int damage) {
-        if (damage <= 10) {
-            return Color.WHITE;
-        } else if (damage <= 25) {
-            return Color.YELLOW;
-        } else if (damage <= 50) {
-            return Color.ORANGE;
-        } else if (damage <= 100) {
-            return Color.RED;
+        // Main text
+        if (isCrit) {
+            float hue = (elapsed % 500) / 500f;
+            Color shimmer = Color.getHSBColor(hue, 1f, 1f);
+            g2d.setColor(new Color(shimmer.getRed(), shimmer.getGreen(), shimmer.getBlue(), (int)(255 * alpha)));
         } else {
-            return Color.MAGENTA;
+            Color base = getDamageColor();
+            g2d.setColor(new Color(base.getRed(), base.getGreen(), base.getBlue(), (int)(255 * alpha)));
         }
+        g2d.drawString(text, drawX, drawY);
+
+        g2d.setTransform(savedTx);
+        g2d.setComposite(savedComposite);
     }
 
-    /**
-     * Determines the font size based on damage amount.
-     *
-     * @param damage The damage amount
-     * @return Font size for the damage number
-     */
-    private int getFontSize(int damage) {
-        if (damage <= 10) {
-            return Game.scale(16);
-        } else if (damage <= 25) {
-            return Game.scale(18);
-        } else if (damage <= 50) {
-            return Game.scale(20);
-        } else if (damage <= 100) {
-            return Game.scale(22);
-        } else {
-            return Game.scale(24);
+    private String buildText() {
+        if (isCrit) {
+            return damage + "!";
         }
+        if (damage >= 50) return damage + "!";
+        return String.valueOf(damage);
     }
 
-    /**
-     * Checks if the damage number is still active.
-     *
-     * @return true if still active, false if should be removed
-     */
-    public boolean isActive() {
-        return isActive;
+    private Color getDamageColor() {
+        if (damage <= 5)   return new Color(190, 190, 190);
+        if (damage <= 15)  return Color.WHITE;
+        if (damage <= 30)  return Color.YELLOW;
+        if (damage <= 60)  return new Color(255, 140, 0);
+        if (damage <= 100) return Color.RED;
+        return new Color(220, 0, 255);
     }
 
-    /**
-     * Gets the x-coordinate of the damage number.
-     *
-     * @return x-coordinate
-     */
-    public int getX() {
-        return (int)x;
+    private Color getOutlineColor() {
+        if (isCrit)        return new Color(80, 0, 120);
+        if (damage >= 100) return new Color(100, 0, 0);
+        if (damage >= 50)  return new Color(100, 40, 0);
+        return Color.BLACK;
     }
 
-    /**
-     * Gets the y-coordinate of the damage number.
-     *
-     * @return y-coordinate
-     */
-    public int getY() {
-        return (int)y;
+    private int getFontSize() {
+        if (isCrit)        return Game.scale(16);
+        if (damage >= 100) return Game.scale(26);
+        if (damage >= 50)  return Game.scale(22);
+        if (damage >= 25)  return Game.scale(19);
+        if (damage >= 10)  return Game.scale(16);
+        return Game.scale(14);
     }
 
-    /**
-     * Gets the damage value.
-     *
-     * @return damage amount
-     */
-    public int getDamage() {
-        return damage;
-    }
+    public int getX() { return (int)x; }
+    public int getY() { return (int)y; }
+    public int getDamage() { return damage; }
 }

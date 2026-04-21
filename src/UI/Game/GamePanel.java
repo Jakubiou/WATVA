@@ -351,6 +351,7 @@ public class GamePanel extends JPanel implements ActionListener {
     }
 
     public void startNextWaveAfterAbility() {
+        abilityPanelVisible = false;
         abilityPanel.hidePanel();
         menuButton.setVisible(true);
         gameLogic.nextWave();
@@ -367,6 +368,7 @@ public class GamePanel extends JPanel implements ActionListener {
 
     public void onWaveComplete() {
         menuButton.setVisible(false);
+        abilityPanelVisible = true;
         abilityPanel.showPanel();
     }
 
@@ -443,6 +445,16 @@ public class GamePanel extends JPanel implements ActionListener {
                 currentMouseY = mousePoint.y + getCameraY();
             }
             gameLogic.tryToShoot(currentMouseX, currentMouseY);
+        }
+
+        // Keep shield arc aimed at current mouse position every frame
+        if (shouldUpdate && !gameLogic.isPaused()) {
+            Point mp = getMousePosition();
+            if (mp != null) {
+                gameLogic.getPlayer().setShieldMouseTarget(
+                        mp.x + getCameraX(),
+                        mp.y + getCameraY());
+            }
         }
 
         if (shouldUpdate) {

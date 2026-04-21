@@ -457,9 +457,16 @@ public class GameLogic {
         }
     }
 
+    private static final java.util.Random CRIT_RNG = new java.util.Random();
+
     private void addProjectile(int cx, int cy, int tx, int ty, int pierce, int fire, boolean slow, int bulletSpd, boolean ricochet) {
         PlayerProjectile p = new PlayerProjectile(cx, cy, tx, ty, pierce, fire, slow, bulletSpd);
         if (ricochet) p.setCanRicochet(true);
+        // Roll crit
+        int critChance = player.getCritChance();
+        if (critChance > 0 && CRIT_RNG.nextInt(100) < critChance) {
+            p.setIsCrit(true);
+        }
         playerProjectiles.add(p);
     }
 
